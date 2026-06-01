@@ -4,7 +4,7 @@ var besatzung = [];
 var idCounter = 0;
 var dragSrc = null;
 var branch = null; // 'strasse' | 'parkplatz'
-var mode = 'normal';
+var selectedSections = [];
 var touchData = { active: false, srcId: null, overItem: null };
 var today = new Date().toISOString().split('T')[0];
 var GT_STREETS = null; // { name: { plz, stadt, ortsteil } | null }
@@ -59,9 +59,53 @@ var KAROSSERIE_EINZELN = [
   }
 ];
 
-var SLIDES_BASE = ['slide-0', 'slide-1', 'slide-2', 'slide-3', 'slide-uo-typ'];
-var SLIDES_STRASSE_PRE = ['slide-uo-s1', 'slide-uo-s1b', 'slide-uo-s2', 'slide-uo-s3', 'slide-uo-s4', 'slide-uo-s4b', 'slide-uo-s5', 'slide-uo-spuren'];
-var SLIDES_PARKPLATZ_PRE = ['slide-uo-p1', 'slide-uo-p2', 'slide-uo-spuren'];
+var SECTION_DEFS = {
+  allgemeines: {
+    label: 'Allgemeines', desc: 'Besatzung, Einsatzanlass, Datum & Melder', icon: '👥',
+    getSlides: function() { return ['slide-0', 'slide-1', 'slide-2', 'slide-3']; }
+  },
+  oertlichkeit: {
+    label: 'Örtlichkeit', desc: 'Unfallort – Straße oder Parkplatz', icon: '📍',
+    getSlides: function() {
+      if (!branch) return ['slide-uo-typ'];
+      if (branch === 'strasse') return ['slide-uo-typ', 'slide-uo-s1'];
+      return ['slide-uo-typ', 'slide-uo-p1', 'slide-uo-p2'];
+    }
+  },
+  verhaeltnisse: {
+    label: 'Verkehrsverhältnisse', desc: 'Fahrbahn, Tempo, Licht, Wetter & Sicht', icon: '🌦',
+    getSlides: function() {
+      if (!branch || branch !== 'strasse') return [];
+      return ['slide-uo-s1b', 'slide-uo-s2', 'slide-uo-s3', 'slide-uo-s4', 'slide-uo-s4b', 'slide-uo-s5'];
+    }
+  },
+  spuren: {
+    label: 'Spurenlage', desc: 'Spuren & Teile an der Örtlichkeit', icon: '🔍',
+    getSlides: function() { return ['slide-uo-spuren']; }
+  },
+  fahrzeug: {
+    label: 'Fahrzeugschäden', desc: 'Schadensbild & Fahrzeugdaten', icon: '🚗',
+    getSlides: function() {
+      var fzDetailSlides = [];
+      var fzAbschluss = [];
+      if (fzCurrentIdx !== null && fahrzeugSpuren[fzCurrentIdx]) {
+        var n = fahrzeugSpuren[fzCurrentIdx].selectedTeile.length;
+        for (var i = 0; i < n; i++) fzDetailSlides.push('slide-fz-detail-' + i);
+        if (n > 0) fzAbschluss = ['slide-fz-abschluss'];
+      }
+      return ['slide-fz-nummer', 'slide-fz-picker'].concat(fzDetailSlides).concat(fzAbschluss);
+    }
+  },
+  schilderungen: {
+    label: 'Schilderungen', desc: 'Zeugenaussagen & Angaben', icon: '💬',
+    getSlides: function() { return ['slide-schilderungen']; }
+  }
+};
+
+var LEITFAEDEN = {
+  strasse:   { label: 'VUF Straße',   sections: ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen'] },
+  parkplatz: { label: 'VUF Parkplatz', sections: ['allgemeines','oertlichkeit','spuren','fahrzeug','schilderungen'] }
+};
 
 var ROLLEN_MAP = {
   zeuge:  { disp: 'der Zeuge',               er: 'Er',  erLow: 'er',  sein: 'sein', seiner: 'seiner' },
@@ -74,19 +118,17 @@ var schilderungen = [];
 var schildCounter = 0;
 
 function getActiveSlides() {
-  var fzDetailSlides = [];
-  var fzAbschluss = [];
-  if (fzCurrentIdx !== null && fahrzeugSpuren[fzCurrentIdx]) {
-    var n = fahrzeugSpuren[fzCurrentIdx].selectedTeile.length;
-    for (var i = 0; i < n; i++) fzDetailSlides.push('slide-fz-detail-' + i);
-    if (n > 0) fzAbschluss = ['slide-fz-abschluss'];
-  }
-  var fzSlides = ['slide-fz-nummer', 'slide-fz-picker'].concat(fzDetailSlides).concat(fzAbschluss);
-
-  // Normal mode
-  if (!branch) return SLIDES_BASE;
-  var pre = branch === 'strasse' ? SLIDES_STRASSE_PRE : SLIDES_PARKPLATZ_PRE;
-  return SLIDES_BASE.concat(pre).concat(fzSlides).concat(['slide-schilderungen']);
+  var slides = [];
+  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen'];
+  ORDER.forEach(function(key) {
+    if (selectedSections.indexOf(key) === -1) return;
+    var def = SECTION_DEFS[key];
+    if (!def) return;
+    def.getSlides().forEach(function(id) {
+      if (slides.indexOf(id) === -1) slides.push(id);
+    });
+  });
+  return slides.length > 0 ? slides : ['slide-0'];
 }
 
 // Touch drag
@@ -214,6 +256,7 @@ document.getElementById('uo-tempo').addEventListener('input', function () {
 });
 
 function dismissStart() {
+  if (!selectedSections.length) return;
   render();
   var s = document.getElementById('screen-start');
   s.classList.add('dismissed');
@@ -221,8 +264,47 @@ function dismissStart() {
 }
 document.getElementById('btnStart').onclick = function () { dismissStart(); };
 
+function renderLibrary() {
+  var cont = document.getElementById('libraryBausteins');
+  if (!cont) return;
+  cont.innerHTML = '';
+  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen'];
+  ORDER.forEach(function(key) {
+    var def = SECTION_DEFS[key];
+    var isOn = selectedSections.indexOf(key) !== -1;
+    var card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'baustein-card' + (isOn ? ' selected' : '');
+    card.innerHTML =
+      '<span class="baustein-icon">' + def.icon + '</span>' +
+      '<div class="baustein-text">' +
+        '<span class="baustein-label">' + def.label + '</span>' +
+        '<span class="baustein-desc">' + def.desc + '</span>' +
+      '</div>' +
+      '<span class="baustein-check">' + (isOn ? '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</span>';
+    card.onclick = function() {
+      var idx = selectedSections.indexOf(key);
+      if (idx !== -1) selectedSections.splice(idx, 1);
+      else selectedSections.push(key);
+      renderLibrary();
+    };
+    cont.appendChild(card);
+  });
+  document.getElementById('btnStart').disabled = selectedSections.length === 0;
+}
+
+document.getElementById('btnPresetStrasse').onclick = function() {
+  selectedSections = LEITFAEDEN.strasse.sections.slice();
+  renderLibrary();
+};
+document.getElementById('btnPresetParkplatz').onclick = function() {
+  selectedSections = LEITFAEDEN.parkplatz.sections.slice();
+  renderLibrary();
+};
+
 addBesatzung();
 addSchilderung();
+renderLibrary();
 render();
 ladeGueterslohStrassen();
 
@@ -558,11 +640,20 @@ function updateAdresseVorschlaege() {
 }
 
 function getSlidePreviewText(slideId) {
-  var s1ids = ['slide-0','slide-1','slide-2','slide-3','slide-uo-typ'];
+  var s1ids = ['slide-0','slide-1','slide-2','slide-3'];
   if (s1ids.indexOf(slideId) !== -1) {
     return buildErsterSatz(document.getElementById('einsatzanlass').value || '');
   }
-  if (slideId.indexOf('slide-uo-') === 0) return generateAbschnitt2() || '';
+  if (slideId === 'slide-uo-typ' || slideId === 'slide-uo-s1' || slideId === 'slide-uo-p1' || slideId === 'slide-uo-p2') {
+    return generateOertlichkeitText() || '';
+  }
+  if (slideId === 'slide-uo-s1b' || slideId === 'slide-uo-s2' || slideId === 'slide-uo-s3' ||
+      slideId === 'slide-uo-s4'  || slideId === 'slide-uo-s4b' || slideId === 'slide-uo-s5') {
+    return generateVerkehrsText() || '';
+  }
+  if (slideId === 'slide-uo-spuren') {
+    var st = spurenText(); return st ? st.replace(/^\n+/, '') : '';
+  }
   if (slideId.indexOf('slide-fz-') === 0) return generateFahrzeugText() || '';
   if (slideId === 'slide-schilderungen') return generateSchilderungenText() || '';
   return '';
@@ -1965,61 +2056,73 @@ function generateSchilderungenText() {
 }
 
 function generateResult() {
-  var strasse = document.getElementById('strasse').value || '[Straße]';
-  var hausnummer = document.getElementById('hausnummer').value;
-  var strasseVoll = strasse + (hausnummer ? ' ' + hausnummer : '');
-  var plz = document.getElementById('plz').value || '[PLZ]';
-  var stadt = document.getElementById('stadt').value || '[Stadt]';
-  var anlass = document.getElementById('einsatzanlass').value || '[Einsatzbeschreibung]';
+  var doc = document.getElementById('reportDoc');
+  doc.innerHTML = '';
+  var delay = 0;
+  var sectionNum = 1;
 
-  var text1 =
-    buildErsterSatz(anlass) + '\n\n' +
-    'Einsatzörtlichkeit: ' + strasseVoll + ', ' + plz + ' ' + stadt + '.';
-  var text2 = generateAbschnitt2();
-  var text3 = generateFahrzeugText();
-
-  (function () {
-    var doc = document.getElementById('reportDoc');
-    doc.innerHTML = '';
-    var delay = 0;
-    function appendSection(num, title, text) {
-      if (!text) return;
-      if (doc.children.length > 0) {
-        var sp = document.createElement('div');
-        sp.className = 'report-spacer';
-        doc.appendChild(sp);
-      }
-      var h = document.createElement('div');
-      h.className = 'report-heading report-item-in';
-      h.style.animationDelay = delay + 'ms';
-      h.textContent = num + ' ' + title;
-      doc.appendChild(h);
-      delay += 80;
-      var b = document.createElement('div');
-      b.className = 'report-body report-item-in';
-      b.style.animationDelay = delay + 'ms';
-      b.textContent = text;
-      doc.appendChild(b);
-      delay += 160;
+  function appendSection(title, text) {
+    if (!text || !text.trim()) return;
+    if (doc.children.length > 0) {
+      var sp = document.createElement('div');
+      sp.className = 'report-spacer';
+      doc.appendChild(sp);
     }
-    var text4 = generateSchilderungenText();
-    appendSection('1', 'Allgemeines / Einsatzanlass', text1);
-    appendSection('2', 'Unfallörtlichkeit', text2);
-    appendSection('3', 'Spuren an den Fahrzeugen', text3);
-    appendSection('4', 'Schilderungen', text4);
+    var h = document.createElement('div');
+    h.className = 'report-heading report-item-in';
+    h.style.animationDelay = delay + 'ms';
+    h.textContent = sectionNum + ' ' + title;
+    doc.appendChild(h);
+    delay += 80;
+    var b = document.createElement('div');
+    b.className = 'report-body report-item-in';
+    b.style.animationDelay = delay + 'ms';
+    b.textContent = text;
+    doc.appendChild(b);
+    delay += 160;
+    sectionNum++;
+  }
 
-    var slides = getActiveSlides();
-    slides.forEach(function (id) {
-      var s = document.getElementById(id);
-      s.classList.remove('active');
-      s.classList.add('exit-left');
-    });
-    document.getElementById('slide-result').classList.add('active');
-    document.getElementById('progress').style.width = '100%';
-    document.getElementById('stepCounter').textContent = 'Fertig';
-    document.getElementById('btnBack').disabled = true;
-    document.getElementById('dots').innerHTML = '';
-  })();
+  var generators = {
+    allgemeines: function() {
+      var strasse = document.getElementById('strasse').value || '[Straße]';
+      var hausnummer = document.getElementById('hausnummer').value;
+      var plz = document.getElementById('plz').value || '[PLZ]';
+      var stadt = document.getElementById('stadt').value || '[Stadt]';
+      var anlass = document.getElementById('einsatzanlass').value || '[Einsatzbeschreibung]';
+      return buildErsterSatz(anlass) + '\n\n' +
+        'Einsatzörtlichkeit: ' + strasse + (hausnummer ? ' ' + hausnummer : '') + ', ' + plz + ' ' + stadt + '.';
+    },
+    oertlichkeit:  function() { return generateOertlichkeitText(); },
+    verhaeltnisse: function() { return generateVerkehrsText(); },
+    spuren:        function() { var t = spurenText(); return t ? t.replace(/^\n+/, '') : ''; },
+    fahrzeug:      function() { return generateFahrzeugText(); },
+    schilderungen: function() { return generateSchilderungenText(); }
+  };
+
+  var titles = {
+    allgemeines:   'Allgemeines / Einsatzanlass',
+    oertlichkeit:  'Unfallörtlichkeit',
+    verhaeltnisse: 'Verkehrsverhältnisse',
+    spuren:        'Spuren auf der Fahrbahn',
+    fahrzeug:      'Spuren an den Fahrzeugen',
+    schilderungen: 'Schilderungen'
+  };
+
+  selectedSections.forEach(function(key) {
+    if (generators[key]) appendSection(titles[key], generators[key]());
+  });
+
+  var slides = getActiveSlides();
+  slides.forEach(function (id) {
+    var s = document.getElementById(id);
+    if (s) { s.classList.remove('active'); s.classList.add('exit-left'); }
+  });
+  document.getElementById('slide-result').classList.add('active');
+  document.getElementById('progress').style.width = '100%';
+  document.getElementById('stepCounter').textContent = 'Fertig';
+  document.getElementById('btnBack').disabled = true;
+  document.getElementById('dots').innerHTML = '';
 }
 
 function spurenText() {
@@ -2028,9 +2131,8 @@ function spurenText() {
   return v ? '\n\nAuf der Fahrbahn wurden folgende Spuren festgestellt: ' + v + '.' : '';
 }
 
-function generateAbschnitt2() {
+function generateOertlichkeitText() {
   if (!branch) return '';
-
   var plz = document.getElementById('plz').value || '[PLZ]';
   var stadt = document.getElementById('stadt').value || '[Stadt]';
 
@@ -2041,139 +2143,123 @@ function generateAbschnitt2() {
     var strassentyp = getChipValue('strassentyp');
     var ortsteil = document.getElementById('uo-ortsteil').value;
     var woGenau = document.getElementById('uo-wo-genau').value;
-    var tempo = document.getElementById('uo-tempo').value;
-    var fahrstreifen = document.getElementById('uo-fahrstreifen').value;
-    var trennung = getChipValue('trennung');
-    var verkehr = getChipValue('verkehr');
-    var beleuchtung = getChipValue('beleuchtung');
-    var verlauf = getChipValue('verlauf');
-    var fahrtrichtung = document.getElementById('uo-fahrtrichtung').value || '[Richtung]';
-    var steigung = getChipValue('steigung');
-
-    var trennungMap = {
-      'mittellinie': 'eine durchgezogene Mittellinie',
-      'doppelte-linie': 'eine doppelte durchgezogene Linie',
-      'mittelstreifen': 'einen begrünten Mittelstreifen, baulich',
-      'mittelinsel': 'eine bauliche Mittelinsel'
-    };
-    var verkehrMap = { 'schwach': 'schwaches', 'moderat': 'moderates', 'stark': 'starkes' };
-    var beleuchtungMap = {
-      'in-betrieb': 'Die Straßenbeleuchtung war in Betrieb und gewährleistete eine ausreichende, gleichmäßige Ausleuchtung der Fahrbahn.',
-      'nicht-vorhanden': 'Eine Straßenbeleuchtung war nicht vorhanden.',
-      'ausgeschaltet': 'Die Straßenbeleuchtung war vorhanden, aufgrund der Tageszeit bestimmungsgemäß ausgeschaltet.'
-    };
-    var verlaufMap = { 'gerade': 'gerade', 'linkskurve': 'in einer Linkskurve', 'rechtskurve': 'in einer Rechtskurve' };
-    var steigungMap = {
-      'keine': 'keine Steigung oder Gefälle',
-      'gefaelle-gering': 'ein geringes Gefälle',
-      'gefaelle-maessig': 'ein mäßiges Gefälle',
-      'gefaelle-stark': 'ein starkes Gefälle',
-      'steigung-gering': 'eine geringe Steigung',
-      'steigung-maessig': 'eine mäßige Steigung',
-      'steigung-stark': 'eine starke Steigung'
-    };
-
-    var lageText = (lage && lage !== 'none') ? lage + ' ' : '';
-    var lageGelegen = lageText ? lageText + 'gelegene ' : '';
+    var lageGelegen = (lage && lage !== 'none') ? lage + ' gelegene ' : '';
     var strassentypText = (strassentyp && strassentyp !== 'none') ? ' (' + strassentyp + ')' : '';
     var ortsteilText = ortsteil ? ' (Ortsteil: ' + ortsteil + ')' : '';
     var strasseAdresse = strasse + (uoHausnummer ? ' ' + uoHausnummer : '');
-
     var lines = [];
     lines.push('Bei der Unfallörtlichkeit handelt es sich um folgende ' + lageGelegen + 'Straße: ' +
       strasseAdresse + strassentypText + ', ' + plz + ' ' + stadt + ortsteilText + '.');
-
     if (woGenau) lines.push('Der Unfall ereignete sich ' + woGenau + '.');
-
-    if (tempo) {
-      var tempoGrundVal = getChipValue('tempo-grund');
-      var tempoSatz = 'Die zulässige Höchstgeschwindigkeit auf diesem Abschnitt der Straße beträgt ' + tempo + ' km/h';
-      if (tempoGrundVal && tempoGrundVal !== 'none') {
-        tempoSatz += ', ' + (tempoGrundVal === 'vz274'
-          ? 'vorgegeben durch das VZ. 274'
-          : 'welche sich aus der Lage innerhalb geschlossener Ortschaft ergibt');
-      }
-      tempoSatz += '.';
-      lines.push(tempoSatz);
-    }
-
-    if (fahrstreifen && trennung && trennung !== 'none') {
-      lines.push('Es bestehen ' + fahrstreifen + ' Fahrstreifen je Richtung. Die Richtungsfahrbahnen sind durch ' +
-        (trennungMap[trennung] || '[Trennung]') + ' voneinander getrennt.');
-    } else if (fahrstreifen) {
-      lines.push('Es bestehen ' + fahrstreifen + ' Fahrstreifen je Richtung.');
-    }
-
-    if (verkehr && verkehr !== 'none') {
-      lines.push('Zum Zeitpunkt der Unfallaufnahme herrschte ' + (verkehrMap[verkehr] || '[Verkehr]') + ' Verkehrsaufkommen.');
-    }
-
-    if (beleuchtung && beleuchtung !== 'none') {
-      lines.push(beleuchtungMap[beleuchtung] || '');
-    }
-
-    var verlaufVal = (verlauf && verlauf !== 'none') ? (verlaufMap[verlauf] || null) : null;
-    var steigungVal = (steigung && steigung !== 'none') ? (steigungMap[steigung] || null) : null;
-    if (verlaufVal || steigungVal) {
-      var strecke = 'Der Streckenabschnitt verläuft auf Höhe der Unfallstelle';
-      if (verlaufVal) strecke += ' ' + verlaufVal;
-      if (steigungVal) strecke += (verlaufVal ? ' und' : '') + ' weist in Fahrtrichtung ' + fahrtrichtung + ' ' + steigungVal + ' auf';
-      lines.push(strecke + '.');
-    }
-
-    var wetter = getChipValue('wetter');
-    var fahrbahn = getChipValue('fahrbahn');
-    var sicht = getChipValue('sicht');
-
-    var wetterMap = {
-      'trocken': 'trockene Witterung',
-      'regen': 'Regen',
-      'schneefall': 'Schneefall',
-      'nebel': 'Nebel',
-      'frost-eis': 'Frost und Eisglätte'
-    };
-    var fahrbahnMap = {
-      'trocken': 'trocken',
-      'nass': 'nass',
-      'feucht': 'feucht',
-      'verschneit': 'mit Schnee bedeckt',
-      'vereist': 'vereist'
-    };
-    var sichtMap = {
-      'gut': 'guten',
-      'eingeschraenkt': 'eingeschränkten',
-      'schlecht': 'schlechten'
-    };
-
-    var wetterVal = (wetter && wetter !== 'none') ? (wetterMap[wetter] || wetter) : null;
-    var sichtVal = (sicht && sicht !== 'none') ? (sichtMap[sicht] || sicht) : null;
-    if (wetterVal && sichtVal) {
-      lines.push('Zum Unfallzeitpunkt herrschten ' + wetterVal + ' bei ' + sichtVal + ' Sichtverhältnissen.');
-    } else if (wetterVal) {
-      lines.push('Zum Unfallzeitpunkt herrschten ' + wetterVal + '.');
-    } else if (sichtVal) {
-      lines.push('Zum Unfallzeitpunkt herrschten ' + sichtVal + ' Sichtverhältnisse.');
-    }
-
-    if (fahrbahn && fahrbahn !== 'none') {
-      lines.push('Die Fahrbahnoberfläche war zum Unfallzeitpunkt ' + (fahrbahnMap[fahrbahn] || fahrbahn) + '.');
-    }
-
-    return lines.filter(Boolean).join('\n\n') + spurenText();
+    return lines.filter(Boolean).join('\n\n');
   }
 
   if (branch === 'parkplatz') {
     var pkAdresse = document.getElementById('pk-adresse').value || '[Adresse]';
     var pkZugehoerigkeit = document.getElementById('pk-zugehoerigkeit').value || '[Zugehörigkeit]';
     var pkPosition = document.getElementById('pk-position').value || '[Position]';
-
     return 'Bei der Unfallörtlichkeit handelt es sich um den ' + pkZugehoerigkeit +
-      ', ' + pkAdresse + ', ' + plz + ' ' + stadt + '.\n\n' + pkPosition + spurenText();
+      ', ' + pkAdresse + ', ' + plz + ' ' + stadt + '.\n\n' + pkPosition;
   }
-
   return '';
 }
 
+function generateVerkehrsText() {
+  if (branch !== 'strasse') return '';
+  var tempo = document.getElementById('uo-tempo').value;
+  var fahrstreifen = document.getElementById('uo-fahrstreifen').value;
+  var trennung = getChipValue('trennung');
+  var verkehr = getChipValue('verkehr');
+  var beleuchtung = getChipValue('beleuchtung');
+  var verlauf = getChipValue('verlauf');
+  var fahrtrichtung = document.getElementById('uo-fahrtrichtung').value || '[Richtung]';
+  var steigung = getChipValue('steigung');
+  var wetter = getChipValue('wetter');
+  var fahrbahn = getChipValue('fahrbahn');
+  var sicht = getChipValue('sicht');
+
+  var trennungMap = {
+    'mittellinie': 'eine durchgezogene Mittellinie',
+    'doppelte-linie': 'eine doppelte durchgezogene Linie',
+    'mittelstreifen': 'einen begrünten Mittelstreifen, baulich',
+    'mittelinsel': 'eine bauliche Mittelinsel'
+  };
+  var verkehrMap = { 'schwach': 'schwaches', 'moderat': 'moderates', 'stark': 'starkes' };
+  var beleuchtungMap = {
+    'in-betrieb': 'Die Straßenbeleuchtung war in Betrieb und gewährleistete eine ausreichende, gleichmäßige Ausleuchtung der Fahrbahn.',
+    'nicht-vorhanden': 'Eine Straßenbeleuchtung war nicht vorhanden.',
+    'ausgeschaltet': 'Die Straßenbeleuchtung war vorhanden, aufgrund der Tageszeit bestimmungsgemäß ausgeschaltet.'
+  };
+  var verlaufMap = { 'gerade': 'gerade', 'linkskurve': 'in einer Linkskurve', 'rechtskurve': 'in einer Rechtskurve' };
+  var steigungMap = {
+    'keine': 'keine Steigung oder Gefälle',
+    'gefaelle-gering': 'ein geringes Gefälle', 'gefaelle-maessig': 'ein mäßiges Gefälle', 'gefaelle-stark': 'ein starkes Gefälle',
+    'steigung-gering': 'eine geringe Steigung', 'steigung-maessig': 'eine mäßige Steigung', 'steigung-stark': 'eine starke Steigung'
+  };
+  var wetterMap = { 'trocken': 'trockene Witterung', 'regen': 'Regen', 'schneefall': 'Schneefall', 'nebel': 'Nebel', 'frost-eis': 'Frost und Eisglätte' };
+  var fahrbahnMap = { 'trocken': 'trocken', 'nass': 'nass', 'feucht': 'feucht', 'verschneit': 'mit Schnee bedeckt', 'vereist': 'vereist' };
+  var sichtMap = { 'gut': 'guten', 'eingeschraenkt': 'eingeschränkten', 'schlecht': 'schlechten' };
+
+  var lines = [];
+
+  if (tempo) {
+    var tempoGrundVal = getChipValue('tempo-grund');
+    var tempoSatz = 'Die zulässige Höchstgeschwindigkeit auf diesem Abschnitt der Straße beträgt ' + tempo + ' km/h';
+    if (tempoGrundVal && tempoGrundVal !== 'none') {
+      tempoSatz += ', ' + (tempoGrundVal === 'vz274' ? 'vorgegeben durch das VZ. 274' : 'welche sich aus der Lage innerhalb geschlossener Ortschaft ergibt');
+    }
+    lines.push(tempoSatz + '.');
+  }
+
+  if (fahrstreifen && trennung && trennung !== 'none') {
+    lines.push('Es bestehen ' + fahrstreifen + ' Fahrstreifen je Richtung. Die Richtungsfahrbahnen sind durch ' +
+      (trennungMap[trennung] || '[Trennung]') + ' voneinander getrennt.');
+  } else if (fahrstreifen) {
+    lines.push('Es bestehen ' + fahrstreifen + ' Fahrstreifen je Richtung.');
+  }
+
+  if (verkehr && verkehr !== 'none') {
+    lines.push('Zum Zeitpunkt der Unfallaufnahme herrschte ' + (verkehrMap[verkehr] || '[Verkehr]') + ' Verkehrsaufkommen.');
+  }
+
+  if (beleuchtung && beleuchtung !== 'none') {
+    lines.push(beleuchtungMap[beleuchtung] || '');
+  }
+
+  var verlaufVal = (verlauf && verlauf !== 'none') ? (verlaufMap[verlauf] || null) : null;
+  var steigungVal = (steigung && steigung !== 'none') ? (steigungMap[steigung] || null) : null;
+  if (verlaufVal || steigungVal) {
+    var strecke = 'Der Streckenabschnitt verläuft auf Höhe der Unfallstelle';
+    if (verlaufVal) strecke += ' ' + verlaufVal;
+    if (steigungVal) strecke += (verlaufVal ? ' und' : '') + ' weist in Fahrtrichtung ' + fahrtrichtung + ' ' + steigungVal + ' auf';
+    lines.push(strecke + '.');
+  }
+
+  var wetterVal = (wetter && wetter !== 'none') ? (wetterMap[wetter] || wetter) : null;
+  var sichtVal = (sicht && sicht !== 'none') ? (sichtMap[sicht] || sicht) : null;
+  if (wetterVal && sichtVal) {
+    lines.push('Zum Unfallzeitpunkt herrschten ' + wetterVal + ' bei ' + sichtVal + ' Sichtverhältnissen.');
+  } else if (wetterVal) {
+    lines.push('Zum Unfallzeitpunkt herrschten ' + wetterVal + '.');
+  } else if (sichtVal) {
+    lines.push('Zum Unfallzeitpunkt herrschten ' + sichtVal + ' Sichtverhältnisse.');
+  }
+
+  if (fahrbahn && fahrbahn !== 'none') {
+    lines.push('Die Fahrbahnoberfläche war zum Unfallzeitpunkt ' + (fahrbahnMap[fahrbahn] || fahrbahn) + '.');
+  }
+
+  return lines.filter(Boolean).join('\n\n');
+}
+
+function generateAbschnitt2() {
+  var parts = [
+    generateOertlichkeitText(),
+    generateVerkehrsText(),
+    spurenText().replace(/^\n+/, '')
+  ].filter(Boolean);
+  return parts.join('\n\n');
+}
 // ── Kopieren ────────────────────────────────────────────────
 
 function copyText() {
@@ -2209,7 +2295,7 @@ function resetAll() {
   besatzung = [];
   current = 0;
   branch = null;
-  mode = 'normal';
+  selectedSections = [];
   document.getElementById('strasse').value = '';
   document.getElementById('hausnummer').value = '';
   document.getElementById('plz').value = '';
@@ -2243,9 +2329,18 @@ function resetAll() {
   schildCounter = 0;
   addBesatzung();
   addSchilderung();
-  render();
+  // Show library screen again
+  var startEl = document.getElementById('screen-start');
+  startEl.style.display = '';
+  startEl.classList.remove('dismissed');
+  renderLibrary();
+  // Reset slide states
+  document.getElementById('slide-result').classList.remove('active');
   document.querySelectorAll('.slide').forEach(function (s) { s.classList.remove('active', 'exit-left'); });
-  document.getElementById('slide-0').classList.add('active');
+  document.getElementById('progress').style.width = '0%';
+  document.getElementById('stepCounter').textContent = '';
+  document.getElementById('dots').innerHTML = '';
+  document.getElementById('btnBack').disabled = true;
 }
 
 // ── Enter-Taste ─────────────────────────────────────────────

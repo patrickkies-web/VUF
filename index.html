@@ -6,8 +6,8 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Polizeibericht v3.1</title>
-  <link rel="stylesheet" href="style.css?v=3.1">
+  <title>Polizeibericht v3.2</title>
+  <link rel="stylesheet" href="style.css?v=3.2">
 </head>
 <body>
 
@@ -18,7 +18,20 @@
     <div class="start-sub">in weniger als 3&nbsp;Minuten</div>
   </div>
   <div class="start-body">
-    <button class="btn-start" id="btnStart">Aufnahme starten</button>
+    <div class="lib-group-label">Leitfaden laden</div>
+    <div class="lib-presets">
+      <button class="btn-preset" id="btnPresetStrasse">
+        <span class="preset-name">VUF Stra&szlig;e</span>
+        <span class="preset-sub">6&nbsp;Abschnitte</span>
+      </button>
+      <button class="btn-preset" id="btnPresetParkplatz">
+        <span class="preset-name">VUF Parkplatz</span>
+        <span class="preset-sub">5&nbsp;Abschnitte</span>
+      </button>
+    </div>
+    <div class="lib-group-label">Oder einzeln w&auml;hlen</div>
+    <div class="lib-bausteins" id="libraryBausteins"></div>
+    <button class="btn-start" id="btnStart" disabled>Aufnahme starten</button>
     <div class="start-disclaimer">
       <div class="disclaimer-row">
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
