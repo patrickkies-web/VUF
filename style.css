@@ -712,6 +712,13 @@ body {
   color: var(--accent);
 }
 
+.street-dropdown-hint {
+  color: var(--muted);
+  font-style: italic;
+  cursor: default;
+  pointer-events: none;
+}
+
 .btn-keine {
   opacity: .5;
   border-style: dashed;

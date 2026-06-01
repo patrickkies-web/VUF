@@ -575,7 +575,12 @@ function ermittleStandort(target) {
 
   input.addEventListener('input', function () {
     var q = this.value.trim();
-    if (!GT_STREETS || q.length < 2) { closeDropdown(); return; }
+    if (q.length < 2) { closeDropdown(); return; }
+    if (GT_STREETS === null) {
+      dd.innerHTML = '<div class="street-dropdown-item street-dropdown-hint">Straßen werden geladen …</div>';
+      dd.classList.add('open');
+      return;
+    }
     var qLow = q.toLowerCase();
     var matches = Object.keys(GT_STREETS)
       .filter(function (n) {
@@ -623,7 +628,7 @@ function ladeGueterslohStrassen() {
     var cached = localStorage.getItem('gt_streets_v2');
     if (cached) {
       var obj = JSON.parse(cached);
-      if (obj.ts && Date.now() - obj.ts < 7 * 24 * 3600 * 1000) {
+      if (obj.ts && Date.now() - obj.ts < 7 * 24 * 3600 * 1000 && Object.keys(obj.data).length > 0) {
         GT_STREETS = obj.data;
         return;
       }
@@ -631,18 +636,33 @@ function ladeGueterslohStrassen() {
   } catch (e) {}
 
   var q = '[out:json][timeout:25];area[name="Gütersloh"]["admin_level"="8"]->.gt;way["highway"]["name"](area.gt);out tags;';
-  fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q) })
-    .then(function (r) { return r.json(); })
-    .then(function (data) {
-      var names = {};
-      data.elements.forEach(function (el) {
-        var name = el.tags && el.tags.name;
-        if (name) names[name] = null;
-      });
-      GT_STREETS = names;
-      try { localStorage.setItem('gt_streets_v2', JSON.stringify({ ts: Date.now(), data: names })); } catch (e) {}
-    })
-    .catch(function () { GT_STREETS = {}; });
+  var endpoints = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://overpass.openstreetmap.fr/api/interpreter'
+  ];
+
+  function tryEndpoint(i) {
+    if (i >= endpoints.length) { GT_STREETS = {}; return; }
+    var controller = new AbortController();
+    var timer = setTimeout(function () { controller.abort(); }, 12000);
+    fetch(endpoints[i], { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: controller.signal })
+      .then(function (r) { clearTimeout(timer); return r.json(); })
+      .then(function (data) {
+        var names = {};
+        data.elements.forEach(function (el) {
+          var name = el.tags && el.tags.name;
+          if (name) names[name] = null;
+        });
+        GT_STREETS = Object.keys(names).length > 0 ? names : {};
+        if (Object.keys(names).length > 0) {
+          try { localStorage.setItem('gt_streets_v2', JSON.stringify({ ts: Date.now(), data: names })); } catch (e) {}
+        }
+      })
+      .catch(function () { clearTimeout(timer); tryEndpoint(i + 1); });
+  }
+
+  tryEndpoint(0);
 }
 
 // ── Chip-Wert lesen ─────────────────────────────────────────
