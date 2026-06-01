@@ -865,3 +865,97 @@ body {
   0%   { transform: translate(0, 0); opacity: 1; }
   100% { transform: translate(var(--dx), var(--dy)); opacity: 0; }
 }
+
+/* Fahrzeugspuren redesign */
+.fz-card {
+  border-left: 3px solid var(--accent);
+  padding: 0 0 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.fz-category-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.fz-part-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.btn-part-chip {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  padding: 6px 13px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color .15s, color .15s, background .15s, box-shadow .15s;
+}
+
+.btn-part-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(29,78,216,.04);
+}
+
+.btn-part-chip.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(29,78,216,.1);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.btn-det-next {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px 22px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background .2s, box-shadow .2s;
+  box-shadow: 0 3px 10px rgba(29,78,216,.25);
+}
+
+.btn-det-next:hover {
+  background: #1e40af;
+  box-shadow: 0 4px 14px rgba(29,78,216,.35);
+}
+
+.btn-det-next:disabled {
+  cursor: default;
+}
+
+.btn-det-back {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  color: var(--muted);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color .2s, color .2s;
+}
+
+.btn-det-back:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
