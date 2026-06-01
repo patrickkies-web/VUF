@@ -254,6 +254,7 @@ function render() {
   }
 
   if (slides[current] === 'slide-3') updatePreview();
+  if (slides[current] === 'slide-uo-p1') updateAdresseVorschlaege();
 }
 
 // ── Einsatzanlass-Vorschau ──────────────────────────────────
@@ -273,6 +274,18 @@ function buildErsterSatz(anlass) {
     : '[Besatzung]';
   return 'Am ' + datumStr + ', um ' + uhrStr + ' Uhr, erhielt die Streifenwagenbesatzung ' +
     besStr + ' folgenden Einsatz: ' + (anlass || '…') + '.';
+}
+
+function updateAdresseVorschlaege() {
+  var dl = document.getElementById('adresse-vorschlaege');
+  if (!dl) return;
+  dl.innerHTML = '';
+  var strasse = document.getElementById('strasse').value;
+  var plz = document.getElementById('plz').value;
+  var stadt = document.getElementById('stadt').value;
+  var kombiniert = [strasse, plz, stadt].filter(Boolean).join(', ');
+  if (strasse) { var o1 = document.createElement('option'); o1.value = strasse; dl.appendChild(o1); }
+  if (kombiniert && kombiniert !== strasse) { var o2 = document.createElement('option'); o2.value = kombiniert; dl.appendChild(o2); }
 }
 
 function updatePreview() {
