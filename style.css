@@ -701,6 +701,22 @@ body::before {
   border-color: var(--danger);
   box-shadow: 0 0 0 3px rgba(255, 74, 107, .12);
 }
+.btn-dev-skip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1.5px dashed #f59e0b;
+  border-radius: 8px;
+  color: #f59e0b;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: .05em;
+  padding: 8px 14px;
+  cursor: pointer;
+  opacity: .7;
+}
+.btn-dev-skip:hover { opacity: 1; }
 .btn-info {
   background: transparent;
   border: 1.5px solid var(--muted);
