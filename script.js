@@ -110,10 +110,32 @@ document.querySelectorAll('[data-group]').forEach(function (btn) {
       branch = this.dataset.value;
       nextSlide();
     }
-    if (group === 'tempo-grund') {
-      document.getElementById('vzRow').style.display = this.dataset.value === 'vz274' ? '' : 'none';
-    }
   });
+});
+
+// Speed chips (data-speed)
+document.querySelectorAll('[data-speed]').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var speed = this.dataset.speed;
+    document.getElementById('uo-tempo').value = speed;
+    document.getElementById('uo-tempo').classList.remove('field-error');
+    document.querySelectorAll('[data-speed]').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.speed === speed);
+    });
+    var grundWrap = document.querySelector('.suggestions[data-required-if="uo-tempo"]');
+    if (grundWrap) grundWrap.classList.remove('chip-error');
+  });
+});
+
+document.getElementById('uo-tempo').addEventListener('input', function () {
+  var val = this.value.trim();
+  document.querySelectorAll('[data-speed]').forEach(function (b) {
+    b.classList.toggle('active', b.dataset.speed === val);
+  });
+  if (!val) {
+    var grundWrap = document.querySelector('.suggestions[data-required-if="uo-tempo"]');
+    if (grundWrap) grundWrap.classList.remove('chip-error');
+  }
 });
 
 addBesatzung();
@@ -238,10 +260,18 @@ function nextSlide() {
     Object.keys(groups).forEach(function (g) {
       var wrap = slideEl.querySelector('.suggestions:has([data-group="' + g + '"])') ||
         (function() {
-          // fallback: find first btn with this group and get parent .suggestions
           var btn = slideEl.querySelector('[data-group="' + g + '"]');
           return btn ? btn.closest('.suggestions') : null;
         })();
+      // Skip validation when dependency field is empty
+      var requiredIf = wrap ? wrap.dataset.requiredIf : null;
+      if (requiredIf) {
+        var depEl = document.getElementById(requiredIf);
+        if (!depEl || !depEl.value.trim()) {
+          if (wrap) wrap.classList.remove('chip-error');
+          return;
+        }
+      }
       var hasActive = !!slideEl.querySelector('[data-group="' + g + '"].active');
       if (!hasActive) {
         missing = true;
@@ -585,7 +615,6 @@ function generateAbschnitt2() {
     var ortsteil = document.getElementById('uo-ortsteil').value;
     var woGenau = document.getElementById('uo-wo-genau').value;
     var tempo = document.getElementById('uo-tempo').value;
-    var vz274 = document.getElementById('uo-vz274').value || '[VZ]';
     var fahrstreifen = document.getElementById('uo-fahrstreifen').value;
     var trennung = getChipValue('trennung');
     var verkehr = getChipValue('verkehr');
@@ -633,7 +662,7 @@ function generateAbschnitt2() {
       var tempoSatz = 'Die zulässige Höchstgeschwindigkeit auf diesem Abschnitt der Straße beträgt ' + tempo + ' km/h';
       if (tempoGrundVal && tempoGrundVal !== 'none') {
         tempoSatz += ', ' + (tempoGrundVal === 'vz274'
-          ? 'vorgegeben durch das VZ. 274-' + vz274
+          ? 'vorgegeben durch das VZ. 274'
           : 'welche sich aus der Lage innerhalb geschlossener Ortschaft ergibt');
       }
       tempoSatz += '.';
@@ -722,11 +751,11 @@ function resetAll() {
   document.getElementById('nachtragenCheck').checked = false;
   document.getElementById('timeFields').classList.remove('hidden');
   // Abschnitt 2
-  ['uo-strasse', 'uo-hausnummer', 'uo-ortsteil', 'uo-wo-genau', 'uo-tempo', 'uo-vz274', 'uo-fahrstreifen', 'uo-fahrtrichtung',
+  ['uo-strasse', 'uo-hausnummer', 'uo-ortsteil', 'uo-wo-genau', 'uo-tempo', 'uo-fahrstreifen', 'uo-fahrtrichtung',
     'pk-adresse', 'pk-zugehoerigkeit', 'pk-position'].forEach(function (id) {
     document.getElementById(id).value = '';
   });
-  document.getElementById('vzRow').style.display = 'none';
+  document.querySelectorAll('[data-speed]').forEach(function (b) { b.classList.remove('active'); });
   document.getElementById('uo-spuren').value = '';
   document.getElementById('keineSpurenCheck').checked = false;
   document.getElementById('spurenFields').classList.remove('hidden');

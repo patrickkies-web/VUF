@@ -229,19 +229,22 @@
       </div>
       <div class="input-group">
         <div class="input-label">H&ouml;chstgeschwindigkeit (km/h)</div>
-        <input class="field-input" type="number" id="uo-tempo" placeholder="50" min="1" max="300">
+        <div class="suggestions" style="margin-bottom:8px">
+          <button class="btn-suggestion" data-speed="30">30</button>
+          <button class="btn-suggestion" data-speed="50">50</button>
+          <button class="btn-suggestion" data-speed="60">60</button>
+          <button class="btn-suggestion" data-speed="70">70</button>
+          <button class="btn-suggestion" data-speed="80">80</button>
+          <button class="btn-suggestion" data-speed="100">100</button>
+        </div>
+        <input class="field-input" type="number" id="uo-tempo" placeholder="sonstige km/h" min="1" max="300">
       </div>
       <div class="input-group">
-        <div class="input-label">Grundlage</div>
-        <div class="suggestions">
+        <div class="input-label">Grundlage (Pflicht bei Geschwindigkeit)</div>
+        <div class="suggestions" data-required-if="uo-tempo">
           <button class="btn-suggestion" data-group="tempo-grund" data-value="vz274">VZ. 274</button>
           <button class="btn-suggestion" data-group="tempo-grund" data-value="ortschaft">geschlossene Ortschaft</button>
-          <button class="btn-suggestion btn-keine" data-group="tempo-grund" data-value="none">—</button>
         </div>
-      </div>
-      <div class="input-group" id="vzRow" style="display:none">
-        <div class="input-label">VZ. 274 – Zahl</div>
-        <input class="field-input" type="text" id="uo-vz274" placeholder="50">
       </div>
       <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
         <button class="btn-next" id="btnUoS2">Weiter
