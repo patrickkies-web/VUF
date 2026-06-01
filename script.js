@@ -584,6 +584,7 @@ function ermittleStandort(target) {
     var hit = GT_STREETS ? GT_STREETS[name] : null;
     if (hit) fuelleAdressfelder(hit);
     else strasseDetailLaden(name);
+    setTimeout(function () { document.getElementById('hausnummer').focus(); }, 50);
   }
 
   function openDropdown(matches) {
