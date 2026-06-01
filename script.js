@@ -4,7 +4,41 @@ var current = 0;
 var besatzung = [];
 var idCounter = 0;
 var dragSrc = null;
+var touchData = { active: false, srcId: null, overItem: null };
 var today = new Date().toISOString().split('T')[0];
+
+document.addEventListener('touchmove', function (e) {
+  if (!touchData.active) return;
+  e.preventDefault();
+  var touch = e.touches[0];
+  var els = document.querySelectorAll('.besatzung-item:not(.dragging)');
+  var newOver = null;
+  els.forEach(function (el) {
+    var rect = el.getBoundingClientRect();
+    if (touch.clientY >= rect.top && touch.clientY <= rect.bottom) newOver = el;
+  });
+  if (touchData.overItem && touchData.overItem !== newOver) touchData.overItem.classList.remove('drag-over');
+  if (newOver) { newOver.classList.add('drag-over'); touchData.overItem = newOver; }
+}, { passive: false });
+
+document.addEventListener('touchend', function () {
+  if (!touchData.active) return;
+  var srcItem = document.querySelector('.besatzung-item.dragging');
+  if (srcItem) srcItem.classList.remove('dragging');
+  if (touchData.overItem) {
+    touchData.overItem.classList.remove('drag-over');
+    var fi = besatzung.findIndex(function (x) { return x.id === touchData.srcId; });
+    var ti = besatzung.findIndex(function (x) { return x.id === parseInt(touchData.overItem.dataset.bid); });
+    if (fi !== ti && fi !== -1 && ti !== -1) {
+      var moved = besatzung.splice(fi, 1)[0];
+      besatzung.splice(ti, 0, moved);
+      renderBesatzung();
+    }
+  }
+  touchData.active = false;
+  touchData.srcId = null;
+  touchData.overItem = null;
+});
 
 document.getElementById('datum').value = today;
 document.getElementById('btnAdd').onclick = addBesatzung;
@@ -40,6 +74,8 @@ function removeBesatzung(id) {
 function renderBesatzung() {
   var list = document.getElementById('besatzungList');
   list.innerHTML = '';
+  var hint = document.getElementById('dragHint');
+  if (hint) hint.style.display = besatzung.length >= 2 ? 'flex' : 'none';
 
   besatzung.forEach(function (b) {
     var item = document.createElement('div');
@@ -50,6 +86,13 @@ function renderBesatzung() {
     var handle = document.createElement('div');
     handle.className = 'drag-handle';
     handle.innerHTML = '<span></span><span></span><span></span>';
+    handle.addEventListener('touchstart', function (e) {
+      touchData.active = true;
+      touchData.srcId = b.id;
+      touchData.overItem = null;
+      item.classList.add('dragging');
+      e.preventDefault();
+    }, { passive: false });
     item.appendChild(handle);
 
     var fields = document.createElement('div');
