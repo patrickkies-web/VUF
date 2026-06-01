@@ -744,3 +744,99 @@ body::before {
   color: var(--muted);
   line-height: 1.55;
 }
+
+/* ── Generate Animation ─────────────────────────────────── */
+#genOverlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 36px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+#genOverlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: .25;
+  pointer-events: none;
+}
+#genRadarWrap {
+  position: relative;
+  width: 260px;
+  height: 260px;
+}
+#genStatus {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  color: var(--accent);
+  text-transform: uppercase;
+  min-height: 20px;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+#genFragLayer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 501;
+}
+.gen-frag {
+  position: absolute;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--accent);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: genFragAnim 1.7s ease-out forwards;
+}
+@keyframes genFragAnim {
+  0%   { opacity: 0.75; transform: translate(0, 0); }
+  70%  { opacity: 0.4; }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)); }
+}
+.gen-particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  pointer-events: none;
+  animation: genParticleAnim 0.7s ease-out forwards;
+}
+@keyframes genParticleAnim {
+  0%   { opacity: 1; transform: translate(0, 0) scale(1); box-shadow: 0 0 8px var(--accent); }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0); }
+}
+.gen-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent);
+  pointer-events: none;
+  box-shadow: 0 0 28px var(--accent), inset 0 0 20px rgba(74,158,255,.15);
+  animation: genRingAnim 0.7s ease-out forwards;
+}
+@keyframes genRingAnim {
+  0%   { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(2.8); }
+}
+.report-item-in {
+  animation: reportItemIn 0.45s ease-out backwards;
+}
+@keyframes reportItemIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
