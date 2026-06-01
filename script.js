@@ -1892,7 +1892,7 @@ function generateSchilderungenText() {
     if (!rm) return '';
     var bel = s.belehrender || '[Beamter/Beamtin]';
     var geg = s.gegenueber || '[Beamter/Beamtin]';
-    var intro = 'Nach erfolgter zeugenschaftlicher Belehrung durch ' + bel + ' gab ' + rm.disp + ' gegenüber ' + geg + ' sinngemäß folgendes an:';
+    var intro = 'Nach erfolgter zeugenschaftlicher Belehrung durch ' + bel + ' machte ' + rm.disp + ' gegenüber ' + geg + ' sinngemäß folgende Angaben:';
     var body = '';
     if (s.modus === 'vuf') {
       var datum = formatDateDE(s.abstelltDatum) || '[Datum]';
