@@ -777,3 +777,91 @@ body {
   color: var(--muted);
   line-height: 1.6;
 }
+
+/* ── Generate-Overlay ──────────────────────────────────── */
+#genOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  background: rgba(245, 247, 250, .96);
+  backdrop-filter: blur(10px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+#genFragLayer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+#genRadarWrap {
+  position: relative;
+  width: 260px;
+  height: 260px;
+}
+
+#genCanvas {
+  display: block;
+  width: 260px;
+  height: 260px;
+}
+
+#genStatus {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  letter-spacing: .14em;
+  color: var(--accent);
+  min-height: 1.4em;
+}
+
+.gen-frag {
+  position: absolute;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--accent);
+  opacity: 0;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: gen-frag-fly 1.75s ease-out forwards;
+}
+
+@keyframes gen-frag-fly {
+  0%   { opacity: 0;   transform: translate(0, 0); }
+  15%  { opacity: .65; }
+  85%  { opacity: .4;  }
+  100% { opacity: 0;   transform: translate(var(--dx), var(--dy)); }
+}
+
+.gen-ring {
+  position: absolute;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  opacity: 0;
+  animation: gen-ring-out .9s ease-out forwards;
+}
+
+@keyframes gen-ring-out {
+  0%   { transform: scale(.2); opacity: .85; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+.gen-particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: gen-particle-fly .7s ease-out forwards;
+}
+
+@keyframes gen-particle-fly {
+  0%   { transform: translate(0, 0); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)); opacity: 0; }
+}
