@@ -64,8 +64,18 @@ var KAROSSERIETEILE_REST = [
 ];
 
 var SLIDES_BASE = ['slide-0', 'slide-1', 'slide-2', 'slide-3', 'slide-uo-typ'];
-var SLIDES_STRASSE = ['slide-uo-s1', 'slide-uo-s1b', 'slide-uo-s2', 'slide-uo-s3', 'slide-uo-s4', 'slide-uo-s4b', 'slide-uo-s5', 'slide-uo-spuren', 'slide-uo-fahrzeug'];
-var SLIDES_PARKPLATZ = ['slide-uo-p1', 'slide-uo-p2', 'slide-uo-spuren', 'slide-uo-fahrzeug'];
+var SLIDES_STRASSE = ['slide-uo-s1', 'slide-uo-s1b', 'slide-uo-s2', 'slide-uo-s3', 'slide-uo-s4', 'slide-uo-s4b', 'slide-uo-s5', 'slide-uo-spuren', 'slide-uo-fahrzeug', 'slide-schilderungen'];
+var SLIDES_PARKPLATZ = ['slide-uo-p1', 'slide-uo-p2', 'slide-uo-spuren', 'slide-uo-fahrzeug', 'slide-schilderungen'];
+
+var ROLLEN_MAP = {
+  zeuge:  { disp: 'der Zeuge',               er: 'Er',  erLow: 'er',  sein: 'sein', seiner: 'seiner' },
+  zeugin: { disp: 'die Zeugin',              er: 'Sie', erLow: 'sie', sein: 'ihr',  seiner: 'ihrer'  },
+  ub02m:  { disp: 'der Unfallbeteiligte 02', er: 'Er',  erLow: 'er',  sein: 'sein', seiner: 'seiner' },
+  ub02w:  { disp: 'die Unfallbeteiligte 02', er: 'Sie', erLow: 'sie', sein: 'ihr',  seiner: 'ihrer'  }
+};
+
+var schilderungen = [];
+var schildCounter = 0;
 
 function getActiveSlides() {
   if (branch === 'strasse') return SLIDES_BASE.concat(SLIDES_STRASSE);
@@ -125,7 +135,9 @@ document.getElementById('btnUoP1').onclick = nextSlide;
 document.getElementById('btnUoP2').onclick = nextSlide;
 document.getElementById('btnUoSpuren').onclick = nextSlide;
 document.getElementById('btnAddFahrzeug').onclick = addFahrzeugSpur;
-document.getElementById('btnGenerateFahrzeug').onclick = generateResult;
+document.getElementById('btnGenerateFahrzeug').onclick = nextSlide;
+document.getElementById('btnAddSchilderung').onclick = addSchilderung;
+document.getElementById('btnGenerateSchilderungen').onclick = generateResult;
 document.getElementById('btnBack').onclick = prevSlide;
 document.getElementById('btnCopy').onclick = copyText;
 document.getElementById('btnReset').onclick = resetAll;
@@ -201,6 +213,7 @@ document.getElementById('uo-tempo').addEventListener('input', function () {
 
 addBesatzung();
 addFahrzeugSpur();
+addSchilderung();
 render();
 ladeGueterslohStrassen();
 
@@ -1215,6 +1228,237 @@ function runGenerateAnimation(frags, done) {
   setTimeout(function () { requestAnimationFrame(drawFrame); }, 350);
 }
 
+// ── Schilderungen ────────────────────────────────────────────
+
+function getBesatzungLabels() {
+  return besatzung.filter(function (b) { return b.name && b.name.trim(); }).map(function (b) {
+    return (b.dienstgrad ? b.dienstgrad + ' ' : '') + b.name.trim();
+  });
+}
+
+function getUnfallOrtVorfill() {
+  if (branch === 'strasse') {
+    var s = document.getElementById('uo-strasse').value;
+    var h = document.getElementById('uo-hausnummer').value;
+    return s ? 'in der ' + s + (h ? ' ' + h : '') : '';
+  }
+  if (branch === 'parkplatz') {
+    var pk = document.getElementById('pk-adresse').value;
+    return pk ? 'auf dem Parkplatz ' + pk : '';
+  }
+  return '';
+}
+
+function addSchilderung() {
+  schildCounter++;
+  schilderungen.push({
+    id: schildCounter,
+    rolle: '',
+    belehrender: '',
+    gegenueber: '',
+    modus: '',
+    abstelltDatum: document.getElementById('datum').value || '',
+    abstelltUhrzeit: '',
+    abstelltOrt: getUnfallOrtVorfill(),
+    rueckUhrzeit: '',
+    zwischenzeit: null,
+    zwischenzeitText: '',
+    freitext: ''
+  });
+  renderSchilderungen();
+}
+
+function removeSchilderung(id) {
+  schilderungen = schilderungen.filter(function (s) { return s.id !== id; });
+  renderSchilderungen();
+}
+
+function renderSchilderungen() {
+  var list = document.getElementById('schilderungList');
+  if (!list) return;
+  list.innerHTML = '';
+  var officers = getBesatzungLabels();
+
+  schilderungen.forEach(function (s, idx) {
+    var card = document.createElement('div');
+    card.style.cssText = 'border-left:3px solid var(--accent);padding:0 0 0 18px;display:flex;flex-direction:column;gap:20px;';
+
+    function mkGroup(lbl, content) {
+      var g = document.createElement('div');
+      g.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
+      if (lbl) { var l = document.createElement('div'); l.className = 'input-label'; l.textContent = lbl; g.appendChild(l); }
+      if (content) g.appendChild(content);
+      return g;
+    }
+
+    function mkChips(opts, cur, onChange) {
+      var wrap = document.createElement('div'); wrap.className = 'suggestions';
+      opts.forEach(function (o) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn-suggestion' + (cur === o.v ? ' active' : '');
+        btn.textContent = o.label;
+        btn.onclick = (function (v) { return function () { onChange(v); renderSchilderungen(); }; })(o.v);
+        wrap.appendChild(btn);
+      });
+      return wrap;
+    }
+
+    function mkOfficerChips(cur, onChange) {
+      var wrap = document.createElement('div'); wrap.className = 'suggestions';
+      if (!officers.length) {
+        var note = document.createElement('span');
+        note.style.cssText = 'font-size:13px;color:var(--muted);';
+        note.textContent = '— Besatzung auf Folie 1 eintragen —';
+        wrap.appendChild(note);
+      } else {
+        officers.forEach(function (name) {
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'btn-suggestion' + (cur === name ? ' active' : '');
+          btn.textContent = name;
+          btn.onclick = (function (n) { return function () { onChange(n); renderSchilderungen(); }; })(name);
+          wrap.appendChild(btn);
+        });
+      }
+      return wrap;
+    }
+
+    // Header
+    var hdr = document.createElement('div');
+    hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;';
+    var ttl = document.createElement('div');
+    ttl.className = 'input-label'; ttl.style.cssText = 'font-weight:700;font-size:15px;margin:0;';
+    ttl.textContent = 'Person ' + (idx + 1);
+    var rb = document.createElement('button');
+    rb.className = 'btn-remove'; rb.type = 'button'; rb.innerHTML = '&times;';
+    (function (sid) { rb.onclick = function () { removeSchilderung(sid); }; })(s.id);
+    hdr.appendChild(ttl); hdr.appendChild(rb);
+    card.appendChild(hdr);
+
+    // Rolle
+    card.appendChild(mkGroup('Rolle', mkChips(
+      [{ v: 'zeuge', label: 'Zeuge' }, { v: 'zeugin', label: 'Zeugin' },
+       { v: 'ub02m', label: 'Unfallbeteiligter 02' }, { v: 'ub02w', label: 'Unfallbeteiligte 02' }],
+      s.rolle, function (v) { s.rolle = v; }
+    )));
+
+    if (s.rolle) {
+      // Belehrender
+      card.appendChild(mkGroup('Belehrung durchgeführt durch', mkOfficerChips(
+        s.belehrender,
+        function (n) { s.belehrender = n; if (!s.gegenueber) s.gegenueber = n; }
+      )));
+
+      if (s.belehrender) {
+        // Gegenüber
+        card.appendChild(mkGroup('Äußerung gemacht gegenüber', mkOfficerChips(
+          s.gegenueber, function (n) { s.gegenueber = n; }
+        )));
+
+        if (s.gegenueber) {
+          // Modus
+          card.appendChild(mkGroup('Art der Schilderung', mkChips(
+            [{ v: 'vuf', label: 'Fahrzeug abgestellt & Schäden festgestellt (VUF-Standard)' },
+             { v: 'frei', label: 'Freie Schilderung' }],
+            s.modus, function (v) { s.modus = v; }
+          )));
+
+          if (s.modus === 'vuf') {
+            // Date + Abstelluhrzeit row
+            var dateRow = document.createElement('div');
+            dateRow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;';
+            function mkInpGroup(lbl, type, val, onChange) {
+              var g = document.createElement('div');
+              g.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+              var l = document.createElement('div'); l.className = 'input-label'; l.textContent = lbl;
+              var inp = document.createElement('input');
+              inp.type = type; inp.className = 'field-input'; inp.value = val;
+              inp.oninput = function () { onChange(this.value); };
+              g.appendChild(l); g.appendChild(inp);
+              return g;
+            }
+            dateRow.appendChild(mkInpGroup('Datum Abstellung', 'date', s.abstelltDatum, function (v) { s.abstelltDatum = v; }));
+            dateRow.appendChild(mkInpGroup('Uhrzeit Abstellung', 'time', s.abstelltUhrzeit, function (v) { s.abstelltUhrzeit = v; }));
+            card.appendChild(dateRow);
+
+            var ortInp = document.createElement('input');
+            ortInp.type = 'text'; ortInp.className = 'field-input';
+            ortInp.placeholder = 'z.B. in der Berliner Straße 12';
+            ortInp.value = s.abstelltOrt;
+            ortInp.oninput = function () { s.abstelltOrt = this.value; };
+            card.appendChild(mkGroup('Wo abgestellt', ortInp));
+
+            var rueckInp = document.createElement('input');
+            rueckInp.type = 'time'; rueckInp.className = 'field-input';
+            rueckInp.style.maxWidth = '160px'; rueckInp.value = s.rueckUhrzeit;
+            rueckInp.oninput = function () { s.rueckUhrzeit = this.value; };
+            card.appendChild(mkGroup('Uhrzeit der Rückkehr', rueckInp));
+
+            card.appendChild(mkGroup('Beobachtungen in der Zwischenzeit?', mkChips(
+              [{ v: 'nein', label: 'Nein' }, { v: 'ja', label: 'Ja' }],
+              s.zwischenzeit, function (v) { s.zwischenzeit = v; }
+            )));
+
+            if (s.zwischenzeit === 'ja') {
+              var zwTa = document.createElement('textarea');
+              zwTa.className = 'field-input field-textarea';
+              zwTa.placeholder = 'Was hat die Person in der Zwischenzeit beobachtet?';
+              zwTa.value = s.zwischenzeitText;
+              zwTa.oninput = function () { s.zwischenzeitText = this.value; };
+              card.appendChild(mkGroup('Beschreibung der Beobachtungen', zwTa));
+            }
+
+          } else if (s.modus === 'frei') {
+            var freiTa = document.createElement('textarea');
+            freiTa.className = 'field-input field-textarea';
+            freiTa.style.minHeight = '120px';
+            freiTa.placeholder = 'Schilderung sinngemäß eingeben …';
+            freiTa.value = s.freitext;
+            freiTa.oninput = function () { s.freitext = this.value; };
+            card.appendChild(mkGroup('Schilderung / Äußerung', freiTa));
+          }
+        }
+      }
+    }
+
+    list.appendChild(card);
+  });
+}
+
+function formatDateDE(iso) {
+  if (!iso) return '';
+  var p = iso.split('-');
+  return p.length === 3 ? p[2] + '.' + p[1] + '.' + p[0] : iso;
+}
+
+function generateSchilderungenText() {
+  if (!schilderungen.length) return '';
+  return schilderungen.map(function (s) {
+    var rm = ROLLEN_MAP[s.rolle];
+    if (!rm) return '';
+    var bel = s.belehrender || '[Beamter/Beamtin]';
+    var geg = s.gegenueber || '[Beamter/Beamtin]';
+    var intro = 'Nach erfolgter zeugenschaftlicher Belehrung durch ' + bel + ' gab ' + rm.disp + ' gegenüber ' + geg + ' sinngemäß folgendes an:';
+    var body = '';
+    if (s.modus === 'vuf') {
+      var datum = formatDateDE(s.abstelltDatum) || '[Datum]';
+      var uzeit = s.abstelltUhrzeit || '[Uhrzeit]';
+      var ort   = s.abstelltOrt || '[Ort]';
+      var rueck = s.rueckUhrzeit || '[Uhrzeit]';
+      body = rm.er + ' habe ' + rm.sein + ' Fahrzeug am ' + datum + ' gegen ' + uzeit + ' Uhr ' + ort + ' abgestellt. Bei ' + rm.seiner + ' Rückkehr gegen ' + rueck + ' Uhr habe ' + rm.erLow + ' festgestellt, dass ' + rm.sein + ' Fahrzeug beschädigt worden war.';
+      if (s.zwischenzeit === 'ja' && s.zwischenzeitText) {
+        body += ' In der Zwischenzeit habe ' + rm.erLow + ' folgendes festgestellt: ' + s.zwischenzeitText;
+      } else {
+        body += ' Weitere Feststellungen in der Zwischenzeit habe ' + rm.erLow + ' nicht gemacht.';
+      }
+    } else if (s.modus === 'frei') {
+      body = s.freitext || '[Keine Angaben]';
+    }
+    return intro + '\n\n' + body;
+  }).filter(Boolean).join('\n\n');
+}
+
 function generateResult() {
   var strasse = document.getElementById('strasse').value || '[Straße]';
   var hausnummer = document.getElementById('hausnummer').value;
@@ -1253,9 +1497,11 @@ function generateResult() {
       doc.appendChild(b);
       delay += 160;
     }
+    var text4 = generateSchilderungenText();
     appendSection('1', 'Allgemeines / Einsatzanlass', text1);
     appendSection('2', 'Unfallörtlichkeit', text2);
     appendSection('3', 'Spuren an den Fahrzeugen', text3);
+    appendSection('4', 'Schilderungen', text4);
 
     var slides = getActiveSlides();
     slides.forEach(function (id) {
@@ -1485,8 +1731,11 @@ function resetAll() {
   fahrzeugSpuren = [];
   fzCounter = 0;
   teilCounter = 0;
+  schilderungen = [];
+  schildCounter = 0;
   addBesatzung();
   addFahrzeugSpur();
+  addSchilderung();
   render();
   document.querySelectorAll('.slide').forEach(function (s) { s.classList.remove('active', 'exit-left'); });
   document.getElementById('slide-0').classList.add('active');
