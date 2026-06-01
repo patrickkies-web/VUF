@@ -1307,9 +1307,9 @@ function renderSchilderungen() {
     function mkOfficerChips(cur, onChange) {
       var wrap = document.createElement('div'); wrap.className = 'suggestions';
       if (!officers.length) {
-        var note = document.createElement('span');
-        note.style.cssText = 'font-size:13px;color:var(--muted);';
-        note.textContent = '— Besatzung auf Folie 1 eintragen —';
+        var note = document.createElement('div');
+        note.style.cssText = 'font-size:13px;color:var(--accent);background:rgba(29,78,216,.08);border:1px solid rgba(29,78,216,.25);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:8px;';
+        note.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg> Bitte zuerst die Besatzung auf <strong>Folie 1</strong> eintragen.';
         wrap.appendChild(note);
       } else {
         officers.forEach(function (name) {
@@ -1423,6 +1423,12 @@ function renderSchilderungen() {
     }
 
     list.appendChild(card);
+  });
+
+  // Scroll new content into view
+  requestAnimationFrame(function () {
+    var slide = document.getElementById('slide-schilderungen');
+    if (slide) slide.scrollTop = slide.scrollHeight;
   });
 }
 
