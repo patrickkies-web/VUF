@@ -2199,8 +2199,7 @@ function resetAll() {
 
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Enter' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'TEXTAREA') {
-    var slides = getActiveSlides();
-    if (current === slides.length - 1) generateResult();
-    else nextSlide();
+    e.preventDefault();
+    e.target.blur();
   }
 });
