@@ -1020,6 +1020,182 @@ function generateFahrzeugText() {
 
 // ── Bericht generieren ──────────────────────────────────────
 
+function collectFragments() {
+  var frags = [];
+  ['strasse', 'hausnummer', 'plz', 'stadt', 'uo-strasse', 'uo-hausnummer', 'uo-ortsteil', 'uo-tempo', 'uhrzeit'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el && el.value && el.value.trim()) frags.push(el.value.trim());
+  });
+  document.querySelectorAll('[data-group].active').forEach(function (b) {
+    var t = b.textContent.trim();
+    if (t.length > 1 && t !== '—') frags.push(t);
+  });
+  besatzung.forEach(function (b) { if (b.name) frags.push(b.name); });
+  if (frags.length < 4) frags = frags.concat(['BPOL', 'GTH', '33330', 'VUF', 'BERICHT', 'PROTOKOLL']);
+  return frags;
+}
+
+function runGenerateAnimation(frags, done) {
+  var overlay = document.getElementById('genOverlay');
+  var canvas = document.getElementById('genCanvas');
+  var statusEl = document.getElementById('genStatus');
+  var fragLayer = document.getElementById('genFragLayer');
+  var radarWrap = document.getElementById('genRadarWrap');
+
+  fragLayer.innerHTML = '';
+  radarWrap.querySelectorAll('.gen-particle,.gen-ring').forEach(function (el) { el.remove(); });
+  statusEl.textContent = '';
+  statusEl.style.color = '';
+
+  overlay.style.opacity = '1';
+  overlay.style.pointerEvents = 'all';
+
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height, cx = W / 2, cy = H / 2, R = 100;
+  var radarStart = null, radarDur = 2000, burstFired = false;
+
+  // Typewriter
+  var statusStr = 'BERICHT WIRD GENERIERT';
+  var sIdx = 0;
+  var sTimer = setInterval(function () {
+    statusEl.textContent = statusStr.slice(0, sIdx) + (sIdx < statusStr.length ? '▌' : '');
+    if (sIdx < statusStr.length) { sIdx++; } else {
+      clearInterval(sTimer);
+      var blink = true;
+      overlay._blink = setInterval(function () {
+        statusEl.textContent = statusStr + (blink ? '▌' : ' ');
+        blink = !blink;
+      }, 530);
+    }
+  }, 55);
+
+  // Fragment spawner
+  var fIdx = 0;
+  var fTimer = setInterval(function () {
+    var el = document.createElement('span');
+    el.className = 'gen-frag';
+    el.textContent = frags[fIdx % frags.length];
+    fIdx++;
+    var side = (Math.random() * 4) | 0;
+    var lx, ly, dx, dy;
+    if (side === 0) { lx = 5 + Math.random() * 85; ly = -3; dx = (Math.random() - .5) * 60; dy = 110; }
+    else if (side === 1) { lx = 103; ly = 5 + Math.random() * 85; dx = -115; dy = (Math.random() - .5) * 60; }
+    else if (side === 2) { lx = 5 + Math.random() * 85; ly = 103; dx = (Math.random() - .5) * 60; dy = -115; }
+    else { lx = -3; ly = 5 + Math.random() * 85; dx = 115; dy = (Math.random() - .5) * 60; }
+    el.style.left = lx + 'vw'; el.style.top = ly + 'vh';
+    el.style.setProperty('--dx', dx + 'vw');
+    el.style.setProperty('--dy', dy + 'vh');
+    fragLayer.appendChild(el);
+    setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 1750);
+  }, 200);
+
+  function drawFrame(ts) {
+    if (!radarStart) radarStart = ts;
+    var p = Math.min((ts - radarStart) / radarDur, 1);
+    var angle = p * Math.PI * 2 - Math.PI / 2;
+
+    ctx.clearRect(0, 0, W, H);
+
+    // BG radial glow
+    var bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, R + 40);
+    bg.addColorStop(0, 'rgba(74,158,255,.07)'); bg.addColorStop(1, 'rgba(74,158,255,0)');
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+    // Rings
+    [.33, .66, 1].forEach(function (f) {
+      ctx.beginPath(); ctx.arc(cx, cy, R * f, 0, Math.PI * 2);
+      ctx.strokeStyle = f === 1 ? 'rgba(74,158,255,.45)' : 'rgba(74,158,255,.15)';
+      ctx.lineWidth = f === 1 ? 1.5 : 1; ctx.stroke();
+    });
+
+    // Crosshairs
+    ctx.save(); ctx.setLineDash([3, 9]); ctx.strokeStyle = 'rgba(74,158,255,.18)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - R - 14, cy); ctx.lineTo(cx + R + 14, cy);
+    ctx.moveTo(cx, cy - R - 14); ctx.lineTo(cx, cy + R + 14);
+    ctx.stroke(); ctx.restore();
+
+    // Sweep sector trail
+    for (var i = 0; i < 45; i++) {
+      var frac = i / 45;
+      var a1 = angle - Math.PI * .8 * (1 - frac);
+      var a2 = angle - Math.PI * .8 * (1 - (i + 1) / 45);
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R, a1, a2);
+      ctx.fillStyle = 'rgba(74,158,255,' + (.2 * frac * frac) + ')'; ctx.fill();
+    }
+
+    // Sweep line
+    ctx.save(); ctx.shadowColor = '#4a9eff'; ctx.shadowBlur = 16;
+    ctx.beginPath(); ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(angle) * (R + 10), cy + Math.sin(angle) * (R + 10));
+    ctx.strokeStyle = '#4a9eff'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
+
+    // Tip glow dot
+    ctx.save(); ctx.shadowColor = '#fff'; ctx.shadowBlur = 22;
+    ctx.beginPath(); ctx.arc(cx + Math.cos(angle) * R, cy + Math.sin(angle) * R, 4.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff'; ctx.fill(); ctx.restore();
+
+    // Tick marks
+    for (var j = 0; j < 36; j++) {
+      var ta = (j / 36) * Math.PI * 2 - Math.PI / 2;
+      var maj = j % 9 === 0;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(ta) * (R - (maj ? 10 : 5)), cy + Math.sin(ta) * (R - (maj ? 10 : 5)));
+      ctx.lineTo(cx + Math.cos(ta) * (R + 3), cy + Math.sin(ta) * (R + 3));
+      ctx.strokeStyle = maj ? 'rgba(74,158,255,.65)' : 'rgba(74,158,255,.22)';
+      ctx.lineWidth = maj ? 1.5 : 1; ctx.stroke();
+    }
+
+    // Center dot
+    ctx.save(); ctx.shadowColor = '#4a9eff'; ctx.shadowBlur = 14;
+    ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#4a9eff'; ctx.fill(); ctx.restore();
+
+    if (p >= 1 && !burstFired) {
+      burstFired = true;
+      clearInterval(fTimer); clearInterval(sTimer);
+      if (overlay._blink) clearInterval(overlay._blink);
+      statusEl.style.color = '#10b981';
+      statusEl.textContent = 'BERICHT FERTIG ▌';
+
+      // Burst ring
+      var ring = document.createElement('div');
+      ring.className = 'gen-ring';
+      ring.style.cssText = 'position:absolute;width:220px;height:220px;left:20px;top:20px;';
+      radarWrap.appendChild(ring);
+
+      // Burst particles
+      for (var k = 0; k < 24; k++) {
+        var pa = (k / 24) * Math.PI * 2;
+        var pd = 80 + Math.random() * 55;
+        var pp = document.createElement('div');
+        pp.className = 'gen-particle';
+        pp.style.cssText = 'position:absolute;left:' + (cx - 2) + 'px;top:' + (cy - 2) + 'px;';
+        pp.style.setProperty('--dx', Math.cos(pa) * pd + 'px');
+        pp.style.setProperty('--dy', Math.sin(pa) * pd + 'px');
+        radarWrap.appendChild(pp);
+      }
+
+      setTimeout(function () {
+        overlay.style.transition = 'opacity 0.55s ease';
+        overlay.style.opacity = '0';
+        setTimeout(function () {
+          overlay.style.pointerEvents = 'none';
+          overlay.style.transition = '';
+          overlay.style.opacity = '';
+          fragLayer.innerHTML = '';
+          done();
+        }, 560);
+      }, 750);
+      return;
+    }
+
+    if (p < 1) requestAnimationFrame(drawFrame);
+  }
+
+  setTimeout(function () { requestAnimationFrame(drawFrame); }, 350);
+}
+
 function generateResult() {
   var strasse = document.getElementById('strasse').value || '[Straße]';
   var hausnummer = document.getElementById('hausnummer').value;
@@ -1031,43 +1207,49 @@ function generateResult() {
   var text1 =
     buildErsterSatz(anlass) + '\n\n' +
     'Einsatzörtlichkeit: ' + strasseVoll + ', ' + plz + ' ' + stadt + '.';
-
   var text2 = generateAbschnitt2();
   var text3 = generateFahrzeugText();
 
-  var doc = document.getElementById('reportDoc');
-  doc.innerHTML = '';
-  function appendSection(num, title, text) {
-    if (!text) return;
-    if (doc.children.length > 0) {
-      var sp = document.createElement('div');
-      sp.className = 'report-spacer';
-      doc.appendChild(sp);
+  runGenerateAnimation(collectFragments(), function () {
+    var doc = document.getElementById('reportDoc');
+    doc.innerHTML = '';
+    var delay = 0;
+    function appendSection(num, title, text) {
+      if (!text) return;
+      if (doc.children.length > 0) {
+        var sp = document.createElement('div');
+        sp.className = 'report-spacer';
+        doc.appendChild(sp);
+      }
+      var h = document.createElement('div');
+      h.className = 'report-heading report-item-in';
+      h.style.animationDelay = delay + 'ms';
+      h.textContent = num + ' ' + title;
+      doc.appendChild(h);
+      delay += 80;
+      var b = document.createElement('div');
+      b.className = 'report-body report-item-in';
+      b.style.animationDelay = delay + 'ms';
+      b.textContent = text;
+      doc.appendChild(b);
+      delay += 160;
     }
-    var h = document.createElement('div');
-    h.className = 'report-heading';
-    h.textContent = num + ' ' + title;
-    doc.appendChild(h);
-    var b = document.createElement('div');
-    b.className = 'report-body';
-    b.textContent = text;
-    doc.appendChild(b);
-  }
-  appendSection('1', 'Allgemeines / Einsatzanlass', text1);
-  appendSection('2', 'Unfallörtlichkeit', text2);
-  appendSection('3', 'Spuren an den Fahrzeugen', text3);
+    appendSection('1', 'Allgemeines / Einsatzanlass', text1);
+    appendSection('2', 'Unfallörtlichkeit', text2);
+    appendSection('3', 'Spuren an den Fahrzeugen', text3);
 
-  var slides = getActiveSlides();
-  slides.forEach(function (id) {
-    var s = document.getElementById(id);
-    s.classList.remove('active');
-    s.classList.add('exit-left');
+    var slides = getActiveSlides();
+    slides.forEach(function (id) {
+      var s = document.getElementById(id);
+      s.classList.remove('active');
+      s.classList.add('exit-left');
+    });
+    document.getElementById('slide-result').classList.add('active');
+    document.getElementById('progress').style.width = '100%';
+    document.getElementById('stepCounter').textContent = 'Fertig';
+    document.getElementById('btnBack').disabled = true;
+    document.getElementById('dots').innerHTML = '';
   });
-  document.getElementById('slide-result').classList.add('active');
-  document.getElementById('progress').style.width = '100%';
-  document.getElementById('stepCounter').textContent = 'Fertig';
-  document.getElementById('btnBack').disabled = true;
-  document.getElementById('dots').innerHTML = '';
 }
 
 function spurenText() {
