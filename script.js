@@ -11,6 +11,8 @@ var autoOrtsteil = '';
 var fahrzeugSpuren = [];
 var fzCounter = 0;
 var fzNummernMax = 2;
+var fzCurrentIdx = null;
+var fzSelectedNum = null;
 
 var KAROSSERIE_EINZELN = [
   {
@@ -57,8 +59,8 @@ var KAROSSERIE_EINZELN = [
 ];
 
 var SLIDES_BASE = ['slide-0', 'slide-1', 'slide-2', 'slide-3', 'slide-uo-typ'];
-var SLIDES_STRASSE = ['slide-uo-s1', 'slide-uo-s1b', 'slide-uo-s2', 'slide-uo-s3', 'slide-uo-s4', 'slide-uo-s4b', 'slide-uo-s5', 'slide-uo-spuren', 'slide-uo-fahrzeug', 'slide-schilderungen'];
-var SLIDES_PARKPLATZ = ['slide-uo-p1', 'slide-uo-p2', 'slide-uo-spuren', 'slide-uo-fahrzeug', 'slide-schilderungen'];
+var SLIDES_STRASSE_PRE = ['slide-uo-s1', 'slide-uo-s1b', 'slide-uo-s2', 'slide-uo-s3', 'slide-uo-s4', 'slide-uo-s4b', 'slide-uo-s5', 'slide-uo-spuren'];
+var SLIDES_PARKPLATZ_PRE = ['slide-uo-p1', 'slide-uo-p2', 'slide-uo-spuren'];
 
 var ROLLEN_MAP = {
   zeuge:  { disp: 'der Zeuge',               er: 'Er',  erLow: 'er',  sein: 'sein', seiner: 'seiner' },
@@ -71,9 +73,14 @@ var schilderungen = [];
 var schildCounter = 0;
 
 function getActiveSlides() {
-  if (branch === 'strasse') return SLIDES_BASE.concat(SLIDES_STRASSE);
-  if (branch === 'parkplatz') return SLIDES_BASE.concat(SLIDES_PARKPLATZ);
-  return SLIDES_BASE;
+  if (!branch) return SLIDES_BASE;
+  var fzDetailSlides = [];
+  if (fzCurrentIdx !== null && fahrzeugSpuren[fzCurrentIdx]) {
+    var n = fahrzeugSpuren[fzCurrentIdx].selectedTeile.length;
+    for (var i = 0; i < n; i++) fzDetailSlides.push('slide-fz-detail-' + i);
+  }
+  var pre = branch === 'strasse' ? SLIDES_STRASSE_PRE : SLIDES_PARKPLATZ_PRE;
+  return SLIDES_BASE.concat(pre).concat(['slide-fz-nummer', 'slide-fz-picker']).concat(fzDetailSlides).concat(['slide-schilderungen']);
 }
 
 // Touch drag
@@ -127,8 +134,6 @@ document.getElementById('btnUoS5').onclick = nextSlide;
 document.getElementById('btnUoP1').onclick = nextSlide;
 document.getElementById('btnUoP2').onclick = nextSlide;
 document.getElementById('btnUoSpuren').onclick = nextSlide;
-document.getElementById('btnAddFahrzeug').onclick = addFahrzeugSpur;
-document.getElementById('btnGenerateFahrzeug').onclick = nextSlide;
 document.getElementById('btnAddSchilderung').onclick = addSchilderung;
 document.getElementById('btnGenerateSchilderungen').onclick = generateResult;
 document.getElementById('btnBack').onclick = prevSlide;
@@ -205,7 +210,6 @@ document.getElementById('uo-tempo').addEventListener('input', function () {
 });
 
 addBesatzung();
-addFahrzeugSpur();
 addSchilderung();
 render();
 ladeGueterslohStrassen();
@@ -389,6 +393,7 @@ function skipSlide() {
 }
 
 function render() {
+  buildFzDetailSlides();
   var slides = getActiveSlides();
   var TOTAL = slides.length;
 
@@ -397,6 +402,7 @@ function render() {
   });
   slides.forEach(function (id, i) {
     var s = document.getElementById(id);
+    if (!s) return;
     if (i === current) s.classList.add('active');
     else if (i < current) s.classList.add('exit-left');
   });
@@ -422,7 +428,11 @@ function render() {
     if (!ot.value && autoOrtsteil) ot.value = autoOrtsteil;
   }
   if (slides[current] === 'slide-uo-p1') updateAdresseVorschlaege();
-  if (slides[current] === 'slide-uo-fahrzeug') renderFahrzeugSpuren();
+  if (slides[current] === 'slide-fz-nummer') renderFzNummer();
+  if (slides[current] === 'slide-fz-picker') renderFzPicker();
+  if (slides[current] && slides[current].indexOf('slide-fz-detail-') === 0) {
+    renderFzDetail(parseInt(slides[current].replace('slide-fz-detail-', ''), 10));
+  }
 }
 
 // ── Einsatzanlass-Vorschau ──────────────────────────────────
@@ -709,38 +719,320 @@ function getChipValue(group) {
   return active ? active.dataset.value : null;
 }
 
-// ── Fahrzeugspuren ──────────────────────────────────────────
+// ── Fahrzeugspuren (slide-basiert) ──────────────────────────
 
 function mkTeilDetail() {
   return { schadensart: [], schadensartFrei: '', verlauf: '', von: '', bis: '', lackanhaftungen: null, farbe: '', pergamintute: null, spurfix: null };
 }
 
-function addFahrzeugSpur() {
-  fzCounter++;
-  fahrzeugSpuren.push({
-    id: fzCounter,
-    zugehoerigkeit: null,
-    phase: 'number-select',
-    selectedTeile: [],
-    detailStep: 0,
-    teileDetails: {},
-    aufgrundText: null,
-    wert: '',
-    lichtbilder: null
+function buildFzDetailSlides() {
+  document.querySelectorAll('[id^="slide-fz-detail-"]').forEach(function (el) {
+    el.parentNode.removeChild(el);
   });
-  renderFahrzeugSpuren();
+  if (fzCurrentIdx === null || !fahrzeugSpuren[fzCurrentIdx]) return;
+  var fz = fahrzeugSpuren[fzCurrentIdx];
+  var anchor = document.getElementById('slide-schilderungen');
+  fz.selectedTeile.forEach(function (teilName, i) {
+    var slide = document.createElement('div');
+    slide.className = 'slide';
+    slide.id = 'slide-fz-detail-' + i;
+    anchor.parentNode.insertBefore(slide, anchor);
+  });
 }
 
-function removeFahrzeugSpur(id) {
-  fahrzeugSpuren = fahrzeugSpuren.filter(function (f) { return f.id !== id; });
-  renderFahrzeugSpuren();
+function jumpToSlide(id) {
+  buildFzDetailSlides();
+  var slides = getActiveSlides();
+  var idx = slides.indexOf(id);
+  if (idx !== -1) { current = idx; render(); }
 }
 
-function renderFahrzeugSpuren() {
-  var list = document.getElementById('fahrzeugList');
-  if (!list) return;
-  list.innerHTML = '';
+function startFahrzeugErfassen() {
+  if (!fzSelectedNum) return;
+  var existingIdx = -1;
+  for (var i = 0; i < fahrzeugSpuren.length; i++) {
+    if (fahrzeugSpuren[i].zugehoerigkeit === fzSelectedNum) { existingIdx = i; break; }
+  }
+  if (existingIdx !== -1) {
+    fzCurrentIdx = existingIdx;
+  } else {
+    fzCounter++;
+    fahrzeugSpuren.push({ id: fzCounter, zugehoerigkeit: fzSelectedNum, selectedTeile: [], teileDetails: {}, aufgrundText: null, wert: '', lichtbilder: null });
+    fzCurrentIdx = fahrzeugSpuren.length - 1;
+  }
+  nextSlide();
+}
 
+function renderFzNummer() {
+  var cont = document.getElementById('fz-nummer-content');
+  if (!cont) return;
+  cont.innerHTML = '';
+  var doneNums = fahrzeugSpuren.map(function (fz) { return fz.zugehoerigkeit; });
+
+  var numRow = document.createElement('div');
+  numRow.style.cssText = 'display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:28px;';
+  for (var n = 1; n <= fzNummernMax; n++) {
+    var numStr = n < 10 ? '0' + n : '' + n;
+    var isDone = doneNums.indexOf(numStr) !== -1;
+    var isSelected = fzSelectedNum === numStr;
+    var cls = 'btn-fz-num' + (isDone ? ' done' : '') + (isSelected ? ' selected' : '');
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = cls; btn.textContent = numStr;
+    (function (ns) { btn.onclick = function () { fzSelectedNum = ns; renderFzNummer(); }; })(numStr);
+    numRow.appendChild(btn);
+  }
+  var addBtn = document.createElement('button');
+  addBtn.type = 'button'; addBtn.className = 'btn-fz-num add'; addBtn.textContent = '+';
+  addBtn.onclick = function () { fzNummernMax++; renderFzNummer(); };
+  numRow.appendChild(addBtn);
+  cont.appendChild(numRow);
+
+  var erfassenBtn = document.createElement('button');
+  erfassenBtn.type = 'button'; erfassenBtn.className = 'btn-det-next';
+  if (!fzSelectedNum) {
+    erfassenBtn.textContent = 'Ordnungsnummer wählen';
+    erfassenBtn.disabled = true; erfassenBtn.style.opacity = '0.4'; erfassenBtn.style.cursor = 'default';
+  } else {
+    var isDoneSelected = doneNums.indexOf(fzSelectedNum) !== -1;
+    erfassenBtn.textContent = isDoneSelected ? 'Fahrzeug ' + fzSelectedNum + ' bearbeiten →' : 'Fahrzeug ' + fzSelectedNum + ' erfassen →';
+    erfassenBtn.onclick = startFahrzeugErfassen;
+  }
+  cont.appendChild(erfassenBtn);
+
+  if (fahrzeugSpuren.length > 0) {
+    var skipBtn = document.createElement('button');
+    skipBtn.type = 'button'; skipBtn.className = 'btn-det-back'; skipBtn.style.marginTop = '14px';
+    skipBtn.textContent = 'Zu den Schilderungen →';
+    skipBtn.onclick = function () { fzCurrentIdx = null; jumpToSlide('slide-schilderungen'); };
+    cont.appendChild(skipBtn);
+  }
+}
+
+function renderFzPicker() {
+  var cont = document.getElementById('fz-picker-content');
+  if (!cont) return;
+  cont.innerHTML = '';
+  if (fzCurrentIdx === null || !fahrzeugSpuren[fzCurrentIdx]) return;
+  var fz = fahrzeugSpuren[fzCurrentIdx];
+  var titleEl = document.getElementById('fz-picker-title');
+  if (titleEl) titleEl.innerHTML = 'Fahrzeug <strong>' + fz.zugehoerigkeit + '</strong>';
+
+  KAROSSERIE_EINZELN.forEach(function (bereich) {
+    var catWrap = document.createElement('div');
+    catWrap.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin-bottom:14px;';
+    var catLbl = document.createElement('div');
+    catLbl.className = 'fz-category-label'; catLbl.textContent = bereich.label;
+    catWrap.appendChild(catLbl);
+    bereich.rows.forEach(function (row) {
+      var rowEl = document.createElement('div');
+      rowEl.style.cssText = 'display:grid;grid-template-columns:repeat(' + row.length + ',1fr);gap:6px;';
+      row.forEach(function (teilName) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn-part-chip' + (fz.selectedTeile.indexOf(teilName) !== -1 ? ' active' : '');
+        btn.textContent = teilName;
+        btn.onclick = (function (t) { return function () {
+          var i = fz.selectedTeile.indexOf(t);
+          if (i !== -1) { fz.selectedTeile.splice(i, 1); delete fz.teileDetails[t]; }
+          else { fz.selectedTeile.push(t); if (!fz.teileDetails[t]) fz.teileDetails[t] = mkTeilDetail(); }
+          renderFzPicker();
+        }; })(teilName);
+        rowEl.appendChild(btn);
+      });
+      catWrap.appendChild(rowEl);
+    });
+    cont.appendChild(catWrap);
+  });
+
+  var nParts = fz.selectedTeile.length;
+  var detailBtn = document.createElement('button');
+  detailBtn.type = 'button'; detailBtn.className = 'btn-det-next'; detailBtn.style.marginTop = '8px';
+  if (nParts === 0) {
+    detailBtn.textContent = 'Bitte Teile auswählen';
+    detailBtn.disabled = true; detailBtn.style.opacity = '0.4'; detailBtn.style.cursor = 'default';
+  } else {
+    detailBtn.textContent = 'Details erfassen (' + nParts + ' Teil' + (nParts !== 1 ? 'e' : '') + ') →';
+    detailBtn.onclick = function () {
+      buildFzDetailSlides();
+      var slides = getActiveSlides();
+      var pickerIdx = slides.indexOf('slide-fz-picker');
+      if (pickerIdx !== -1 && pickerIdx < slides.length - 1) { current = pickerIdx + 1; render(); }
+    };
+  }
+  cont.appendChild(detailBtn);
+}
+
+function renderFzDetail(idx) {
+  var slideId = 'slide-fz-detail-' + idx;
+  var slide = document.getElementById(slideId);
+  if (!slide || fzCurrentIdx === null || !fahrzeugSpuren[fzCurrentIdx]) return;
+  slide.innerHTML = '';
+  var fz = fahrzeugSpuren[fzCurrentIdx];
+  var parts = fz.selectedTeile;
+  var teilName = parts[idx];
+  if (!teilName) return;
+  var detail = fz.teileDetails[teilName] || (fz.teileDetails[teilName] = mkTeilDetail());
+  var isLast = (idx === parts.length - 1);
+
+  function mkGroup(lbl, content) {
+    var g = document.createElement('div');
+    g.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
+    if (lbl) { var l = document.createElement('div'); l.className = 'input-label'; l.textContent = lbl; g.appendChild(l); }
+    if (content) g.appendChild(content);
+    return g;
+  }
+  function mkChipRow(options, cur, onChange) {
+    var sugg = document.createElement('div'); sugg.className = 'suggestions';
+    options.forEach(function (o) {
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'btn-suggestion' + (cur === o.v ? ' active' : ''); btn.textContent = o.label;
+      btn.onclick = function () { onChange(o.v); renderFzDetail(idx); };
+      sugg.appendChild(btn);
+    });
+    return sugg;
+  }
+
+  // Progress header
+  var hdr = document.createElement('div');
+  hdr.style.cssText = 'display:flex;flex-direction:column;gap:5px;margin-bottom:16px;';
+  var progMeta = document.createElement('div');
+  progMeta.style.cssText = 'font-size:12px;color:var(--muted);';
+  progMeta.textContent = 'Fahrzeug ' + fz.zugehoerigkeit + ' · Teil ' + (idx + 1) + ' von ' + parts.length;
+  var progBar = document.createElement('div');
+  progBar.style.cssText = 'height:4px;border-radius:2px;background:var(--border);overflow:hidden;';
+  var progFill = document.createElement('div');
+  progFill.style.cssText = 'height:100%;border-radius:2px;background:var(--accent);width:' + Math.round((idx + 1) / parts.length * 100) + '%;transition:width .3s;';
+  progBar.appendChild(progFill);
+  var partTitle = document.createElement('div');
+  partTitle.className = 'question-text'; partTitle.style.marginTop = '2px'; partTitle.textContent = teilName;
+  hdr.appendChild(progMeta); hdr.appendChild(progBar); hdr.appendChild(partTitle);
+  slide.appendChild(hdr);
+
+  // Copy from previous
+  if (idx > 0) {
+    var prevName = parts[idx - 1];
+    var copyBtn = document.createElement('button');
+    copyBtn.type = 'button'; copyBtn.className = 'btn-copy';
+    copyBtn.textContent = '↩ Von "' + prevName + '" übernehmen';
+    copyBtn.onclick = (function (t, p) { return function () {
+      fz.teileDetails[t] = JSON.parse(JSON.stringify(fz.teileDetails[p]));
+      renderFzDetail(idx);
+    }; })(teilName, prevName);
+    slide.appendChild(copyBtn);
+  }
+
+  var form = document.createElement('div');
+  form.style.cssText = 'display:flex;flex-direction:column;gap:16px;';
+  if (!Array.isArray(detail.schadensart)) detail.schadensart = [];
+  var schadensOpts = ['Kratzer / Lackabrieb', 'Deformierung des Fahrzeugteils', 'Delle', 'Beule'];
+  var schadensSection = document.createElement('div');
+  schadensSection.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
+  var schadensLblRow = document.createElement('div');
+  schadensLblRow.style.cssText = 'display:flex;align-items:center;gap:8px;';
+  var schadensLbl = document.createElement('div'); schadensLbl.className = 'input-label'; schadensLbl.textContent = 'Art der Beschädigung';
+  var schadensHint = document.createElement('span'); schadensHint.style.cssText = 'font-size:11px;color:var(--muted);'; schadensHint.textContent = 'Mehrauswahl möglich';
+  schadensLblRow.appendChild(schadensLbl); schadensLblRow.appendChild(schadensHint);
+  var schadensChips = document.createElement('div'); schadensChips.className = 'suggestions';
+  schadensOpts.forEach(function (o) {
+    var btn = document.createElement('button'); btn.type = 'button';
+    btn.className = 'btn-suggestion' + (detail.schadensart.indexOf(o) !== -1 ? ' active' : ''); btn.textContent = o;
+    btn.onclick = (function (opt) { return function () {
+      var i = detail.schadensart.indexOf(opt);
+      if (i !== -1) detail.schadensart.splice(i, 1); else detail.schadensart.push(opt);
+      renderFzDetail(idx);
+    }; })(o);
+    schadensChips.appendChild(btn);
+  });
+  var schadensFreiInp = document.createElement('input');
+  schadensFreiInp.type = 'text'; schadensFreiInp.className = 'field-input';
+  schadensFreiInp.placeholder = 'Sonstiges …'; schadensFreiInp.value = detail.schadensartFrei || '';
+  schadensFreiInp.oninput = function () { detail.schadensartFrei = this.value; };
+  schadensSection.appendChild(schadensLblRow); schadensSection.appendChild(schadensChips); schadensSection.appendChild(schadensFreiInp);
+  form.appendChild(schadensSection);
+
+  var hasSchadensart = detail.schadensart.length > 0 || !!detail.schadensartFrei;
+  if (hasSchadensart) {
+    form.appendChild(mkGroup('Verlauf', mkChipRow(
+      [{v:'punktuell',label:'punktuell'},{v:'horizontal',label:'horizontal'},{v:'vertikal',label:'vertikal'}],
+      detail.verlauf, function (v) { detail.verlauf = v; }
+    )));
+    if (detail.verlauf) {
+      var hoehe = document.createElement('div'); hoehe.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;';
+      function mkMiniInput(ph, val, onChange) {
+        var inp = document.createElement('input'); inp.type = 'text'; inp.className = 'field-input';
+        inp.style.cssText = 'width:70px;padding:10px 12px;font-size:15px;'; inp.placeholder = ph; inp.value = val;
+        inp.oninput = function () { onChange(this.value); }; return inp;
+      }
+      function lbl2(t) { var s = document.createElement('span'); s.className = 'input-label'; s.style.cssText = 'margin:0;white-space:nowrap;'; s.textContent = t; return s; }
+      hoehe.appendChild(lbl2('Anstoßhöhe'));
+      hoehe.appendChild(mkMiniInput('von', detail.von, function (v) { detail.von = v; }));
+      hoehe.appendChild(lbl2('–'));
+      hoehe.appendChild(mkMiniInput('bis', detail.bis, function (v) { detail.bis = v; }));
+      hoehe.appendChild(lbl2('cm'));
+      form.appendChild(mkGroup(null, hoehe));
+      form.appendChild(mkGroup('Lackanhaftungen vorhanden?', mkChipRow(
+        [{v:'ja',label:'Ja'},{v:'nein',label:'Nein'}], detail.lackanhaftungen, function (v) { detail.lackanhaftungen = v; }
+      )));
+      if (detail.lackanhaftungen === 'ja') {
+        var farbeInp = document.createElement('input'); farbeInp.type = 'text'; farbeInp.className = 'field-input';
+        farbeInp.placeholder = 'z.B. weißer'; farbeInp.value = detail.farbe;
+        farbeInp.oninput = function () { detail.farbe = this.value; };
+        form.appendChild(mkGroup('Farbe des Lackabriebs', farbeInp));
+        form.appendChild(mkGroup('Pergamintütchen genutzt?', mkChipRow(
+          [{v:'ja',label:'Ja'},{v:'nein',label:'Nein'}], detail.pergamintute, function (v) { detail.pergamintute = v; }
+        )));
+        form.appendChild(mkGroup('SPURFIX-Folie genutzt?', mkChipRow(
+          [{v:'ja',label:'Ja'},{v:'nein',label:'Nein'}], detail.spurfix, function (v) { detail.spurfix = v; }
+        )));
+      }
+    }
+  }
+  slide.appendChild(form);
+
+  if (isLast) {
+    var sep = document.createElement('hr'); sep.style.cssText = 'border:none;border-top:1px solid var(--border);margin:16px 0;';
+    slide.appendChild(sep);
+    var aufgrundGroup = document.createElement('div'); aufgrundGroup.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
+    var aufgrundLblRow = document.createElement('div'); aufgrundLblRow.style.cssText = 'display:flex;align-items:center;gap:8px;';
+    var aufgrundLbl = document.createElement('div'); aufgrundLbl.className = 'input-label'; aufgrundLbl.textContent = '"Aufgrund ..."-Satz einfügen?';
+    var infoBtn = document.createElement('button'); infoBtn.type = 'button'; infoBtn.className = 'btn-info'; infoBtn.textContent = 'ⓘ';
+    var infoBox = document.createElement('div'); infoBox.className = 'info-box'; infoBox.style.display = 'none';
+    infoBox.textContent = 'Aufgrund der festgestellten äußeren Beschädigungen können verdeckte Schäden, insbesondere an Trägerstrukturen, Befestigungspunkten, Verformungselementen nicht ausgeschlossen werden.';
+    infoBtn.onclick = function () { infoBox.style.display = infoBox.style.display === 'none' ? '' : 'none'; };
+    aufgrundLblRow.appendChild(aufgrundLbl); aufgrundLblRow.appendChild(infoBtn);
+    aufgrundGroup.appendChild(aufgrundLblRow); aufgrundGroup.appendChild(infoBox);
+    aufgrundGroup.appendChild(mkChipRow([{v:'ja',label:'Ja'},{v:'nein',label:'Nein'}], fz.aufgrundText, function (v) { fz.aufgrundText = v; }));
+    slide.appendChild(aufgrundGroup);
+    var wertInp = document.createElement('input'); wertInp.type = 'text'; wertInp.className = 'field-input';
+    wertInp.placeholder = 'z.B. 1.500'; wertInp.value = fz.wert; wertInp.oninput = function () { fz.wert = this.value; };
+    slide.appendChild(mkGroup('Schadenshöhe ca. (€) – geschätzt', wertInp));
+    slide.appendChild(mkGroup('Lichtbilder gefertigt?', mkChipRow([{v:'ja',label:'Ja'},{v:'nein',label:'Nein'}], fz.lichtbilder, function (v) { fz.lichtbilder = v; })));
+  }
+
+  var nav = document.createElement('div'); nav.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;';
+  var backBtn = document.createElement('button'); backBtn.type = 'button'; backBtn.className = 'btn-det-back'; backBtn.textContent = '← Teile';
+  backBtn.onclick = function () { var slides = getActiveSlides(); var pi = slides.indexOf('slide-fz-picker'); if (pi !== -1) { current = pi; render(); } };
+  nav.appendChild(backBtn);
+  if (idx > 0) {
+    var prevBtn = document.createElement('button'); prevBtn.type = 'button'; prevBtn.className = 'btn-det-back';
+    prevBtn.textContent = '← ' + parts[idx - 1]; prevBtn.onclick = function () { current--; render(); };
+    nav.appendChild(prevBtn);
+  }
+  if (!isLast) {
+    var nextBtn = document.createElement('button'); nextBtn.type = 'button'; nextBtn.className = 'btn-det-next';
+    nextBtn.textContent = parts[idx + 1] + ' →'; nextBtn.onclick = function () { current++; render(); };
+    nav.appendChild(nextBtn);
+  } else {
+    var fertigBtn = document.createElement('button'); fertigBtn.type = 'button'; fertigBtn.className = 'btn-det-next';
+    fertigBtn.textContent = 'Fertig →';
+    fertigBtn.onclick = function () { fzCurrentIdx = null; fzSelectedNum = null; jumpToSlide('slide-fz-nummer'); };
+    nav.appendChild(fertigBtn);
+  }
+  slide.appendChild(nav);
+}
+
+function renderFahrzeugSpuren_REMOVED() {
+  // replaced by slide-based renderFzNummer / renderFzPicker / renderFzDetail
   fahrzeugSpuren.forEach(function (fz, idx) {
     var card = document.createElement('div');
     card.className = 'fz-card';
@@ -1861,10 +2153,11 @@ function resetAll() {
   fahrzeugSpuren = [];
   fzCounter = 0;
   fzNummernMax = 2;
+  fzCurrentIdx = null;
+  fzSelectedNum = null;
   schilderungen = [];
   schildCounter = 0;
   addBesatzung();
-  addFahrzeugSpur();
   addSchilderung();
   render();
   document.querySelectorAll('.slide').forEach(function (s) { s.classList.remove('active', 'exit-left'); });
