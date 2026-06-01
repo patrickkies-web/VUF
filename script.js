@@ -348,21 +348,20 @@ function ermittleStandort(target) {
 
 document.getElementById('strasse').addEventListener('input', function () {
   var q = this.value.trim();
-  var qLow = q.toLowerCase();
+  var dl = document.getElementById('strassen-vorschlaege');
 
-  if (GT_STREETS) {
+  if (GT_STREETS && Object.prototype.hasOwnProperty.call(GT_STREETS, q)) {
     var hit = GT_STREETS[q];
-    if (hit) {
-      fuelleAdressfelder(hit);
-    } else if (hit === null) {
-      strasseDetailLaden(q);
-    }
+    if (hit) fuelleAdressfelder(hit);
+    else strasseDetailLaden(q);
+    dl.innerHTML = '';
+    return;
   }
 
-  var dl = document.getElementById('strassen-vorschlaege');
   dl.innerHTML = '';
   if (!GT_STREETS || q.length < 2) return;
 
+  var qLow = q.toLowerCase();
   Object.keys(GT_STREETS)
     .filter(function (n) {
       var low = n.toLowerCase();
