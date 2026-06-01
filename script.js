@@ -1479,7 +1479,7 @@ function generateResult() {
   var text2 = generateAbschnitt2();
   var text3 = generateFahrzeugText();
 
-  runGenerateAnimation(collectFragments(), function () {
+  (function () {
     var doc = document.getElementById('reportDoc');
     doc.innerHTML = '';
     var delay = 0;
@@ -1520,7 +1520,7 @@ function generateResult() {
     document.getElementById('stepCounter').textContent = 'Fertig';
     document.getElementById('btnBack').disabled = true;
     document.getElementById('dots').innerHTML = '';
-  });
+  })();
 }
 
 function spurenText() {
