@@ -64,7 +64,7 @@ var KAROSSERIETEILE_REST = [
 ];
 
 var SLIDES_BASE = ['slide-0', 'slide-1', 'slide-2', 'slide-3', 'slide-uo-typ'];
-var SLIDES_STRASSE = ['slide-uo-s1', 'slide-uo-s2', 'slide-uo-s3', 'slide-uo-s4', 'slide-uo-s5', 'slide-uo-spuren', 'slide-uo-fahrzeug'];
+var SLIDES_STRASSE = ['slide-uo-s1', 'slide-uo-s1b', 'slide-uo-s2', 'slide-uo-s3', 'slide-uo-s4', 'slide-uo-s4b', 'slide-uo-s5', 'slide-uo-spuren', 'slide-uo-fahrzeug'];
 var SLIDES_PARKPLATZ = ['slide-uo-p1', 'slide-uo-p2', 'slide-uo-spuren', 'slide-uo-fahrzeug'];
 
 function getActiveSlides() {
@@ -115,9 +115,11 @@ document.getElementById('btnNext1').onclick = nextSlide;
 document.getElementById('btnNext2').onclick = nextSlide;
 document.getElementById('btnNext3').onclick = nextSlide;
 document.getElementById('btnUoS1').onclick = nextSlide;
+document.getElementById('btnUoS1b').onclick = nextSlide;
 document.getElementById('btnUoS2').onclick = nextSlide;
 document.getElementById('btnUoS3').onclick = nextSlide;
 document.getElementById('btnUoS4').onclick = nextSlide;
+document.getElementById('btnUoS4b').onclick = nextSlide;
 document.getElementById('btnUoS5').onclick = nextSlide;
 document.getElementById('btnUoP1').onclick = nextSlide;
 document.getElementById('btnUoP2').onclick = nextSlide;
