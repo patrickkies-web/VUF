@@ -10,13 +10,50 @@ var GT_STREETS = null; // { name: { plz, stadt, ortsteil } | null }
 var autoOrtsteil = '';
 var fahrzeugSpuren = [];
 var fzCounter = 0;
+var fzNummernMax = 2;
 
-var KAROSSERIE_BEREICHE = [
-  { label: 'Frontbereich', teile: ['Frontschürze links', 'Frontschürze Mitte', 'Frontschürze rechts', 'Motorhaube', 'Frontscheibe', 'Scheinwerfer links', 'Scheinwerfer rechts', 'Nebelscheinwerfer links', 'Nebelscheinwerfer rechts', 'Kotflügel vorne links', 'Kotflügel vorne rechts'] },
-  { label: 'Linke Fahrzeugseite', teile: ['Außenspiegel links', 'Vordertür links', 'Hintertür links', 'Schweller links', 'A-Säule links', 'B-Säule links', 'C-Säule links', 'Radlauf vorne links', 'Radlauf hinten links', 'Felge vorne links', 'Felge hinten links', 'Seitenscheibe vorne links', 'Seitenscheibe hinten links', 'Kotflügel / Heckseitenblech links'] },
-  { label: 'Rechte Fahrzeugseite', teile: ['Außenspiegel rechts', 'Vordertür rechts', 'Hintertür rechts', 'Schweller rechts', 'A-Säule rechts', 'B-Säule rechts', 'C-Säule rechts', 'Radlauf vorne rechts', 'Radlauf hinten rechts', 'Felge vorne rechts', 'Felge hinten rechts', 'Seitenscheibe vorne rechts', 'Seitenscheibe hinten rechts', 'Kotflügel / Heckseitenblech rechts'] },
-  { label: 'Heckbereich', teile: ['Heckschürze / Stoßstange hinten', 'Heckklappe / Kofferraumdeckel', 'Heckscheibe', 'Rückleuchte links', 'Rückleuchte rechts'] },
-  { label: 'Sonstiges', teile: ['Dach', 'Unterfahrschutz'] }
+var KAROSSERIE_EINZELN = [
+  {
+    label: 'Fahrzeugfront',
+    rows: [
+      ['Motorhaube'],
+      ['Frontscheibe'],
+      ['A-Säule links', 'A-Säule rechts'],
+      ['Scheinwerfer links', 'Scheinwerfer rechts'],
+      ['Kotflügel vorne links', 'Kotflügel vorne rechts'],
+      ['Frontschürze links', 'Frontschürze Mitte', 'Frontschürze rechts'],
+      ['Nebelscheinwerfer links', 'Nebelscheinwerfer rechts']
+    ]
+  },
+  {
+    label: 'Fahrzeugmitte',
+    rows: [
+      ['Dach'],
+      ['Außenspiegel links', 'Außenspiegel rechts'],
+      ['Vordertür links', 'Vordertür rechts'],
+      ['Seitenscheibe vorne links', 'Seitenscheibe vorne rechts'],
+      ['B-Säule links', 'B-Säule rechts'],
+      ['Hintertür links', 'Hintertür rechts'],
+      ['Seitenscheibe hinten links', 'Seitenscheibe hinten rechts'],
+      ['C-Säule links', 'C-Säule rechts'],
+      ['Schweller links', 'Schweller rechts'],
+      ['Radlauf vorne links', 'Radlauf vorne rechts'],
+      ['Felge vorne links', 'Felge vorne rechts'],
+      ['Radlauf hinten links', 'Radlauf hinten rechts'],
+      ['Felge hinten links', 'Felge hinten rechts'],
+      ['Unterfahrschutz']
+    ]
+  },
+  {
+    label: 'Fahrzeugheck',
+    rows: [
+      ['Heckklappe / Kofferraumdeckel'],
+      ['Heckscheibe'],
+      ['Rückleuchte links', 'Rückleuchte rechts'],
+      ['Kotflügel / Heckseitenblech links', 'Kotflügel / Heckseitenblech rechts'],
+      ['Heckschürze links', 'Heckschürze Mitte', 'Heckschürze rechts']
+    ]
+  }
 ];
 
 var SLIDES_BASE = ['slide-0', 'slide-1', 'slide-2', 'slide-3', 'slide-uo-typ'];
@@ -682,8 +719,8 @@ function addFahrzeugSpur() {
   fzCounter++;
   fahrzeugSpuren.push({
     id: fzCounter,
-    zugehoerigkeit: '02',
-    phase: 'picker',
+    zugehoerigkeit: null,
+    phase: 'number-select',
     selectedTeile: [],
     detailStep: 0,
     teileDetails: {},
@@ -741,7 +778,7 @@ function renderFahrzeugSpuren() {
     var ttl = document.createElement('div');
     ttl.className = 'input-label';
     ttl.style.cssText = 'font-weight:700;font-size:15px;margin:0;';
-    ttl.textContent = 'Fahrzeug ' + (idx + 1);
+    ttl.textContent = 'Fahrzeug ' + (idx + 1) + (fz.zugehoerigkeit ? ' · ' + fz.zugehoerigkeit : '');
     var rb = document.createElement('button');
     rb.className = 'btn-remove';
     rb.type = 'button';
@@ -750,69 +787,110 @@ function renderFahrzeugSpuren() {
     hdr.appendChild(ttl); hdr.appendChild(rb);
     card.appendChild(hdr);
 
-    // ── Zugehörigkeit ──
-    card.appendChild(mkGroup('Zugehörigkeit', mkChipRow(
-      [{ v: '01', label: '01' }, { v: '02', label: '02' }],
-      fz.zugehoerigkeit,
-      function (v) { fz.zugehoerigkeit = v; }
-    )));
+    if (fz.phase === 'number-select') {
+      // ──────── NUMMER WÄHLEN ────────
+      var numWrap = document.createElement('div');
+      numWrap.style.cssText = 'display:flex;flex-direction:column;gap:14px;';
 
-    if (fz.phase === 'picker') {
-      // ──────── PICKER PHASE ────────
+      var numLbl = document.createElement('div');
+      numLbl.className = 'input-label';
+      numLbl.textContent = 'Welche Fahrzeugnummer?';
+      numWrap.appendChild(numLbl);
+
+      var numRow = document.createElement('div');
+      numRow.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;';
+      for (var n = 1; n <= fzNummernMax; n++) {
+        var numStr = n < 10 ? '0' + n : '' + n;
+        var numBtn = document.createElement('button');
+        numBtn.type = 'button';
+        numBtn.className = 'btn-suggestion' + (fz.zugehoerigkeit === numStr ? ' active' : '');
+        numBtn.textContent = numStr;
+        numBtn.onclick = (function (v, fzRef) { return function () { fzRef.zugehoerigkeit = v; renderFahrzeugSpuren(); }; })(numStr, fz);
+        numRow.appendChild(numBtn);
+      }
+      var addNumBtn = document.createElement('button');
+      addNumBtn.type = 'button';
+      addNumBtn.className = 'btn-suggestion';
+      addNumBtn.textContent = '+';
+      addNumBtn.style.cssText = 'font-weight:700;border-style:dashed;min-width:52px;';
+      addNumBtn.onclick = function () { fzNummernMax++; renderFahrzeugSpuren(); };
+      numRow.appendChild(addNumBtn);
+      numWrap.appendChild(numRow);
+
+      var weiterBtn = document.createElement('button');
+      weiterBtn.type = 'button';
+      weiterBtn.className = 'btn-det-next';
+      if (!fz.zugehoerigkeit) {
+        weiterBtn.textContent = 'Nummer wählen';
+        weiterBtn.disabled = true;
+        weiterBtn.style.cssText = 'opacity:0.4;cursor:default;';
+      } else {
+        weiterBtn.textContent = 'Weiter →';
+        weiterBtn.onclick = (function (fzRef) { return function () { fzRef.phase = 'picker-einzeln'; renderFahrzeugSpuren(); }; })(fz);
+      }
+      numWrap.appendChild(weiterBtn);
+      card.appendChild(numWrap);
+
+    } else if (fz.phase === 'picker-einzeln') {
+      // ──────── TEILE PICKER ────────
       var pickerWrap = document.createElement('div');
       pickerWrap.style.cssText = 'display:flex;flex-direction:column;gap:14px;';
 
+      var backNumBtn = document.createElement('button');
+      backNumBtn.type = 'button';
+      backNumBtn.className = 'btn-det-back';
+      backNumBtn.textContent = '← Nummer ändern';
+      backNumBtn.onclick = (function (fzRef) { return function () { fzRef.phase = 'number-select'; renderFahrzeugSpuren(); }; })(fz);
+      pickerWrap.appendChild(backNumBtn);
+
       var pickerLbl = document.createElement('div');
       pickerLbl.className = 'input-label';
-      pickerLbl.textContent = 'Beschädigte Fahrzeugteile markieren';
+      pickerLbl.textContent = 'Welche Fahrzeugteile sind beschädigt?';
       pickerWrap.appendChild(pickerLbl);
 
-      KAROSSERIE_BEREICHE.forEach(function (bereich) {
+      KAROSSERIE_EINZELN.forEach(function (bereich) {
         var catWrap = document.createElement('div');
         catWrap.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
         var catLbl = document.createElement('div');
         catLbl.className = 'fz-category-label';
         catLbl.textContent = bereich.label;
         catWrap.appendChild(catLbl);
-        var chips = document.createElement('div');
-        chips.className = 'fz-part-chips';
-        bereich.teile.forEach(function (teilName) {
-          var btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'btn-part-chip' + (fz.selectedTeile.indexOf(teilName) !== -1 ? ' active' : '');
-          btn.textContent = teilName;
-          btn.onclick = (function (t) { return function () {
-            var i = fz.selectedTeile.indexOf(t);
-            if (i !== -1) {
-              fz.selectedTeile.splice(i, 1);
-              delete fz.teileDetails[t];
-            } else {
-              fz.selectedTeile.push(t);
-              if (!fz.teileDetails[t]) fz.teileDetails[t] = mkTeilDetail();
-            }
-            renderFahrzeugSpuren();
-          }; })(teilName);
-          chips.appendChild(btn);
+        var catRows = document.createElement('div');
+        catRows.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+        bereich.rows.forEach(function (row) {
+          var rowEl = document.createElement('div');
+          rowEl.style.cssText = 'display:grid;grid-template-columns:repeat(' + row.length + ',1fr);gap:6px;';
+          row.forEach(function (teilName) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn-part-chip' + (fz.selectedTeile.indexOf(teilName) !== -1 ? ' active' : '');
+            btn.textContent = teilName;
+            btn.onclick = (function (t, fzRef) { return function () {
+              var i = fzRef.selectedTeile.indexOf(t);
+              if (i !== -1) { fzRef.selectedTeile.splice(i, 1); delete fzRef.teileDetails[t]; }
+              else { fzRef.selectedTeile.push(t); if (!fzRef.teileDetails[t]) fzRef.teileDetails[t] = mkTeilDetail(); }
+              renderFahrzeugSpuren();
+            }; })(teilName, fz);
+            rowEl.appendChild(btn);
+          });
+          catRows.appendChild(rowEl);
         });
-        catWrap.appendChild(chips);
+        catWrap.appendChild(catRows);
         pickerWrap.appendChild(catWrap);
       });
 
-      var n = fz.selectedTeile.length;
+      var nParts = fz.selectedTeile.length;
       var detailBtn = document.createElement('button');
       detailBtn.type = 'button';
       detailBtn.className = 'btn-det-next';
-      detailBtn.style.marginTop = '6px';
-      if (n === 0) {
+      detailBtn.style.marginTop = '4px';
+      if (nParts === 0) {
         detailBtn.textContent = 'Bitte Teile auswählen';
         detailBtn.disabled = true;
-        detailBtn.style.opacity = '0.4';
-        detailBtn.style.cursor = 'default';
+        detailBtn.style.cssText = 'opacity:0.4;cursor:default;margin-top:4px;';
       } else {
-        detailBtn.textContent = 'Details erfassen (' + n + ' Teil' + (n !== 1 ? 'e' : '') + ') →';
-        (function (fzRef) {
-          detailBtn.onclick = function () { fzRef.phase = 'detail'; fzRef.detailStep = 0; renderFahrzeugSpuren(); };
-        })(fz);
+        detailBtn.textContent = 'Details erfassen (' + nParts + ' Teil' + (nParts !== 1 ? 'e' : '') + ') →';
+        detailBtn.onclick = (function (fzRef) { return function () { fzRef.phase = 'detail'; fzRef.detailStep = 0; renderFahrzeugSpuren(); }; })(fz);
       }
       pickerWrap.appendChild(detailBtn);
       card.appendChild(pickerWrap);
@@ -971,7 +1049,7 @@ function renderFahrzeugSpuren() {
       backPickerBtn.type = 'button';
       backPickerBtn.className = 'btn-det-back';
       backPickerBtn.textContent = '← Teile bearbeiten';
-      (function (fzRef) { backPickerBtn.onclick = function () { fzRef.phase = 'picker'; renderFahrzeugSpuren(); }; })(fz);
+      (function (fzRef) { backPickerBtn.onclick = function () { fzRef.phase = 'picker-einzeln'; renderFahrzeugSpuren(); }; })(fz);
       nav.appendChild(backPickerBtn);
 
       if (step > 0) {
@@ -1782,6 +1860,7 @@ function resetAll() {
   document.querySelectorAll('.suggestions-anlass').forEach(function (el) { el.classList.remove('has-selection'); });
   fahrzeugSpuren = [];
   fzCounter = 0;
+  fzNummernMax = 2;
   schilderungen = [];
   schildCounter = 0;
   addBesatzung();
