@@ -287,6 +287,7 @@ function render() {
   }
 
   if (slides[current] === 'slide-3') updatePreview();
+  if (slides[current] === 'slide-uo-s1') updateUoAdresseChips();
   if (slides[current] === 'slide-uo-p1') updateAdresseVorschlaege();
   if (slides[current] === 'slide-uo-s2' && autoOrtsteil) {
     var f = document.getElementById('uo-ortsteil');
@@ -311,6 +312,29 @@ function buildErsterSatz(anlass) {
     : '[Besatzung]';
   return 'Am ' + datumStr + ', um ' + uhrStr + ' Uhr, erhielt die Streifenwagenbesatzung ' +
     besStr + ' folgenden Einsatz: ' + (anlass || '…') + '.';
+}
+
+function updateUoAdresseChips() {
+  var chips = document.getElementById('uo-adresse-chips');
+  if (!chips) return;
+  chips.innerHTML = '';
+  var strasse = document.getElementById('strasse').value;
+  var hausnummer = document.getElementById('hausnummer').value;
+  var strasseVoll = strasse + (hausnummer ? ' ' + hausnummer : '');
+  var options = [];
+  if (strasseVoll) options.push({ label: strasseVoll, s: strasse, nr: hausnummer });
+  if (strasse && hausnummer) options.push({ label: strasse, s: strasse, nr: '' });
+  options.forEach(function (opt) {
+    var btn = document.createElement('button');
+    btn.className = 'btn-suggestion';
+    btn.type = 'button';
+    btn.textContent = opt.label;
+    btn.addEventListener('click', function () {
+      document.getElementById('uo-strasse').value = opt.s;
+      document.getElementById('uo-hausnummer').value = opt.nr;
+    });
+    chips.appendChild(btn);
+  });
 }
 
 function updateAdresseVorschlaege() {
@@ -535,11 +559,12 @@ function spurenText() {
 function generateAbschnitt2() {
   if (!branch) return '';
 
-  var strasse = document.getElementById('strasse').value || '[Straße]';
   var plz = document.getElementById('plz').value || '[PLZ]';
   var stadt = document.getElementById('stadt').value || '[Stadt]';
 
   if (branch === 'strasse') {
+    var strasse = document.getElementById('uo-strasse').value || document.getElementById('strasse').value || '[Straße]';
+    var uoHausnummer = document.getElementById('uo-hausnummer').value;
     var lage = getChipValue('lage');
     var strassentyp = getChipValue('strassentyp');
     var ortsteil = document.getElementById('uo-ortsteil').value;
@@ -580,10 +605,11 @@ function generateAbschnitt2() {
     var lageText = (lage && lage !== 'none') ? lage + ' ' : '';
     var strassentypText = (strassentyp && strassentyp !== 'none') ? ' (' + strassentyp + ')' : '';
     var ortsteilText = ortsteil ? ' (Ortsteil: ' + ortsteil + ')' : '';
+    var strasseAdresse = strasse + (uoHausnummer ? ' ' + uoHausnummer : '');
 
     var lines = [];
     lines.push('Bei der Unfallörtlichkeit handelt es sich um die ' + lageText + 'gelegene ' +
-      strasse + strassentypText + ', in ' + plz + ' ' + stadt + ortsteilText + '.');
+      strasseAdresse + strassentypText + ', in ' + plz + ' ' + stadt + ortsteilText + '.');
 
     if (woGenau) lines.push('Der Unfall ereignete sich ' + woGenau + '.');
 
@@ -681,7 +707,7 @@ function resetAll() {
   document.getElementById('nachtragenCheck').checked = false;
   document.getElementById('timeFields').classList.remove('hidden');
   // Abschnitt 2
-  ['uo-ortsteil', 'uo-wo-genau', 'uo-tempo', 'uo-vz274', 'uo-fahrstreifen', 'uo-fahrtrichtung',
+  ['uo-strasse', 'uo-hausnummer', 'uo-ortsteil', 'uo-wo-genau', 'uo-tempo', 'uo-vz274', 'uo-fahrstreifen', 'uo-fahrtrichtung',
     'pk-adresse', 'pk-zugehoerigkeit', 'pk-position'].forEach(function (id) {
     document.getElementById(id).value = '';
   });
