@@ -6,6 +6,9 @@ var dragSrc = null;
 var branch = null; // 'strasse' | 'parkplatz'
 var touchData = { active: false, srcId: null, overItem: null };
 var today = new Date().toISOString().split('T')[0];
+var strassenTimer = null;
+var strassenMap = {};
+var autoOrtsteil = '';
 
 var SLIDES_BASE = ['slide-0', 'slide-1', 'slide-2', 'slide-3', 'slide-uo-typ'];
 var SLIDES_STRASSE = ['slide-uo-s1', 'slide-uo-s2', 'slide-uo-s3', 'slide-uo-s4', 'slide-uo-spuren'];
@@ -260,6 +263,10 @@ function render() {
 
   if (slides[current] === 'slide-3') updatePreview();
   if (slides[current] === 'slide-uo-p1') updateAdresseVorschlaege();
+  if (slides[current] === 'slide-uo-s2' && autoOrtsteil) {
+    var f = document.getElementById('uo-ortsteil');
+    if (!f.value) f.value = autoOrtsteil;
+  }
 }
 
 // ── Einsatzanlass-Vorschau ──────────────────────────────────
@@ -335,6 +342,51 @@ function ermittleStandort(target) {
     btn.disabled = false;
     alert('GPS-Zugriff wurde verweigert.');
   }, { timeout: 10000 });
+}
+
+// ── Straßen-Autocomplete (Gütersloh) ────────────────────────
+
+document.getElementById('strasse').addEventListener('input', function () {
+  var q = this.value.trim();
+  var data = strassenMap[q];
+  if (data) fuelleAdressfelder(data);
+  clearTimeout(strassenTimer);
+  if (q.length < 3) return;
+  strassenTimer = setTimeout(function () { sucheStrassenVorschlaege(q); }, 350);
+});
+
+function fuelleAdressfelder(data) {
+  document.getElementById('plz').value = data.plz || document.getElementById('plz').value;
+  document.getElementById('stadt').value = data.stadt || document.getElementById('stadt').value;
+  if (data.ortsteil) autoOrtsteil = data.ortsteil;
+}
+
+function sucheStrassenVorschlaege(query) {
+  fetch('https://nominatim.openstreetmap.org/search?' +
+    'q=' + encodeURIComponent(query + ', Gütersloh') +
+    '&format=json&addressdetails=1&limit=10&countrycodes=de&accept-language=de')
+    .then(function (r) { return r.json(); })
+    .then(function (results) {
+      var dl = document.getElementById('strassen-vorschlaege');
+      dl.innerHTML = '';
+      strassenMap = {};
+      results.forEach(function (item) {
+        var a = item.address || {};
+        var road = a.road;
+        if (!road) return;
+        var ort = a.city || a.town || a.village || '';
+        if (ort.toLowerCase().indexOf('gütersloh') === -1) return;
+        var plz = a.postcode || '';
+        var ortsteil = a.suburb || a.quarter || a.neighbourhood || '';
+        if (!strassenMap[road]) {
+          strassenMap[road] = { plz: plz, stadt: 'Gütersloh', ortsteil: ortsteil };
+          var opt = document.createElement('option');
+          opt.value = road;
+          dl.appendChild(opt);
+        }
+      });
+    })
+    .catch(function () {});
 }
 
 // ── Chip-Wert lesen ─────────────────────────────────────────
@@ -510,6 +562,9 @@ function resetAll() {
   document.getElementById('uo-spuren').value = '';
   document.getElementById('keineSpurenCheck').checked = false;
   document.getElementById('spurenFields').classList.remove('hidden');
+  strassenMap = {};
+  autoOrtsteil = '';
+  document.getElementById('strassen-vorschlaege').innerHTML = '';
   document.querySelectorAll('[data-group]').forEach(function (b) { b.classList.remove('active'); });
   addBesatzung();
   render();
