@@ -557,6 +557,36 @@ body::before {
   cursor: default;
 }
 
+.option-cards {
+  display: flex;
+  gap: 12px;
+}
+
+.option-card {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px 16px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--text);
+  transition: border-color .2s, background .2s, color .2s;
+}
+
+.option-card:hover,
+.option-card.active {
+  border-color: var(--accent);
+  background: rgba(74, 158, 255, .08);
+  color: var(--accent);
+}
+
 .suggestions {
   display: flex;
   flex-wrap: wrap;
