@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>Polizeibericht v2.2</title>
+  <title>Polizeibericht v2.3</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -60,7 +60,7 @@
         </div>
         <div class="input-group">
           <div class="input-label">Nr.</div>
-          <input class="field-input" type="text" id="hausnummer" placeholder="12">
+          <input class="field-input" type="text" id="hausnummer" placeholder="12" data-required="true">
         </div>
       </div>
       <div class="row">
@@ -169,10 +169,21 @@
       </div>
     </div>
 
-    <!-- Slide UO-S1: Lage & Straßentyp -->
+    <!-- Slide UO-S1: Adresse, Lage & Straßentyp -->
     <div class="slide" id="slide-uo-s1">
       <div class="question-number">Abschnitt 2 &middot; Frage 1</div>
-      <div class="question-text">Lage &amp;<br><strong>Stra&szlig;entyp</strong></div>
+      <div class="question-text">Adresse &amp;<br><strong>Lage der Unfall&ouml;rtlichkeit</strong></div>
+      <div class="input-group">
+        <div class="input-label">Stra&szlig;e</div>
+        <div style="display:grid;grid-template-columns:1fr 90px;gap:10px;align-items:end">
+          <input class="field-input" type="text" id="uo-strasse" placeholder="z.B. Berliner Stra&szlig;e" autocomplete="off" data-required="true">
+          <div>
+            <div class="input-label" style="margin-bottom:4px">Nr.</div>
+            <input class="field-input" type="text" id="uo-hausnummer" placeholder="12" data-required="true">
+          </div>
+        </div>
+        <div id="uo-adresse-chips" class="suggestions" style="margin-top:8px;flex-wrap:wrap"></div>
+      </div>
       <div class="input-group">
         <div class="input-label">Lage</div>
         <div class="suggestions">
@@ -218,19 +229,22 @@
       </div>
       <div class="input-group">
         <div class="input-label">H&ouml;chstgeschwindigkeit (km/h)</div>
-        <input class="field-input" type="number" id="uo-tempo" placeholder="50" min="1" max="300">
+        <div class="suggestions" style="margin-bottom:8px">
+          <button class="btn-suggestion" data-speed="30">30</button>
+          <button class="btn-suggestion" data-speed="50">50</button>
+          <button class="btn-suggestion" data-speed="60">60</button>
+          <button class="btn-suggestion" data-speed="70">70</button>
+          <button class="btn-suggestion" data-speed="80">80</button>
+          <button class="btn-suggestion" data-speed="100">100</button>
+        </div>
+        <input class="field-input" type="number" id="uo-tempo" placeholder="sonstige km/h" min="1" max="300">
       </div>
       <div class="input-group">
-        <div class="input-label">Grundlage</div>
-        <div class="suggestions">
+        <div class="input-label">Grundlage (Pflicht bei Geschwindigkeit)</div>
+        <div class="suggestions" data-required-if="uo-tempo">
           <button class="btn-suggestion" data-group="tempo-grund" data-value="vz274">VZ. 274</button>
           <button class="btn-suggestion" data-group="tempo-grund" data-value="ortschaft">geschlossene Ortschaft</button>
-          <button class="btn-suggestion btn-keine" data-group="tempo-grund" data-value="none">—</button>
         </div>
-      </div>
-      <div class="input-group" id="vzRow" style="display:none">
-        <div class="input-label">VZ. 274 – Zahl</div>
-        <input class="field-input" type="text" id="uo-vz274" placeholder="50">
       </div>
       <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
         <button class="btn-next" id="btnUoS2">Weiter
