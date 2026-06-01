@@ -529,3 +529,48 @@ body::before {
   border-color: #48bb78;
   color: #48bb78;
 }
+
+.btn-locate {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: .1em;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color .2s, color .2s;
+  align-self: flex-start;
+}
+
+.btn-locate:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-locate:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+.field-textarea {
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.5;
+}
+
+.preview-box {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 18px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--muted);
+  white-space: pre-wrap;
+  font-style: italic;
+}

@@ -1,5 +1,5 @@
 var DIENSTGRADE = ['PKin', 'PK', 'POKin', 'POK', 'PHKin', 'PHK', 'KAin', 'KA'];
-var TOTAL = 3;
+var TOTAL = 4;
 var current = 0;
 var besatzung = [];
 var idCounter = 0;
@@ -44,10 +44,13 @@ document.getElementById('datum').value = today;
 document.getElementById('btnAdd').onclick = addBesatzung;
 document.getElementById('btnNext0').onclick = nextSlide;
 document.getElementById('btnNext1').onclick = nextSlide;
+document.getElementById('btnNext2').onclick = nextSlide;
 document.getElementById('btnGenerate').onclick = generateResult;
 document.getElementById('btnBack').onclick = prevSlide;
 document.getElementById('btnCopy').onclick = copyText;
 document.getElementById('btnReset').onclick = resetAll;
+document.getElementById('btnLocate').onclick = ermittleStandort;
+document.getElementById('einsatzanlass').oninput = updatePreview;
 document.getElementById('nachtragenCheck').onchange = function () {
   document.getElementById('timeFields').classList.toggle('hidden', this.checked);
 };
@@ -170,7 +173,8 @@ function render() {
   var slides = [
     document.getElementById('slide-0'),
     document.getElementById('slide-1'),
-    document.getElementById('slide-2')
+    document.getElementById('slide-2'),
+    document.getElementById('slide-3')
   ];
   slides.forEach(function (s, i) {
     s.classList.remove('active', 'exit-left');
@@ -189,41 +193,82 @@ function render() {
     d.className = 'dot' + (i === current ? ' active' : i < current ? ' done' : '');
     dots.appendChild(d);
   }
+  if (current === 3) updatePreview();
 }
 
-function generateResult() {
+function buildErsterSatz(anlass) {
   var nachtr = document.getElementById('nachtragenCheck').checked;
   var datum = document.getElementById('datum').value;
   var uhrzeit = document.getElementById('uhrzeit').value;
-  var strasse = document.getElementById('strasse').value || '[Strasse]';
-  var plz = document.getElementById('plz').value || '[PLZ]';
-  var stadt = document.getElementById('stadt').value || '[Ort]';
-
-  var datumStr = '[DATUM]';
+  var datumStr = '[Datum]';
   if (datum) {
     var d = new Date(datum + 'T00:00:00');
     datumStr = d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
-
-  var uhrStr = nachtr ? '[nachzutragen]' : (uhrzeit || '[UHR]');
+  var uhrStr = nachtr ? '[nachzutragen]' : (uhrzeit || '[Uhrzeit]');
   var besStr = besatzung.length
     ? besatzung.map(function (b) { return (b.name || '[Name]') + ', ' + b.grad; }).join(' / ')
     : '[Besatzung]';
+  return 'Am ' + datumStr + ', um ' + uhrStr + ' Uhr, erhielt die Streifenwagenbesatzung ' +
+    besStr + ' folgenden Einsatz: ' + (anlass || '…') + '.';
+}
+
+function updatePreview() {
+  var ta = document.getElementById('einsatzanlass');
+  var box = document.getElementById('previewText');
+  if (ta && box) box.textContent = buildErsterSatz(ta.value);
+}
+
+function ermittleStandort() {
+  var btn = document.getElementById('btnLocate');
+  if (!navigator.geolocation) { alert('GPS nicht verfügbar'); return; }
+  btn.textContent = 'Wird ermittelt…';
+  btn.disabled = true;
+  navigator.geolocation.getCurrentPosition(function (pos) {
+    fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat=' +
+      pos.coords.latitude + '&lon=' + pos.coords.longitude + '&accept-language=de')
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var a = data.address || {};
+        var nr = a.house_number ? ' ' + a.house_number : '';
+        document.getElementById('strasse').value = (a.road || '') + nr;
+        document.getElementById('plz').value = a.postcode || '';
+        document.getElementById('stadt').value = a.city || a.town || a.village || a.municipality || '';
+        btn.textContent = 'Standort ermittelt ✓';
+        btn.disabled = false;
+        setTimeout(function () {
+          btn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Standort ermitteln';
+        }, 3000);
+      })
+      .catch(function () {
+        btn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Standort ermitteln';
+        btn.disabled = false;
+      });
+  }, function () {
+    btn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Standort ermitteln';
+    btn.disabled = false;
+    alert('GPS-Zugriff wurde verweigert.');
+  }, { timeout: 10000 });
+}
+
+function generateResult() {
+  var strasse = document.getElementById('strasse').value || '[Strasse]';
+  var plz = document.getElementById('plz').value || '[PLZ]';
+  var stadt = document.getElementById('stadt').value || '[Ort]';
+  var anlass = document.getElementById('einsatzanlass').value || '[Einsatzbeschreibung]';
 
   var text =
-    'Am ' + datumStr + ', um ' + uhrStr + ' Uhr, erhielt die Streifenwagenbesatzung ' +
-    besStr + ' folgenden Einsatz: [Einsatzbeschreibung].\n\n' +
+    buildErsterSatz(anlass) + '\n\n' +
     'Nach Angaben des Melders [ANGABEN].\n\n' +
-    'Einsatzortlichkeit: ' + strasse + ', ' + plz + ' ' + stadt + '.\n\n' +
-    'Die Streifenwagenbesatzung ' + besStr + ' wurde zur Einsatzortlichkeit entsandt.';
+    'Einsatzörtlichkeit: ' + strasse + ', ' + plz + ' ' + stadt + '.';
 
   document.getElementById('resultText').textContent = text;
 
   var allSlides = document.querySelectorAll('.slide');
   allSlides.forEach(function (s) { s.classList.remove('active', 'exit-left'); });
-  document.getElementById('slide-0').classList.add('exit-left');
-  document.getElementById('slide-1').classList.add('exit-left');
-  document.getElementById('slide-2').classList.add('exit-left');
+  ['slide-0', 'slide-1', 'slide-2', 'slide-3'].forEach(function (id) {
+    document.getElementById(id).classList.add('exit-left');
+  });
   document.getElementById('slide-result').classList.add('active');
   document.getElementById('progress').style.width = '100%';
   document.getElementById('stepCounter').textContent = 'Fertig';
@@ -257,6 +302,7 @@ function resetAll() {
   document.getElementById('stadt').value = '';
   document.getElementById('datum').value = today;
   document.getElementById('uhrzeit').value = '';
+  document.getElementById('einsatzanlass').value = '';
   document.getElementById('nachtragenCheck').checked = false;
   document.getElementById('timeFields').classList.remove('hidden');
   addBesatzung();
@@ -267,7 +313,7 @@ function resetAll() {
 }
 
 document.addEventListener('keydown', function (e) {
-  if (e.key === 'Enter' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SELECT') {
+  if (e.key === 'Enter' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'TEXTAREA') {
     if (current === TOTAL - 1) generateResult();
     else nextSlide();
   }

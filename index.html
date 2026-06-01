@@ -66,6 +66,12 @@
           <input class="field-input" type="text" id="stadt" placeholder="G&uuml;tersloh">
         </div>
       </div>
+      <button class="btn-locate" id="btnLocate">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+        </svg>
+        Standort ermitteln
+      </button>
       <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
         <button class="btn-next" id="btnNext1">
           Weiter
@@ -96,6 +102,29 @@
             <input class="field-input" type="time" id="uhrzeit">
           </div>
         </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
+        <button class="btn-next" id="btnNext2">
+          Weiter
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+        <div class="hint">oder <kbd>Enter</kbd></div>
+      </div>
+    </div>
+
+    <!-- Slide 4: Einsatzanlass -->
+    <div class="slide" id="slide-3">
+      <div class="question-number">Abschnitt 1 &middot; Frage 4</div>
+      <div class="question-text">Was war der<br><strong>Einsatzanlass?</strong></div>
+      <div class="input-group">
+        <div class="input-label">Einsatzbeschreibung</div>
+        <textarea class="field-input field-textarea" id="einsatzanlass" placeholder="z.B. Ruhest&ouml;rung durch laute Musik"></textarea>
+      </div>
+      <div class="input-group">
+        <div class="input-label">Vorschau &middot; Erster Satz</div>
+        <div class="preview-box" id="previewText"></div>
       </div>
       <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
         <button class="btn-next" id="btnGenerate">
