@@ -8,8 +8,8 @@ var touchData = { active: false, srcId: null, overItem: null };
 var today = new Date().toISOString().split('T')[0];
 
 var SLIDES_BASE = ['slide-0', 'slide-1', 'slide-2', 'slide-3', 'slide-uo-typ'];
-var SLIDES_STRASSE = ['slide-uo-s1', 'slide-uo-s2', 'slide-uo-s3', 'slide-uo-s4'];
-var SLIDES_PARKPLATZ = ['slide-uo-p1', 'slide-uo-p2'];
+var SLIDES_STRASSE = ['slide-uo-s1', 'slide-uo-s2', 'slide-uo-s3', 'slide-uo-s4', 'slide-uo-spuren'];
+var SLIDES_PARKPLATZ = ['slide-uo-p1', 'slide-uo-p2', 'slide-uo-spuren'];
 
 function getActiveSlides() {
   if (branch === 'strasse') return SLIDES_BASE.concat(SLIDES_STRASSE);
@@ -61,9 +61,10 @@ document.getElementById('btnNext3').onclick = nextSlide;
 document.getElementById('btnUoS1').onclick = nextSlide;
 document.getElementById('btnUoS2').onclick = nextSlide;
 document.getElementById('btnUoS3').onclick = nextSlide;
-document.getElementById('btnGenerateS').onclick = generateResult;
+document.getElementById('btnUoS4').onclick = nextSlide;
 document.getElementById('btnUoP1').onclick = nextSlide;
-document.getElementById('btnGenerateP').onclick = generateResult;
+document.getElementById('btnUoP2').onclick = nextSlide;
+document.getElementById('btnGenerateSpuren').onclick = generateResult;
 document.getElementById('btnBack').onclick = prevSlide;
 document.getElementById('btnCopy').onclick = copyText;
 document.getElementById('btnReset').onclick = resetAll;
@@ -72,6 +73,10 @@ document.getElementById('btnLocatePk').onclick = function () { ermittleStandort(
 
 document.getElementById('nachtragenCheck').onchange = function () {
   document.getElementById('timeFields').classList.toggle('hidden', this.checked);
+};
+
+document.getElementById('keineSpurenCheck').onchange = function () {
+  document.getElementById('spurenFields').classList.toggle('hidden', this.checked);
 };
 
 document.getElementById('einsatzanlass').oninput = function () {
@@ -370,6 +375,12 @@ function generateResult() {
   document.getElementById('dots').innerHTML = '';
 }
 
+function spurenText() {
+  if (document.getElementById('keineSpurenCheck').checked) return '';
+  var v = document.getElementById('uo-spuren').value.trim();
+  return v ? '\n\nAuf der Fahrbahn wurden folgende Spuren festgestellt: ' + v + '.' : '';
+}
+
 function generateAbschnitt2() {
   if (!branch) return '';
 
@@ -433,7 +444,8 @@ function generateAbschnitt2() {
       (beleuchtungMap[beleuchtung] || '[Beleuchtung]') + '\n\n' +
       'Der Streckenabschnitt verläuft auf Höhe der Unfallstelle ' +
       (verlaufMap[verlauf] || '[Verlauf]') + ' und weist in Fahrtrichtung ' + fahrtrichtung +
-      ' ' + (steigungMap[steigung] || '[Steigung]') + ' auf.';
+      ' ' + (steigungMap[steigung] || '[Steigung]') + ' auf.' +
+      spurenText();
   }
 
   if (branch === 'parkplatz') {
@@ -442,7 +454,7 @@ function generateAbschnitt2() {
     var pkPosition = document.getElementById('pk-position').value || '[Position]';
 
     return 'Bei der Unfallörtlichkeit handelt es sich um den ' + pkZugehoerigkeit +
-      ', ' + pkAdresse + ', ' + plz + ' ' + stadt + '.\n\n' + pkPosition;
+      ', ' + pkAdresse + ', ' + plz + ' ' + stadt + '.\n\n' + pkPosition + spurenText();
   }
 
   return '';
@@ -495,6 +507,9 @@ function resetAll() {
     document.getElementById(id).value = '';
   });
   document.getElementById('vzRow').style.display = 'none';
+  document.getElementById('uo-spuren').value = '';
+  document.getElementById('keineSpurenCheck').checked = false;
+  document.getElementById('spurenFields').classList.remove('hidden');
   document.querySelectorAll('[data-group]').forEach(function (b) { b.classList.remove('active'); });
   addBesatzung();
   render();
