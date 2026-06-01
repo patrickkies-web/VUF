@@ -696,3 +696,30 @@ body::before {
   border-color: var(--danger);
   box-shadow: 0 0 0 3px rgba(255, 74, 107, .12);
 }
+.btn-info {
+  background: transparent;
+  border: 1.5px solid var(--muted);
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.btn-info:hover { border-color: var(--accent); color: var(--accent); }
+.info-box {
+  background: rgba(74, 158, 255, .07);
+  border: 1px solid rgba(74, 158, 255, .2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.55;
+}
