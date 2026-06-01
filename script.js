@@ -10,7 +10,7 @@ var GT_STREETS = null; // { name: { plz, stadt, ortsteil } | null }
 var autoOrtsteil = '';
 
 var SLIDES_BASE = ['slide-0', 'slide-1', 'slide-2', 'slide-3', 'slide-uo-typ'];
-var SLIDES_STRASSE = ['slide-uo-s1', 'slide-uo-s2', 'slide-uo-s3', 'slide-uo-s4', 'slide-uo-spuren'];
+var SLIDES_STRASSE = ['slide-uo-s1', 'slide-uo-s2', 'slide-uo-s3', 'slide-uo-s4', 'slide-uo-s5', 'slide-uo-spuren'];
 var SLIDES_PARKPLATZ = ['slide-uo-p1', 'slide-uo-p2', 'slide-uo-spuren'];
 
 function getActiveSlides() {
@@ -64,6 +64,7 @@ document.getElementById('btnUoS1').onclick = nextSlide;
 document.getElementById('btnUoS2').onclick = nextSlide;
 document.getElementById('btnUoS3').onclick = nextSlide;
 document.getElementById('btnUoS4').onclick = nextSlide;
+document.getElementById('btnUoS5').onclick = nextSlide;
 document.getElementById('btnUoP1').onclick = nextSlide;
 document.getElementById('btnUoP2').onclick = nextSlide;
 document.getElementById('btnGenerateSpuren').onclick = generateResult;
@@ -733,6 +734,44 @@ function generateAbschnitt2() {
       if (verlaufVal) strecke += ' ' + verlaufVal;
       if (steigungVal) strecke += (verlaufVal ? ' und' : '') + ' weist in Fahrtrichtung ' + fahrtrichtung + ' ' + steigungVal + ' auf';
       lines.push(strecke + '.');
+    }
+
+    var wetter = getChipValue('wetter');
+    var fahrbahn = getChipValue('fahrbahn');
+    var sicht = getChipValue('sicht');
+
+    var wetterMap = {
+      'trocken': 'trockene Witterung',
+      'regen': 'Regen',
+      'schneefall': 'Schneefall',
+      'nebel': 'Nebel',
+      'frost-eis': 'Frost und Eisglätte'
+    };
+    var fahrbahnMap = {
+      'trocken': 'trocken',
+      'nass': 'nass',
+      'feucht': 'feucht',
+      'verschneit': 'mit Schnee bedeckt',
+      'vereist': 'vereist'
+    };
+    var sichtMap = {
+      'gut': 'guten',
+      'eingeschraenkt': 'eingeschränkten',
+      'schlecht': 'schlechten'
+    };
+
+    var wetterVal = (wetter && wetter !== 'none') ? (wetterMap[wetter] || wetter) : null;
+    var sichtVal = (sicht && sicht !== 'none') ? (sichtMap[sicht] || sicht) : null;
+    if (wetterVal && sichtVal) {
+      lines.push('Zum Unfallzeitpunkt herrschten ' + wetterVal + ' bei ' + sichtVal + ' Sichtverhältnissen.');
+    } else if (wetterVal) {
+      lines.push('Zum Unfallzeitpunkt herrschten ' + wetterVal + '.');
+    } else if (sichtVal) {
+      lines.push('Zum Unfallzeitpunkt herrschten ' + sichtVal + ' Sichtverhältnisse.');
+    }
+
+    if (fahrbahn && fahrbahn !== 'none') {
+      lines.push('Die Fahrbahnoberfläche war zum Unfallzeitpunkt ' + (fahrbahnMap[fahrbahn] || fahrbahn) + '.');
     }
 
     return lines.filter(Boolean).join('\n\n') + spurenText();
