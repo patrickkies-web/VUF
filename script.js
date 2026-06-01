@@ -721,11 +721,11 @@ function renderFahrzeugSpuren() {
 
   fahrzeugSpuren.forEach(function (fz, idx) {
     var card = document.createElement('div');
-    card.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px;';
+    card.style.cssText = 'border-left:3px solid var(--accent);padding:0 0 0 18px;display:flex;flex-direction:column;gap:20px;';
 
     function mkGroup(lbl, content) {
       var g = document.createElement('div');
-      g.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+      g.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
       if (lbl) {
         var l = document.createElement('div');
         l.className = 'input-label';
@@ -755,7 +755,7 @@ function renderFahrzeugSpuren() {
     hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;';
     var ttl = document.createElement('div');
     ttl.className = 'input-label';
-    ttl.style.fontWeight = '700';
+    ttl.style.cssText = 'font-weight:700;font-size:15px;margin:0;';
     ttl.textContent = 'Fahrzeug ' + (idx + 1);
     var rb = document.createElement('button');
     rb.className = 'btn-remove';
@@ -774,17 +774,18 @@ function renderFahrzeugSpuren() {
 
     // ── Fahrzeugteile ──
     var teileWrap = document.createElement('div');
-    teileWrap.style.cssText = 'display:flex;flex-direction:column;gap:10px;';
+    teileWrap.style.cssText = 'display:flex;flex-direction:column;gap:0;';
     var teileLabel = document.createElement('div');
     teileLabel.className = 'input-label';
+    teileLabel.style.marginBottom = '12px';
     teileLabel.textContent = 'Fahrzeugteile';
     teileWrap.appendChild(teileLabel);
 
-    fz.teile.forEach(function (teil) {
+    fz.teile.forEach(function (teil, tIdx) {
       var row = document.createElement('div');
-      row.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px;';
+      row.style.cssText = 'display:flex;flex-direction:column;gap:16px;padding:' + (tIdx > 0 ? '20px 0 0 0' : '0') + ';' + (tIdx > 0 ? 'border-top:1px solid var(--border);margin-top:20px;' : '');
 
-      // Dropdown + remove
+      // Step 1: Dropdown + remove
       var teilHdr = document.createElement('div');
       teilHdr.style.cssText = 'display:flex;gap:8px;align-items:center;';
       var sel = document.createElement('select');
@@ -808,7 +809,7 @@ function renderFahrzeugSpuren() {
       }
       addOptGroup('Häufig betroffen', KAROSSERIETEILE_TOP);
       addOptGroup('Weitere Fahrzeugteile', KAROSSERIETEILE_REST);
-      sel.onchange = function () { teil.teil = this.value; };
+      sel.onchange = function () { teil.teil = this.value; renderFahrzeugSpuren(); };
 
       var rb2 = document.createElement('button');
       rb2.className = 'btn-remove';
@@ -820,103 +821,108 @@ function renderFahrzeugSpuren() {
       teilHdr.appendChild(rb2);
       row.appendChild(teilHdr);
 
-      // Art der Beschädigung (multi-select)
-      var schadensOpts = ['Kratzer / Lackabrieb', 'Deformierung des Fahrzeugteils', 'Delle', 'Beule'];
-      var schadensRow = document.createElement('div');
-      schadensRow.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
-      var schadensLblRow = document.createElement('div');
-      schadensLblRow.style.cssText = 'display:flex;align-items:center;gap:8px;';
-      var schadensLbl = document.createElement('div');
-      schadensLbl.className = 'input-label';
-      schadensLbl.textContent = 'Art der Beschädigung';
-      schadensLblRow.appendChild(schadensLbl);
-      var schadensHint = document.createElement('span');
-      schadensHint.style.cssText = 'font-size:11px;color:var(--muted);';
-      schadensHint.textContent = 'Mehrauswahl möglich';
-      schadensLblRow.appendChild(schadensHint);
-      var schadensChips = document.createElement('div');
-      schadensChips.className = 'suggestions';
-      if (!Array.isArray(teil.schadensart)) teil.schadensart = [];
-      schadensOpts.forEach(function (o) {
-        var btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'btn-suggestion' + (teil.schadensart.indexOf(o) !== -1 ? ' active' : '');
-        btn.textContent = o;
-        btn.onclick = function () {
-          var idx = teil.schadensart.indexOf(o);
-          if (idx !== -1) { teil.schadensart.splice(idx, 1); } else { teil.schadensart.push(o); }
-          renderFahrzeugSpuren();
-        };
-        schadensChips.appendChild(btn);
-      });
-      var schadensFreiInp = document.createElement('input');
-      schadensFreiInp.type = 'text'; schadensFreiInp.className = 'field-input';
-      schadensFreiInp.style.cssText = 'margin-top:6px;';
-      schadensFreiInp.placeholder = 'Sonstiges …';
-      schadensFreiInp.value = teil.schadensartFrei || '';
-      schadensFreiInp.oninput = function () { teil.schadensartFrei = this.value; };
-      schadensRow.appendChild(schadensLblRow);
-      schadensRow.appendChild(schadensChips);
-      schadensRow.appendChild(schadensFreiInp);
-      row.appendChild(schadensRow);
+      if (teil.teil) {
+        // Step 2: Art der Beschädigung (multi-select)
+        if (!Array.isArray(teil.schadensart)) teil.schadensart = [];
+        var schadensOpts = ['Kratzer / Lackabrieb', 'Deformierung des Fahrzeugteils', 'Delle', 'Beule'];
+        var schadensSection = document.createElement('div');
+        schadensSection.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
+        var schadensLblRow = document.createElement('div');
+        schadensLblRow.style.cssText = 'display:flex;align-items:center;gap:8px;';
+        var schadensLbl = document.createElement('div');
+        schadensLbl.className = 'input-label';
+        schadensLbl.textContent = 'Art der Beschädigung';
+        var schadensHint = document.createElement('span');
+        schadensHint.style.cssText = 'font-size:11px;color:var(--muted);';
+        schadensHint.textContent = 'Mehrauswahl möglich';
+        schadensLblRow.appendChild(schadensLbl);
+        schadensLblRow.appendChild(schadensHint);
+        var schadensChips = document.createElement('div');
+        schadensChips.className = 'suggestions';
+        schadensOpts.forEach(function (o) {
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'btn-suggestion' + (teil.schadensart.indexOf(o) !== -1 ? ' active' : '');
+          btn.textContent = o;
+          btn.onclick = (function (opt) { return function () {
+            var i = teil.schadensart.indexOf(opt);
+            if (i !== -1) { teil.schadensart.splice(i, 1); } else { teil.schadensart.push(opt); }
+            renderFahrzeugSpuren();
+          }; })(o);
+          schadensChips.appendChild(btn);
+        });
+        var schadensFreiInp = document.createElement('input');
+        schadensFreiInp.type = 'text'; schadensFreiInp.className = 'field-input';
+        schadensFreiInp.placeholder = 'Sonstiges …';
+        schadensFreiInp.value = teil.schadensartFrei || '';
+        schadensFreiInp.oninput = function () { teil.schadensartFrei = this.value; };
+        schadensSection.appendChild(schadensLblRow);
+        schadensSection.appendChild(schadensChips);
+        schadensSection.appendChild(schadensFreiInp);
+        row.appendChild(schadensSection);
 
-      // Verlauf chips
-      row.appendChild(mkGroup('Verlauf', mkChipRow(
-        [{ v: 'punktuell', label: 'punktuell' }, { v: 'horizontal', label: 'horizontal' }, { v: 'vertikal', label: 'vertikal' }],
-        teil.verlauf,
-        function (v) { teil.verlauf = v; }
-      )));
+        var hasSchadensart = teil.schadensart.length > 0 || !!teil.schadensartFrei;
+        if (hasSchadensart) {
+          // Step 3: Verlauf
+          row.appendChild(mkGroup('Verlauf', mkChipRow(
+            [{ v: 'punktuell', label: 'punktuell' }, { v: 'horizontal', label: 'horizontal' }, { v: 'vertikal', label: 'vertikal' }],
+            teil.verlauf,
+            function (v) { teil.verlauf = v; }
+          )));
 
-      // Anstoßhöhe von/bis
-      var hoehe = document.createElement('div');
-      hoehe.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;';
-      function mkMiniInput(placeholder, val, onChange) {
-        var inp = document.createElement('input');
-        inp.type = 'text'; inp.className = 'field-input';
-        inp.style.cssText = 'width:70px;padding:10px 12px;font-size:15px;';
-        inp.placeholder = placeholder; inp.value = val;
-        inp.oninput = function () { onChange(this.value); };
-        return inp;
-      }
-      function lbl(t) {
-        var s = document.createElement('span');
-        s.className = 'input-label';
-        s.style.cssText = 'margin:0;white-space:nowrap;';
-        s.textContent = t;
-        return s;
-      }
-      hoehe.appendChild(lbl('Anstoßhöhe'));
-      hoehe.appendChild(mkMiniInput('von', teil.von, function (v) { teil.von = v; }));
-      hoehe.appendChild(lbl('–'));
-      hoehe.appendChild(mkMiniInput('bis', teil.bis, function (v) { teil.bis = v; }));
-      hoehe.appendChild(lbl('cm'));
-      row.appendChild(mkGroup(null, hoehe));
+          if (teil.verlauf) {
+            // Step 4: Anstoßhöhe
+            var hoehe = document.createElement('div');
+            hoehe.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;';
+            function mkMiniInput(ph, val, onChange) {
+              var inp = document.createElement('input');
+              inp.type = 'text'; inp.className = 'field-input';
+              inp.style.cssText = 'width:70px;padding:10px 12px;font-size:15px;';
+              inp.placeholder = ph; inp.value = val;
+              inp.oninput = function () { onChange(this.value); };
+              return inp;
+            }
+            function lbl(t) {
+              var s = document.createElement('span');
+              s.className = 'input-label';
+              s.style.cssText = 'margin:0;white-space:nowrap;';
+              s.textContent = t; return s;
+            }
+            hoehe.appendChild(lbl('Anstoßhöhe'));
+            hoehe.appendChild(mkMiniInput('von', teil.von, function (v) { teil.von = v; }));
+            hoehe.appendChild(lbl('–'));
+            hoehe.appendChild(mkMiniInput('bis', teil.bis, function (v) { teil.bis = v; }));
+            hoehe.appendChild(lbl('cm'));
+            row.appendChild(mkGroup(null, hoehe));
 
-      // Lackanhaftungen per Teil
-      row.appendChild(mkGroup('Lackanhaftungen vorhanden?', mkChipRow(
-        [{ v: 'ja', label: 'Ja' }, { v: 'nein', label: 'Nein' }],
-        teil.lackanhaftungen,
-        function (v) { teil.lackanhaftungen = v; }
-      )));
+            // Step 5: Lackanhaftungen
+            row.appendChild(mkGroup('Lackanhaftungen vorhanden?', mkChipRow(
+              [{ v: 'ja', label: 'Ja' }, { v: 'nein', label: 'Nein' }],
+              teil.lackanhaftungen,
+              function (v) { teil.lackanhaftungen = v; }
+            )));
 
-      if (teil.lackanhaftungen === 'ja') {
-        var farbeInp = document.createElement('input');
-        farbeInp.type = 'text'; farbeInp.className = 'field-input';
-        farbeInp.placeholder = 'z.B. weißer'; farbeInp.value = teil.farbe;
-        farbeInp.oninput = function () { teil.farbe = this.value; };
-        row.appendChild(mkGroup('Farbe des Lackabriebs', farbeInp));
+            if (teil.lackanhaftungen === 'ja') {
+              var farbeInp = document.createElement('input');
+              farbeInp.type = 'text'; farbeInp.className = 'field-input';
+              farbeInp.placeholder = 'z.B. weißer'; farbeInp.value = teil.farbe;
+              farbeInp.oninput = function () { teil.farbe = this.value; };
+              row.appendChild(mkGroup('Farbe des Lackabriebs', farbeInp));
 
-        row.appendChild(mkGroup('Pergamintütchen genutzt?', mkChipRow(
-          [{ v: 'ja', label: 'Ja' }, { v: 'nein', label: 'Nein' }],
-          teil.pergamintute,
-          function (v) { teil.pergamintute = v; }
-        )));
+              row.appendChild(mkGroup('Pergamintütchen genutzt?', mkChipRow(
+                [{ v: 'ja', label: 'Ja' }, { v: 'nein', label: 'Nein' }],
+                teil.pergamintute,
+                function (v) { teil.pergamintute = v; }
+              )));
 
-        row.appendChild(mkGroup('SPURFIX-Folie genutzt?', mkChipRow(
-          [{ v: 'ja', label: 'Ja' }, { v: 'nein', label: 'Nein' }],
-          teil.spurfix,
-          function (v) { teil.spurfix = v; }
-        )));
+              row.appendChild(mkGroup('SPURFIX-Folie genutzt?', mkChipRow(
+                [{ v: 'ja', label: 'Ja' }, { v: 'nein', label: 'Nein' }],
+                teil.spurfix,
+                function (v) { teil.spurfix = v; }
+              )));
+            }
+          }
+        }
       }
 
       teileWrap.appendChild(row);
@@ -926,14 +932,14 @@ function renderFahrzeugSpuren() {
     addTeilBtn.type = 'button';
     addTeilBtn.className = 'btn-add';
     addTeilBtn.innerHTML = '<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Fahrzeugteil hinzufügen';
-    addTeilBtn.style.cssText = 'font-size:13px;padding:7px 14px;';
+    addTeilBtn.style.cssText = 'font-size:13px;padding:7px 14px;margin-top:16px;';
     (function (fzRef) { addTeilBtn.onclick = function () { addTeil(fzRef); }; })(fz);
     teileWrap.appendChild(addTeilBtn);
     card.appendChild(teileWrap);
 
     // ── Aufgrund-Satz ──
     var aufgrundGroup = document.createElement('div');
-    aufgrundGroup.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+    aufgrundGroup.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
     var aufgrundLblRow = document.createElement('div');
     aufgrundLblRow.style.cssText = 'display:flex;align-items:center;gap:8px;';
     var aufgrundLbl = document.createElement('div');
