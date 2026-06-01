@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Polizeibericht</title>
+  <title>Polizeibericht v1.4</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -298,10 +298,9 @@
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
-        <button class="btn-next" id="btnGenerateS">Bericht erstellen
+        <button class="btn-next" id="btnUoS4">Weiter
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </button>
-        <div class="hint">oder <kbd>Enter</kbd></div>
       </div>
     </div>
 
@@ -340,7 +339,28 @@
         <textarea class="field-input field-textarea" id="pk-position" placeholder="z.B. im hinteren Bereich, Reihe 3 von Norden"></textarea>
       </div>
       <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
-        <button class="btn-next" id="btnGenerateP">Bericht erstellen
+        <button class="btn-next" id="btnUoP2">Weiter
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Slide UO-Spuren: Spuren auf der Fahrbahn -->
+    <div class="slide" id="slide-uo-spuren">
+      <div class="question-number">Abschnitt 2 &middot; Spuren</div>
+      <div class="question-text">Spuren auf der<br><strong>Fahrbahn?</strong></div>
+      <div class="nachtragen-wrap" id="keineSpurenWrap">
+        <input type="checkbox" id="keineSpurenCheck" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">
+        <label for="keineSpurenCheck">Keine Spuren auf der Fahrbahn festgestellt</label>
+      </div>
+      <div class="time-fields" id="spurenFields">
+        <div class="input-group">
+          <div class="input-label">Beschreibung der Spuren</div>
+          <textarea class="field-input field-textarea" id="uo-spuren" placeholder="z.B. Reifenspuren in Fahrtrichtung, Fahrzeugteile, Flüssigkeiten ..."></textarea>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
+        <button class="btn-next" id="btnGenerateSpuren">Bericht erstellen
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </button>
         <div class="hint">oder <kbd>Enter</kbd></div>
