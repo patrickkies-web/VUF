@@ -250,10 +250,25 @@ function nextSlide() {
         if (wrap) { wrap.classList.remove('chip-error'); }
       }
     });
+    slideEl.querySelectorAll('[data-required]').forEach(function (inp) {
+      if (!inp.value.trim()) {
+        missing = true;
+        inp.classList.add('field-error');
+      } else {
+        inp.classList.remove('field-error');
+      }
+    });
     if (missing) return;
   }
   if (current < slides.length - 1) { current++; render(); }
 }
+
+// Clear field-error as soon as the user starts typing
+document.addEventListener('input', function (e) {
+  if (e.target.classList && e.target.classList.contains('field-error')) {
+    e.target.classList.remove('field-error');
+  }
+});
 
 function prevSlide() {
   if (current > 0) { current--; render(); }
