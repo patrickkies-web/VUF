@@ -1679,7 +1679,7 @@ function runGenerateAnimation(frags, done) {
 
 function getBesatzungLabels() {
   return besatzung.filter(function (b) { return b.name && b.name.trim(); }).map(function (b) {
-    return (b.dienstgrad ? b.dienstgrad + ' ' : '') + b.name.trim();
+    return (b.grad ? b.grad + ' ' : '') + b.name.trim();
   });
 }
 
