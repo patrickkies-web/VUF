@@ -689,7 +689,7 @@ function addFahrzeugSpur() {
   fahrzeugSpuren.push({
     id: fzCounter,
     zugehoerigkeit: '02',
-    teile: [{ id: teilCounter, teil: '', schadensart: '', verlauf: '', von: '', bis: '', lackanhaftungen: null, farbe: '', pergamintute: null, spurfix: null }],
+    teile: [{ id: teilCounter, teil: '', schadensart: [], schadensartFrei: '', verlauf: '', von: '', bis: '', lackanhaftungen: null, farbe: '', pergamintute: null, spurfix: null }],
     aufgrundText: null,
     wert: '',
     lichtbilder: null
@@ -704,7 +704,7 @@ function removeFahrzeugSpur(id) {
 
 function addTeil(fz) {
   teilCounter++;
-  fz.teile.push({ id: teilCounter, teil: '', schadensart: '', verlauf: '', von: '', bis: '', lackanhaftungen: null, farbe: '', pergamintute: null, spurfix: null });
+  fz.teile.push({ id: teilCounter, teil: '', schadensart: [], schadensartFrei: '', verlauf: '', von: '', bis: '', lackanhaftungen: null, farbe: '', pergamintute: null, spurfix: null });
   renderFahrzeugSpuren();
 }
 
@@ -820,22 +820,31 @@ function renderFahrzeugSpuren() {
       teilHdr.appendChild(rb2);
       row.appendChild(teilHdr);
 
-      // Art der Beschädigung
+      // Art der Beschädigung (multi-select)
       var schadensOpts = ['Kratzer / Lackabrieb', 'Deformierung des Fahrzeugteils', 'Delle', 'Beule'];
       var schadensRow = document.createElement('div');
       schadensRow.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+      var schadensLblRow = document.createElement('div');
+      schadensLblRow.style.cssText = 'display:flex;align-items:center;gap:8px;';
       var schadensLbl = document.createElement('div');
       schadensLbl.className = 'input-label';
       schadensLbl.textContent = 'Art der Beschädigung';
+      schadensLblRow.appendChild(schadensLbl);
+      var schadensHint = document.createElement('span');
+      schadensHint.style.cssText = 'font-size:11px;color:var(--muted);';
+      schadensHint.textContent = 'Mehrauswahl möglich';
+      schadensLblRow.appendChild(schadensHint);
       var schadensChips = document.createElement('div');
       schadensChips.className = 'suggestions';
+      if (!Array.isArray(teil.schadensart)) teil.schadensart = [];
       schadensOpts.forEach(function (o) {
         var btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'btn-suggestion' + (teil.schadensart === o ? ' active' : '');
+        btn.className = 'btn-suggestion' + (teil.schadensart.indexOf(o) !== -1 ? ' active' : '');
         btn.textContent = o;
         btn.onclick = function () {
-          teil.schadensart = teil.schadensart === o ? '' : o;
+          var idx = teil.schadensart.indexOf(o);
+          if (idx !== -1) { teil.schadensart.splice(idx, 1); } else { teil.schadensart.push(o); }
           renderFahrzeugSpuren();
         };
         schadensChips.appendChild(btn);
@@ -844,12 +853,9 @@ function renderFahrzeugSpuren() {
       schadensFreiInp.type = 'text'; schadensFreiInp.className = 'field-input';
       schadensFreiInp.style.cssText = 'margin-top:6px;';
       schadensFreiInp.placeholder = 'Sonstiges …';
-      schadensFreiInp.value = schadensOpts.indexOf(teil.schadensart) === -1 ? teil.schadensart : '';
-      schadensFreiInp.oninput = function () {
-        teil.schadensart = this.value;
-        schadensChips.querySelectorAll('.btn-suggestion').forEach(function (b) { b.classList.remove('active'); });
-      };
-      schadensRow.appendChild(schadensLbl);
+      schadensFreiInp.value = teil.schadensartFrei || '';
+      schadensFreiInp.oninput = function () { teil.schadensartFrei = this.value; };
+      schadensRow.appendChild(schadensLblRow);
       schadensRow.appendChild(schadensChips);
       schadensRow.appendChild(schadensFreiInp);
       row.appendChild(schadensRow);
@@ -991,7 +997,9 @@ function generateFahrzeugText() {
       else if (teil.von) vonBis = 'ab ' + teil.von + ' cm';
       else if (teil.bis) vonBis = 'bis ' + teil.bis + ' cm';
       else vonBis = '[Höhe] cm';
-      var sa = teil.schadensart ? ' (' + teil.schadensart + ')' : '';
+      var saArr = Array.isArray(teil.schadensart) ? teil.schadensart.slice() : (teil.schadensart ? [teil.schadensart] : []);
+      if (teil.schadensartFrei) saArr.push(teil.schadensartFrei);
+      var sa = saArr.length ? ' (' + saArr.join(', ') + ')' : '';
       lines.push('    - ' + t + sa + ': ' + verlaufText + ' – Anstoßhöhe: ' + vonBis);
       if (teil.lackanhaftungen === 'ja') {
         var farbe = teil.farbe ? teil.farbe + ' ' : '';
