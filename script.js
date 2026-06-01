@@ -153,7 +153,6 @@ document.getElementById('keineSpurenCheck').onchange = function () {
 };
 
 document.getElementById('einsatzanlass').oninput = function () {
-  updatePreview();
   document.querySelectorAll('[data-text]').forEach(function (b) {
     b.classList.toggle('active', b.dataset.text === this.value);
   }, this);
@@ -167,7 +166,6 @@ document.querySelectorAll('[data-text]').forEach(function (btn) {
     this.classList.add('active');
     var wrap = this.closest('.suggestions');
     if (wrap) wrap.classList.add('has-selection');
-    updatePreview();
   });
 });
 
@@ -429,7 +427,6 @@ function render() {
     dots.appendChild(d);
   }
 
-  if (slides[current] === 'slide-3') updatePreview();
   if (slides[current] === 'slide-uo-s1') {
     updateUoAdresseChips();
     var ot = document.getElementById('uo-ortsteil');
@@ -442,6 +439,8 @@ function render() {
     renderFzDetail(parseInt(slides[current].replace('slide-fz-detail-', ''), 10));
   }
   if (slides[current] === 'slide-fz-abschluss') renderFzAbschluss();
+  var activeSlideEl = document.getElementById(slides[current]);
+  if (activeSlideEl) injectOrUpdatePreview(activeSlideEl, slides[current]);
 }
 
 // ── Einsatzanlass-Vorschau ──────────────────────────────────
@@ -551,10 +550,49 @@ function updateAdresseVorschlaege() {
   });
 }
 
-function updatePreview() {
-  var ta = document.getElementById('einsatzanlass');
-  var box = document.getElementById('previewText');
-  if (ta && box) box.textContent = buildErsterSatz(ta.value);
+function getSlidePreviewText(slideId) {
+  var s1ids = ['slide-0','slide-1','slide-2','slide-3','slide-uo-typ'];
+  if (s1ids.indexOf(slideId) !== -1) {
+    return buildErsterSatz(document.getElementById('einsatzanlass').value || '');
+  }
+  if (slideId.indexOf('slide-uo-') === 0) return generateAbschnitt2() || '';
+  if (slideId.indexOf('slide-fz-') === 0) return generateFahrzeugText() || '';
+  if (slideId === 'slide-schilderungen') return generateSchilderungenText() || '';
+  return '';
+}
+
+function injectOrUpdatePreview(slideEl, slideId) {
+  var text = getSlidePreviewText(slideId);
+  if (!text) return;
+  var strip = slideEl.querySelector('.preview-strip');
+  if (!strip) {
+    strip = document.createElement('details');
+    strip.className = 'preview-strip';
+    var summary = document.createElement('summary');
+    summary.className = 'preview-toggle';
+    summary.textContent = 'Vorschau';
+    strip.appendChild(summary);
+    var body = document.createElement('div');
+    body.className = 'preview-body';
+    strip.appendChild(body);
+    var insertBefore = null;
+    for (var i = slideEl.children.length - 1; i >= 0; i--) {
+      var child = slideEl.children[i];
+      if (!child.classList.contains('preview-strip') &&
+          child.querySelector && (
+            child.querySelector('.btn-next') ||
+            child.querySelector('.btn-det-next') ||
+            child.querySelector('.btn-det-back') ||
+            child.classList.contains('btn-next') ||
+            child.classList.contains('btn-det-next')
+          )) {
+        insertBefore = child; break;
+      }
+    }
+    slideEl.insertBefore(strip, insertBefore || null);
+  }
+  var bodyEl = strip.querySelector('.preview-body');
+  if (bodyEl) bodyEl.textContent = text;
 }
 
 // ── GPS-Standort ────────────────────────────────────────────
