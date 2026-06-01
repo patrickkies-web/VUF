@@ -259,7 +259,6 @@ function generateResult() {
 
   var text =
     buildErsterSatz(anlass) + '\n\n' +
-    'Nach Angaben des Melders [ANGABEN].\n\n' +
     'Einsatzörtlichkeit: ' + strasse + ', ' + plz + ' ' + stadt + '.';
 
   document.getElementById('resultText').textContent = text;
