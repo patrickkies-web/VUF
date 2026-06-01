@@ -12,50 +12,54 @@ var fahrzeugSpuren = [];
 var fzCounter = 0;
 var teilCounter = 0;
 
-var KAROSSERIETEILE = [
-  'Motorhaube',
-  'Frontschürze / Stoßstange vorne',
+var KAROSSERIETEILE_TOP = [
+  'Frontschürze links',
+  'Frontschürze Mitte',
+  'Frontschürze rechts',
+  'Heckschürze / Stoßstange hinten',
   'Kotflügel vorne links',
   'Kotflügel vorne rechts',
   'Vordertür links',
   'Vordertür rechts',
   'Hintertür links',
   'Hintertür rechts',
-  'Kotflügel / Heckseitenblech links',
-  'Kotflügel / Heckseitenblech rechts',
-  'Heckschürze / Stoßstange hinten',
-  'Heckklappe / Kofferraumdeckel',
-  'Schweller links',
-  'Schweller rechts',
-  'Dach',
+  'Motorhaube',
+  'Außenspiegel links',
+  'Außenspiegel rechts',
+  'Scheinwerfer links',
+  'Scheinwerfer rechts',
+  'Rückleuchte links',
+  'Rückleuchte rechts'
+];
+var KAROSSERIETEILE_REST = [
   'A-Säule links',
   'A-Säule rechts',
   'B-Säule links',
   'B-Säule rechts',
   'C-Säule links',
   'C-Säule rechts',
-  'Außenspiegel links',
-  'Außenspiegel rechts',
-  'Scheinwerfer links',
-  'Scheinwerfer rechts',
-  'Nebelscheinwerfer links',
-  'Nebelscheinwerfer rechts',
-  'Rückleuchte links',
-  'Rückleuchte rechts',
-  'Seitenscheibe vorne links',
-  'Seitenscheibe vorne rechts',
-  'Seitenscheibe hinten links',
-  'Seitenscheibe hinten rechts',
-  'Frontscheibe',
-  'Heckscheibe',
-  'Felge vorne links',
-  'Felge vorne rechts',
+  'Dach',
   'Felge hinten links',
   'Felge hinten rechts',
-  'Radlauf vorne links',
-  'Radlauf vorne rechts',
+  'Felge vorne links',
+  'Felge vorne rechts',
+  'Frontscheibe',
+  'Heckklappe / Kofferraumdeckel',
+  'Heckscheibe',
+  'Kotflügel / Heckseitenblech links',
+  'Kotflügel / Heckseitenblech rechts',
+  'Nebelscheinwerfer links',
+  'Nebelscheinwerfer rechts',
   'Radlauf hinten links',
   'Radlauf hinten rechts',
+  'Radlauf vorne links',
+  'Radlauf vorne rechts',
+  'Schweller links',
+  'Schweller rechts',
+  'Seitenscheibe hinten links',
+  'Seitenscheibe hinten rechts',
+  'Seitenscheibe vorne links',
+  'Seitenscheibe vorne rechts',
   'Unterfahrschutz'
 ];
 
@@ -666,11 +670,7 @@ function addFahrzeugSpur() {
   fahrzeugSpuren.push({
     id: fzCounter,
     zugehoerigkeit: '02',
-    teile: [{ id: teilCounter, teil: '', verlauf: '', von: '', bis: '' }],
-    lackanhaftungen: null,
-    farbe: '',
-    pergamintute: null,
-    spurfix: null,
+    teile: [{ id: teilCounter, teil: '', schadensart: '', verlauf: '', von: '', bis: '', lackanhaftungen: null, farbe: '', pergamintute: null, spurfix: null }],
     aufgrundText: null,
     wert: '',
     lichtbilder: null
@@ -685,7 +685,7 @@ function removeFahrzeugSpur(id) {
 
 function addTeil(fz) {
   teilCounter++;
-  fz.teile.push({ id: teilCounter, teil: '', verlauf: '', von: '', bis: '' });
+  fz.teile.push({ id: teilCounter, teil: '', schadensart: '', verlauf: '', von: '', bis: '', lackanhaftungen: null, farbe: '', pergamintute: null, spurfix: null });
   renderFahrzeugSpuren();
 }
 
@@ -776,12 +776,19 @@ function renderFahrzeugSpuren() {
       emptyOpt.textContent = '— Fahrzeugteil wählen —';
       if (!teil.teil) emptyOpt.selected = true;
       sel.appendChild(emptyOpt);
-      KAROSSERIETEILE.forEach(function (k) {
-        var opt = document.createElement('option');
-        opt.value = k; opt.textContent = k;
-        if (k === teil.teil) opt.selected = true;
-        sel.appendChild(opt);
-      });
+      function addOptGroup(label, items) {
+        var grp = document.createElement('optgroup');
+        grp.label = label;
+        items.forEach(function (k) {
+          var opt = document.createElement('option');
+          opt.value = k; opt.textContent = k;
+          if (k === teil.teil) opt.selected = true;
+          grp.appendChild(opt);
+        });
+        sel.appendChild(grp);
+      }
+      addOptGroup('Häufig betroffen', KAROSSERIETEILE_TOP);
+      addOptGroup('Weitere Fahrzeugteile', KAROSSERIETEILE_REST);
       sel.onchange = function () { teil.teil = this.value; };
 
       var rb2 = document.createElement('button');
@@ -793,6 +800,40 @@ function renderFahrzeugSpuren() {
       teilHdr.appendChild(sel);
       teilHdr.appendChild(rb2);
       row.appendChild(teilHdr);
+
+      // Art der Beschädigung
+      var schadensOpts = ['Kratzer / Lackabrieb', 'Deformierung des Fahrzeugteils', 'Delle', 'Beule'];
+      var schadensRow = document.createElement('div');
+      schadensRow.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+      var schadensLbl = document.createElement('div');
+      schadensLbl.className = 'input-label';
+      schadensLbl.textContent = 'Art der Beschädigung';
+      var schadensChips = document.createElement('div');
+      schadensChips.className = 'suggestions';
+      schadensOpts.forEach(function (o) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn-suggestion' + (teil.schadensart === o ? ' active' : '');
+        btn.textContent = o;
+        btn.onclick = function () {
+          teil.schadensart = teil.schadensart === o ? '' : o;
+          renderFahrzeugSpuren();
+        };
+        schadensChips.appendChild(btn);
+      });
+      var schadensFreiInp = document.createElement('input');
+      schadensFreiInp.type = 'text'; schadensFreiInp.className = 'field-input';
+      schadensFreiInp.style.cssText = 'margin-top:6px;';
+      schadensFreiInp.placeholder = 'Sonstiges …';
+      schadensFreiInp.value = schadensOpts.indexOf(teil.schadensart) === -1 ? teil.schadensart : '';
+      schadensFreiInp.oninput = function () {
+        teil.schadensart = this.value;
+        schadensChips.querySelectorAll('.btn-suggestion').forEach(function (b) { b.classList.remove('active'); });
+      };
+      schadensRow.appendChild(schadensLbl);
+      schadensRow.appendChild(schadensChips);
+      schadensRow.appendChild(schadensFreiInp);
+      row.appendChild(schadensRow);
 
       // Verlauf chips
       row.appendChild(mkGroup('Verlauf', mkChipRow(
@@ -826,6 +867,33 @@ function renderFahrzeugSpuren() {
       hoehe.appendChild(lbl('cm'));
       row.appendChild(mkGroup(null, hoehe));
 
+      // Lackanhaftungen per Teil
+      row.appendChild(mkGroup('Lackanhaftungen vorhanden?', mkChipRow(
+        [{ v: 'ja', label: 'Ja' }, { v: 'nein', label: 'Nein' }],
+        teil.lackanhaftungen,
+        function (v) { teil.lackanhaftungen = v; }
+      )));
+
+      if (teil.lackanhaftungen === 'ja') {
+        var farbeInp = document.createElement('input');
+        farbeInp.type = 'text'; farbeInp.className = 'field-input';
+        farbeInp.placeholder = 'z.B. weißer'; farbeInp.value = teil.farbe;
+        farbeInp.oninput = function () { teil.farbe = this.value; };
+        row.appendChild(mkGroup('Farbe des Lackabriebs', farbeInp));
+
+        row.appendChild(mkGroup('Pergamintütchen genutzt?', mkChipRow(
+          [{ v: 'ja', label: 'Ja' }, { v: 'nein', label: 'Nein' }],
+          teil.pergamintute,
+          function (v) { teil.pergamintute = v; }
+        )));
+
+        row.appendChild(mkGroup('SPURFIX-Folie genutzt?', mkChipRow(
+          [{ v: 'ja', label: 'Ja' }, { v: 'nein', label: 'Nein' }],
+          teil.spurfix,
+          function (v) { teil.spurfix = v; }
+        )));
+      }
+
       teileWrap.appendChild(row);
     });
 
@@ -838,39 +906,33 @@ function renderFahrzeugSpuren() {
     teileWrap.appendChild(addTeilBtn);
     card.appendChild(teileWrap);
 
-    // ── Lackanhaftungen ──
-    card.appendChild(mkGroup('Lackanhaftungen vorhanden?', mkChipRow(
-      [{ v: 'ja', label: 'Ja' }, { v: 'nein', label: 'Nein' }],
-      fz.lackanhaftungen,
-      function (v) { fz.lackanhaftungen = v; }
-    )));
-
-    if (fz.lackanhaftungen === 'ja') {
-      var farbeInp = document.createElement('input');
-      farbeInp.type = 'text'; farbeInp.className = 'field-input';
-      farbeInp.placeholder = 'z.B. weißer'; farbeInp.value = fz.farbe;
-      farbeInp.oninput = function () { fz.farbe = this.value; };
-      card.appendChild(mkGroup('Farbe des Lackabriebs', farbeInp));
-
-      card.appendChild(mkGroup('Pergamintütchen genutzt?', mkChipRow(
-        [{ v: 'ja', label: 'Ja' }, { v: 'nein', label: 'Nein' }],
-        fz.pergamintute,
-        function (v) { fz.pergamintute = v; }
-      )));
-
-      card.appendChild(mkGroup('SPURFIX-Folie genutzt?', mkChipRow(
-        [{ v: 'ja', label: 'Ja' }, { v: 'nein', label: 'Nein' }],
-        fz.spurfix,
-        function (v) { fz.spurfix = v; }
-      )));
-    }
-
     // ── Aufgrund-Satz ──
-    card.appendChild(mkGroup('"Aufgrund ..."-Satz einfügen?', mkChipRow(
+    var aufgrundGroup = document.createElement('div');
+    aufgrundGroup.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+    var aufgrundLblRow = document.createElement('div');
+    aufgrundLblRow.style.cssText = 'display:flex;align-items:center;gap:8px;';
+    var aufgrundLbl = document.createElement('div');
+    aufgrundLbl.className = 'input-label';
+    aufgrundLbl.textContent = '"Aufgrund ..."-Satz einfügen?';
+    var infoBtn = document.createElement('button');
+    infoBtn.type = 'button';
+    infoBtn.className = 'btn-info';
+    infoBtn.textContent = 'ⓘ';
+    var infoBox = document.createElement('div');
+    infoBox.className = 'info-box';
+    infoBox.style.display = 'none';
+    infoBox.textContent = 'Aufgrund der festgestellten äußeren Beschädigungen können verdeckte Schäden, insbesondere an Trägerstrukturen, Befestigungspunkten, Verformungselementen nicht ausgeschlossen werden.';
+    infoBtn.onclick = function () { infoBox.style.display = infoBox.style.display === 'none' ? '' : 'none'; };
+    aufgrundLblRow.appendChild(aufgrundLbl);
+    aufgrundLblRow.appendChild(infoBtn);
+    aufgrundGroup.appendChild(aufgrundLblRow);
+    aufgrundGroup.appendChild(infoBox);
+    aufgrundGroup.appendChild(mkChipRow(
       [{ v: 'ja', label: 'Ja' }, { v: 'nein', label: 'Nein' }],
       fz.aufgrundText,
       function (v) { fz.aufgrundText = v; }
-    )));
+    ));
+    card.appendChild(aufgrundGroup);
 
     // ── Schadenshöhe ──
     var wertInp = document.createElement('input');
@@ -910,19 +972,19 @@ function generateFahrzeugText() {
       else if (teil.von) vonBis = 'ab ' + teil.von + ' cm';
       else if (teil.bis) vonBis = 'bis ' + teil.bis + ' cm';
       else vonBis = '[Höhe] cm';
-      lines.push('    - ' + t + ': ' + verlaufText + ' – Anstoßhöhe: ' + vonBis);
+      var sa = teil.schadensart ? ' (' + teil.schadensart + ')' : '';
+      lines.push('    - ' + t + sa + ': ' + verlaufText + ' – Anstoßhöhe: ' + vonBis);
+      if (teil.lackanhaftungen === 'ja') {
+        var farbe = teil.farbe ? teil.farbe + ' ' : '';
+        lines.push('An dieser Stelle konnte ' + farbe + 'Lackaufrieb festgestellt werden.');
+        if (teil.pergamintute === 'ja') {
+          lines.push('Der Lack wurde abgetragen und in einer Pergamintüte gesichert (liegt dem Vorgang bei).');
+        }
+        if (teil.spurfix === 'ja') {
+          lines.push('Für ermittlungstaktische Zwecke wurde eine Spurensicherungsfolie auf der Stelle aufgetragen und im Anschluss gesichert (SPURFIX-Folie).');
+        }
+      }
     });
-
-    if (fz.lackanhaftungen === 'ja') {
-      var farbe = fz.farbe ? fz.farbe + ' ' : '';
-      lines.push('An dieser Stelle konnte ' + farbe + 'Lackaufrieb festgestellt werden.');
-      if (fz.pergamintute === 'ja') {
-        lines.push('Der Lack wurde abgetragen und in einer Pergamintüte gesichert (liegt dem Vorgang bei).');
-      }
-      if (fz.spurfix === 'ja') {
-        lines.push('Für ermittlungstaktische Zwecke wurde eine Spurensicherungsfolie auf der Stelle aufgetragen und im Anschluss gesichert (SPURFIX-Folie).');
-      }
-    }
 
     if (fz.aufgrundText === 'ja') {
       lines.push('Aufgrund der festgestellten äußeren Beschädigungen können verdeckte Schäden, insbesondere an Trägerstrukturen, Befestigungspunkten, Verformungselementen nicht ausgeschlossen werden.');
@@ -954,15 +1016,30 @@ function generateResult() {
     buildErsterSatz(anlass) + '\n\n' +
     'Einsatzörtlichkeit: ' + strasseVoll + ', ' + plz + ' ' + stadt + '.';
 
-  document.getElementById('resultText').textContent = text1;
-
   var text2 = generateAbschnitt2();
-  document.getElementById('resultText2').textContent = text2;
-  document.getElementById('section2Result').style.display = text2 ? '' : 'none';
-
   var text3 = generateFahrzeugText();
-  document.getElementById('resultText3').textContent = text3;
-  document.getElementById('section3Result').style.display = text3 ? '' : 'none';
+
+  var doc = document.getElementById('reportDoc');
+  doc.innerHTML = '';
+  function appendSection(num, title, text) {
+    if (!text) return;
+    if (doc.children.length > 0) {
+      var sp = document.createElement('div');
+      sp.className = 'report-spacer';
+      doc.appendChild(sp);
+    }
+    var h = document.createElement('div');
+    h.className = 'report-heading';
+    h.textContent = num + ' ' + title;
+    doc.appendChild(h);
+    var b = document.createElement('div');
+    b.className = 'report-body';
+    b.textContent = text;
+    doc.appendChild(b);
+  }
+  appendSection('1', 'Allgemeines / Einsatzanlass', text1);
+  appendSection('2', 'Unfallörtlichkeit', text2);
+  appendSection('3', 'Spuren an den Fahrzeugen', text3);
 
   var slides = getActiveSlides();
   slides.forEach(function (id) {
@@ -1132,13 +1209,15 @@ function generateAbschnitt2() {
 // ── Kopieren ────────────────────────────────────────────────
 
 function copyText() {
-  var text = document.getElementById('resultText').textContent;
-  var text2El = document.getElementById('section2Result');
-  if (text2El.style.display !== 'none') text += '\n\n' + document.getElementById('resultText2').textContent;
-  var text3El = document.getElementById('section3Result');
-  if (text3El.style.display !== 'none') text += '\n\n' + document.getElementById('resultText3').textContent;
+  var parts = [];
+  var headings = document.querySelectorAll('#reportDoc .report-heading');
+  var bodies = document.querySelectorAll('#reportDoc .report-body');
+  headings.forEach(function (h, i) {
+    parts.push(h.textContent + '\n' + (bodies[i] ? bodies[i].textContent : ''));
+  });
+  var text = parts.join('\n\n');
   navigator.clipboard.writeText(text).catch(function () {
-    var el = document.getElementById('resultText');
+    var el = document.getElementById('reportDoc');
     var range = document.createRange();
     range.selectNodeContents(el);
     var sel = window.getSelection();
