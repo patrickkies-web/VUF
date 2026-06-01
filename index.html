@@ -178,19 +178,17 @@
       <div class="question-number">Abschnitt 2 &middot; Frage 1</div>
       <div class="question-text">Wo hat sich der<br><strong>Unfall ereignet?</strong></div>
       <p class="question-hint">Straße aus den Vorschlägen wählen — PLZ und Ort werden automatisch eingetragen.</p>
-      <div class="input-group">
-        <div class="input-label">Stra&szlig;e</div>
-        <div style="display:grid;grid-template-columns:1fr 90px;gap:10px;align-items:end">
-          <div style="position:relative">
-            <input class="field-input" type="text" id="uo-strasse" placeholder="z.B. Berliner Stra&szlig;e" autocomplete="off" data-required="true">
-            <div id="uo-adresse-chips" class="suggestions" style="margin-top:10px;flex-wrap:wrap"></div>
-          </div>
-          <div>
-            <div class="input-label" style="margin-bottom:6px">Nr.</div>
-            <input class="field-input" type="text" id="uo-hausnummer" placeholder="12" data-required="true">
-          </div>
+      <div style="display:grid;grid-template-columns:1fr 90px;gap:10px;">
+        <div class="input-group">
+          <div class="input-label">Stra&szlig;e</div>
+          <input class="field-input" type="text" id="uo-strasse" placeholder="z.B. Berliner Stra&szlig;e" autocomplete="off" data-required="true">
+        </div>
+        <div class="input-group">
+          <div class="input-label">Nr.</div>
+          <input class="field-input" type="text" id="uo-hausnummer" placeholder="12" data-required="true">
         </div>
       </div>
+      <div id="uo-adresse-chips" class="suggestions" style="flex-wrap:wrap"></div>
       <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
         <button class="btn-next" id="btnUoS1">Weiter
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
