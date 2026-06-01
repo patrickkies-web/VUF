@@ -332,12 +332,12 @@ function render() {
   }
 
   if (slides[current] === 'slide-3') updatePreview();
-  if (slides[current] === 'slide-uo-s1') updateUoAdresseChips();
-  if (slides[current] === 'slide-uo-p1') updateAdresseVorschlaege();
-  if (slides[current] === 'slide-uo-s2' && autoOrtsteil) {
-    var f = document.getElementById('uo-ortsteil');
-    if (!f.value) f.value = autoOrtsteil;
+  if (slides[current] === 'slide-uo-s1') {
+    updateUoAdresseChips();
+    var ot = document.getElementById('uo-ortsteil');
+    if (!ot.value && autoOrtsteil) ot.value = autoOrtsteil;
   }
+  if (slides[current] === 'slide-uo-p1') updateAdresseVorschlaege();
 }
 
 // ── Einsatzanlass-Vorschau ──────────────────────────────────
@@ -377,10 +377,51 @@ function updateUoAdresseChips() {
     btn.addEventListener('click', function () {
       document.getElementById('uo-strasse').value = opt.s;
       document.getElementById('uo-hausnummer').value = opt.nr;
+      if (autoOrtsteil) document.getElementById('uo-ortsteil').value = autoOrtsteil;
+      else if (opt.s) fuelleUoOrtsteil(opt.s, true);
     });
     chips.appendChild(btn);
   });
 }
+
+function fuelleUoOrtsteil(name, tryNominatim) {
+  var hit = GT_STREETS ? GT_STREETS[name] : null;
+  if (hit && hit.ortsteil) {
+    document.getElementById('uo-ortsteil').value = hit.ortsteil;
+    return;
+  }
+  if (autoOrtsteil && document.getElementById('strasse').value.trim() === name) {
+    document.getElementById('uo-ortsteil').value = autoOrtsteil;
+    return;
+  }
+  if (!tryNominatim) return;
+  fetch('https://nominatim.openstreetmap.org/search?' +
+    'street=' + encodeURIComponent(name) +
+    '&city=G%C3%BCtersloh&format=json&addressdetails=1&limit=1&countrycodes=de&accept-language=de')
+    .then(function (r) { return r.json(); })
+    .then(function (results) {
+      if (!results.length) return;
+      var a = results[0].address || {};
+      var ortsteil = a.suburb || a.quarter || a.neighbourhood || '';
+      if (ortsteil) document.getElementById('uo-ortsteil').value = ortsteil;
+      if (GT_STREETS && name in GT_STREETS && GT_STREETS[name]) GT_STREETS[name].ortsteil = ortsteil;
+    })
+    .catch(function () {});
+}
+
+(function () {
+  var input = document.getElementById('uo-strasse');
+  if (!input) return;
+  input.addEventListener('input', function () {
+    var name = this.value.trim();
+    if (!name) { document.getElementById('uo-ortsteil').value = ''; return; }
+    fuelleUoOrtsteil(name, false);
+  });
+  input.addEventListener('blur', function () {
+    var name = this.value.trim();
+    if (name) fuelleUoOrtsteil(name, true);
+  });
+}());
 
 function updateAdresseVorschlaege() {
   var chips = document.getElementById('adresse-chips');
