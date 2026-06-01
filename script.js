@@ -211,6 +211,12 @@ document.getElementById('uo-tempo').addEventListener('input', function () {
   }
 });
 
+document.getElementById('btnStart').onclick = function () {
+  var s = document.getElementById('screen-start');
+  s.classList.add('dismissed');
+  s.addEventListener('transitionend', function () { s.style.display = 'none'; }, { once: true });
+};
+
 addBesatzung();
 addSchilderung();
 render();
