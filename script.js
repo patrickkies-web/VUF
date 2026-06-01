@@ -4,6 +4,7 @@ var besatzung = [];
 var idCounter = 0;
 var dragSrc = null;
 var branch = null; // 'strasse' | 'parkplatz'
+var mode = 'normal'; // 'normal' | 'fastlane'
 var touchData = { active: false, srcId: null, overItem: null };
 var today = new Date().toISOString().split('T')[0];
 var GT_STREETS = null; // { name: { plz, stadt, ortsteil } | null }
@@ -73,7 +74,6 @@ var schilderungen = [];
 var schildCounter = 0;
 
 function getActiveSlides() {
-  if (!branch) return SLIDES_BASE;
   var fzDetailSlides = [];
   var fzAbschluss = [];
   if (fzCurrentIdx !== null && fahrzeugSpuren[fzCurrentIdx]) {
@@ -81,8 +81,26 @@ function getActiveSlides() {
     for (var i = 0; i < n; i++) fzDetailSlides.push('slide-fz-detail-' + i);
     if (n > 0) fzAbschluss = ['slide-fz-abschluss'];
   }
+  var fzSlides = ['slide-fz-nummer', 'slide-fz-picker'].concat(fzDetailSlides).concat(fzAbschluss);
+
+  if (mode === 'fastlane') {
+    if (!branch) return ['slide-uo-typ'];
+    if (branch === 'strasse') {
+      return ['slide-uo-typ', 'slide-uo-s1']
+        .concat(fzSlides)
+        .concat(['slide-schilderungen', 'slide-0', 'slide-1', 'slide-2', 'slide-3',
+                 'slide-uo-s1b', 'slide-uo-s2', 'slide-uo-s3', 'slide-uo-s4', 'slide-uo-s4b', 'slide-uo-s5', 'slide-uo-spuren']);
+    } else {
+      return ['slide-uo-typ', 'slide-uo-p1']
+        .concat(fzSlides)
+        .concat(['slide-schilderungen', 'slide-0', 'slide-1', 'slide-2', 'slide-3', 'slide-uo-p2', 'slide-uo-spuren']);
+    }
+  }
+
+  // Normal mode
+  if (!branch) return SLIDES_BASE;
   var pre = branch === 'strasse' ? SLIDES_STRASSE_PRE : SLIDES_PARKPLATZ_PRE;
-  return SLIDES_BASE.concat(pre).concat(['slide-fz-nummer', 'slide-fz-picker']).concat(fzDetailSlides).concat(fzAbschluss).concat(['slide-schilderungen']);
+  return SLIDES_BASE.concat(pre).concat(fzSlides).concat(['slide-schilderungen']);
 }
 
 // Touch drag
@@ -209,11 +227,14 @@ document.getElementById('uo-tempo').addEventListener('input', function () {
   }
 });
 
-document.getElementById('btnStart').onclick = function () {
+function dismissStart(selectedMode) {
+  mode = selectedMode;
   var s = document.getElementById('screen-start');
   s.classList.add('dismissed');
   s.addEventListener('transitionend', function () { s.style.display = 'none'; }, { once: true });
-};
+}
+document.getElementById('btnStartFastlane').onclick = function () { dismissStart('fastlane'); };
+document.getElementById('btnStartNormal').onclick = function () { dismissStart('normal'); };
 
 addBesatzung();
 addSchilderung();
@@ -2202,6 +2223,7 @@ function resetAll() {
   besatzung = [];
   current = 0;
   branch = null;
+  mode = 'normal';
   document.getElementById('strasse').value = '';
   document.getElementById('hausnummer').value = '';
   document.getElementById('plz').value = '';
