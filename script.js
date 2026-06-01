@@ -229,6 +229,7 @@ document.getElementById('uo-tempo').addEventListener('input', function () {
 
 function dismissStart(selectedMode) {
   mode = selectedMode;
+  render();
   var s = document.getElementById('screen-start');
   s.classList.add('dismissed');
   s.addEventListener('transitionend', function () { s.style.display = 'none'; }, { once: true });
@@ -400,6 +401,7 @@ function nextSlide() {
     if (missing) return;
   }
   if (current < slides.length - 1) { current++; render(); }
+  else { generateResult(); }
 }
 
 // Clear field-error as soon as the user starts typing
