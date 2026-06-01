@@ -903,9 +903,11 @@ body {
   font-family: 'IBM Plex Sans', sans-serif;
   font-size: 13px;
   font-weight: 400;
-  padding: 6px 13px;
+  padding: 8px 6px;
   border-radius: 8px;
   cursor: pointer;
+  width: 100%;
+  text-align: center;
   transition: border-color .15s, color .15s, background .15s, box-shadow .15s;
 }
 
