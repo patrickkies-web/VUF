@@ -688,13 +688,14 @@ function generateAbschnitt2() {
     };
 
     var lageText = (lage && lage !== 'none') ? lage + ' ' : '';
+    var lageGelegen = lageText ? lageText + 'gelegene ' : '';
     var strassentypText = (strassentyp && strassentyp !== 'none') ? ' (' + strassentyp + ')' : '';
     var ortsteilText = ortsteil ? ' (Ortsteil: ' + ortsteil + ')' : '';
     var strasseAdresse = strasse + (uoHausnummer ? ' ' + uoHausnummer : '');
 
     var lines = [];
-    lines.push('Bei der Unfallörtlichkeit handelt es sich um die ' + lageText + 'gelegene ' +
-      strasseAdresse + strassentypText + ', in ' + plz + ' ' + stadt + ortsteilText + '.');
+    lines.push('Bei der Unfallörtlichkeit handelt es sich um folgende ' + lageGelegen + 'Straße: ' +
+      strasseAdresse + strassentypText + ', ' + plz + ' ' + stadt + ortsteilText + '.');
 
     if (woGenau) lines.push('Der Unfall ereignete sich ' + woGenau + '.');
 
