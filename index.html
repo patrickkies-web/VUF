@@ -431,7 +431,26 @@
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
-        <button class="btn-next" id="btnGenerateSpuren">Bericht erstellen
+        <button class="btn-next" id="btnUoSpuren">Weiter
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+        <div class="hint">oder <kbd>Enter</kbd></div>
+      </div>
+    </div>
+
+    <!-- Slide UO-Fahrzeug: Spuren an den Fahrzeugen -->
+    <div class="slide" id="slide-uo-fahrzeug">
+      <div class="question-number">Abschnitt 3 &middot; Fahrzeugspuren</div>
+      <div class="question-text">Spuren an den<br><strong>Fahrzeugen</strong></div>
+      <div id="fahrzeugList" style="display:flex;flex-direction:column;gap:14px"></div>
+      <button class="btn-add" id="btnAddFahrzeug">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        Fahrzeug hinzuf&uuml;gen
+      </button>
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
+        <button class="btn-next" id="btnGenerateFahrzeug">Bericht erstellen
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </button>
         <div class="hint">oder <kbd>Enter</kbd></div>
@@ -449,6 +468,10 @@
       <div id="section2Result" style="display:none">
         <div class="result-label">2 Unfall&ouml;rtlichkeit</div>
         <div class="result-box" id="resultText2"></div>
+      </div>
+      <div id="section3Result" style="display:none">
+        <div class="result-label">3 Spuren an den Fahrzeugen</div>
+        <div class="result-box" id="resultText3"></div>
       </div>
       <div style="display:flex;gap:12px;flex-wrap:wrap">
         <button class="btn-copy" id="btnCopy">Text kopieren</button>

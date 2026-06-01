@@ -8,10 +8,12 @@ var touchData = { active: false, srcId: null, overItem: null };
 var today = new Date().toISOString().split('T')[0];
 var GT_STREETS = null; // { name: { plz, stadt, ortsteil } | null }
 var autoOrtsteil = '';
+var fahrzeugSpuren = [];
+var fzCounter = 0;
 
 var SLIDES_BASE = ['slide-0', 'slide-1', 'slide-2', 'slide-3', 'slide-uo-typ'];
-var SLIDES_STRASSE = ['slide-uo-s1', 'slide-uo-s2', 'slide-uo-s3', 'slide-uo-s4', 'slide-uo-s5', 'slide-uo-spuren'];
-var SLIDES_PARKPLATZ = ['slide-uo-p1', 'slide-uo-p2', 'slide-uo-spuren'];
+var SLIDES_STRASSE = ['slide-uo-s1', 'slide-uo-s2', 'slide-uo-s3', 'slide-uo-s4', 'slide-uo-s5', 'slide-uo-spuren', 'slide-uo-fahrzeug'];
+var SLIDES_PARKPLATZ = ['slide-uo-p1', 'slide-uo-p2', 'slide-uo-spuren', 'slide-uo-fahrzeug'];
 
 function getActiveSlides() {
   if (branch === 'strasse') return SLIDES_BASE.concat(SLIDES_STRASSE);
@@ -67,7 +69,9 @@ document.getElementById('btnUoS4').onclick = nextSlide;
 document.getElementById('btnUoS5').onclick = nextSlide;
 document.getElementById('btnUoP1').onclick = nextSlide;
 document.getElementById('btnUoP2').onclick = nextSlide;
-document.getElementById('btnGenerateSpuren').onclick = generateResult;
+document.getElementById('btnUoSpuren').onclick = nextSlide;
+document.getElementById('btnAddFahrzeug').onclick = addFahrzeugSpur;
+document.getElementById('btnGenerateFahrzeug').onclick = generateResult;
 document.getElementById('btnBack').onclick = prevSlide;
 document.getElementById('btnCopy').onclick = copyText;
 document.getElementById('btnReset').onclick = resetAll;
@@ -140,6 +144,7 @@ document.getElementById('uo-tempo').addEventListener('input', function () {
 });
 
 addBesatzung();
+addFahrzeugSpur();
 render();
 ladeGueterslohStrassen();
 
@@ -339,6 +344,7 @@ function render() {
     if (!ot.value && autoOrtsteil) ot.value = autoOrtsteil;
   }
   if (slides[current] === 'slide-uo-p1') updateAdresseVorschlaege();
+  if (slides[current] === 'slide-uo-fahrzeug') renderFahrzeugSpuren();
 }
 
 // ── Einsatzanlass-Vorschau ──────────────────────────────────
@@ -604,6 +610,149 @@ function getChipValue(group) {
   return active ? active.dataset.value : null;
 }
 
+// ── Fahrzeugspuren ──────────────────────────────────────────
+
+function addFahrzeugSpur() {
+  fzCounter++;
+  fahrzeugSpuren.push({ id: fzCounter, zugehoerigkeit: '', teil: '', verlauf: '', anstoesshoehe: '', farbe: '', wert: '' });
+  renderFahrzeugSpuren();
+}
+
+function removeFahrzeugSpur(id) {
+  fahrzeugSpuren = fahrzeugSpuren.filter(function (f) { return f.id !== id; });
+  renderFahrzeugSpuren();
+}
+
+function renderFahrzeugSpuren() {
+  var list = document.getElementById('fahrzeugList');
+  if (!list) return;
+  list.innerHTML = '';
+
+  fahrzeugSpuren.forEach(function (fz, idx) {
+    var card = document.createElement('div');
+    card.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px;';
+
+    function mkRow(lbl, inp) {
+      var g = document.createElement('div');
+      g.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+      var l = document.createElement('div');
+      l.className = 'input-label';
+      l.textContent = lbl;
+      g.appendChild(l); g.appendChild(inp);
+      return g;
+    }
+
+    // Header
+    var hdr = document.createElement('div');
+    hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;';
+    var ttl = document.createElement('div');
+    ttl.className = 'input-label';
+    ttl.textContent = 'Fahrzeug ' + (idx + 1);
+    var rb = document.createElement('button');
+    rb.className = 'btn-remove';
+    rb.type = 'button';
+    rb.innerHTML = '&times;';
+    (function (id) { rb.onclick = function () { removeFahrzeugSpur(id); }; })(fz.id);
+    hdr.appendChild(ttl); hdr.appendChild(rb);
+    card.appendChild(hdr);
+
+    // Zugehörigkeit
+    var zuInput = document.createElement('input');
+    zuInput.type = 'text'; zuInput.className = 'field-input';
+    zuInput.placeholder = 'z.B. des Geschädigten'; zuInput.value = fz.zugehoerigkeit;
+    zuInput.oninput = function () { fz.zugehoerigkeit = this.value; };
+    card.appendChild(mkRow('Fahrzeug-Zugehörigkeit', zuInput));
+
+    // Fahrzeugteil
+    var teilInput = document.createElement('input');
+    teilInput.type = 'text'; teilInput.className = 'field-input';
+    teilInput.placeholder = 'z.B. linke hintere Stoßstange'; teilInput.value = fz.teil;
+    teilInput.oninput = function () { fz.teil = this.value; };
+    card.appendChild(mkRow('Fahrzeugteil (Wo)', teilInput));
+
+    // Verlauf chips
+    var verlaufOpts = [
+      { v: 'horizontal', label: 'horizontal' },
+      { v: 'diagonal', label: 'diagonal' },
+      { v: 'horizontal-diagonal', label: 'horiz. + diag.' },
+      { v: 'vertikal', label: 'vertikal' }
+    ];
+    var verlaufSugg = document.createElement('div');
+    verlaufSugg.className = 'suggestions';
+    verlaufOpts.forEach(function (o) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn-suggestion' + (fz.verlauf === o.v ? ' active' : '');
+      btn.textContent = o.label;
+      btn.onclick = function () {
+        fz.verlauf = o.v;
+        verlaufSugg.querySelectorAll('.btn-suggestion').forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+      };
+      verlaufSugg.appendChild(btn);
+    });
+    var verlaufG = document.createElement('div');
+    verlaufG.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+    var verlaufL = document.createElement('div');
+    verlaufL.className = 'input-label';
+    verlaufL.textContent = 'Verlauf der Beschädigung';
+    verlaufG.appendChild(verlaufL); verlaufG.appendChild(verlaufSugg);
+    card.appendChild(verlaufG);
+
+    // Anstoßhöhe + Farbe (grid)
+    var grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:110px 1fr;gap:10px;';
+    var ansInput = document.createElement('input');
+    ansInput.type = 'number'; ansInput.className = 'field-input';
+    ansInput.placeholder = 'cm'; ansInput.value = fz.anstoesshoehe;
+    ansInput.oninput = function () { fz.anstoesshoehe = this.value; };
+    var farbeInput = document.createElement('input');
+    farbeInput.type = 'text'; farbeInput.className = 'field-input';
+    farbeInput.placeholder = 'z.B. weißer'; farbeInput.value = fz.farbe;
+    farbeInput.oninput = function () { fz.farbe = this.value; };
+    grid.appendChild(mkRow('Anstoßhöhe (cm)', ansInput));
+    grid.appendChild(mkRow('Farbe Lackaufrieb', farbeInput));
+    card.appendChild(grid);
+
+    // Schadenshöhe
+    var wertInput = document.createElement('input');
+    wertInput.type = 'number'; wertInput.className = 'field-input';
+    wertInput.placeholder = 'z.B. 500'; wertInput.value = fz.wert;
+    wertInput.oninput = function () { fz.wert = this.value; };
+    card.appendChild(mkRow('Schadenshöhe ca. (€)', wertInput));
+
+    list.appendChild(card);
+  });
+}
+
+function generateFahrzeugText() {
+  if (!fahrzeugSpuren.length) return '';
+  var verlaufMap = {
+    'horizontal': 'horizontaler',
+    'diagonal': 'diagonaler',
+    'horizontal-diagonal': 'horizontaler diagonaler',
+    'vertikal': 'vertikaler'
+  };
+  return fahrzeugSpuren.map(function (fz) {
+    var zu = fz.zugehoerigkeit || '[Zugehörigkeit]';
+    var teil = fz.teil || '[Fahrzeugteil]';
+    var verlaufAdj = fz.verlauf ? (verlaufMap[fz.verlauf] || fz.verlauf) : '[Verlauf]';
+    var hoehe = fz.anstoesshoehe ? fz.anstoesshoehe + ' cm' : '[Höhe] cm';
+
+    var lines = [];
+    lines.push('Am Fahrzeug ' + zu + ' zeigten sich folgende unfallbedingte Beschädigungen/Spuren an folgenden Fahrzeugteilen:');
+    lines.push('    - ' + teil + ': ' + verlaufAdj + ' Verlauf – Anstoßhöhe: ' + hoehe);
+    if (fz.farbe) {
+      lines.push('An dieser Stelle konnte ' + fz.farbe + ' Lackaufrieb festgestellt werden. Aus diesem Grund wurde hier der Lack abgetragen und in einer Pergamintüte gesichert (liegt dem Vorgang bei).');
+      lines.push('Für ermittlungstaktische Zwecke wurde eine Spurensicherungsfolie auf der Stelle aufgetragen und im Anschluss gesichert (SPURFIX-Folie).');
+    }
+    lines.push('Aufgrund der festgestellten äußeren Beschädigungen können verdeckte Schäden, insbesondere an Trägerstrukturen, Befestigungspunkten, Verformungselementen nicht ausgeschlossen werden.');
+    if (fz.wert) lines.push('Die Höhe der sichtbaren Beschädigungen liegt bei ca. ' + fz.wert + ' €.');
+    lines.push('Es wurden Lichtbilder gefertigt, welche dem Vorgang digital beigefügt werden.');
+    return lines.join('\n');
+  }).join('\n\n');
+}
+
 // ── Bericht generieren ──────────────────────────────────────
 
 function generateResult() {
@@ -623,6 +772,10 @@ function generateResult() {
   var text2 = generateAbschnitt2();
   document.getElementById('resultText2').textContent = text2;
   document.getElementById('section2Result').style.display = text2 ? '' : 'none';
+
+  var text3 = generateFahrzeugText();
+  document.getElementById('resultText3').textContent = text3;
+  document.getElementById('section3Result').style.display = text3 ? '' : 'none';
 
   var slides = getActiveSlides();
   slides.forEach(function (id) {
@@ -794,9 +947,9 @@ function generateAbschnitt2() {
 function copyText() {
   var text = document.getElementById('resultText').textContent;
   var text2El = document.getElementById('section2Result');
-  if (text2El.style.display !== 'none') {
-    text += '\n\n' + document.getElementById('resultText2').textContent;
-  }
+  if (text2El.style.display !== 'none') text += '\n\n' + document.getElementById('resultText2').textContent;
+  var text3El = document.getElementById('section3Result');
+  if (text3El.style.display !== 'none') text += '\n\n' + document.getElementById('resultText3').textContent;
   navigator.clipboard.writeText(text).catch(function () {
     var el = document.getElementById('resultText');
     var range = document.createRange();
@@ -844,7 +997,10 @@ function resetAll() {
   document.getElementById('strassen-dropdown').innerHTML = '';
   document.getElementById('strassen-dropdown').classList.remove('open');
   document.querySelectorAll('[data-group]').forEach(function (b) { b.classList.remove('active'); });
+  fahrzeugSpuren = [];
+  fzCounter = 0;
   addBesatzung();
+  addFahrzeugSpur();
   render();
   document.querySelectorAll('.slide').forEach(function (s) { s.classList.remove('active', 'exit-left'); });
   document.getElementById('slide-0').classList.add('active');
