@@ -873,13 +873,46 @@ body {
   100% { transform: translate(var(--dx), var(--dy)); opacity: 0; }
 }
 
-/* Fahrzeugspuren redesign */
-.fz-card {
-  border-left: 3px solid var(--accent);
-  padding: 0 0 0 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+/* Fahrzeugspuren v2.9 – slide-based */
+.btn-fz-num {
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace;
+  min-width: 68px;
+  transition: border-color .15s, background .15s, color .15s;
+}
+
+.btn-fz-num.done {
+  border-color: #16a34a;
+  color: #16a34a;
+  background: rgba(22,163,74,.08);
+}
+
+.btn-fz-num.selected {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(29,78,216,.1);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.btn-fz-num.done.selected {
+  border-color: #16a34a;
+  color: #16a34a;
+  background: rgba(22,163,74,.15);
+  box-shadow: 0 0 0 1px #16a34a;
+}
+
+.btn-fz-num.add {
+  border-style: dashed;
+  font-size: 22px;
+  min-width: 54px;
+  color: var(--muted);
 }
 
 .fz-category-label {
