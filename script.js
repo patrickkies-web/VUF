@@ -6,8 +6,7 @@ var dragSrc = null;
 var branch = null; // 'strasse' | 'parkplatz'
 var touchData = { active: false, srcId: null, overItem: null };
 var today = new Date().toISOString().split('T')[0];
-var strassenTimer = null;
-var strassenMap = {};
+var GT_STREETS = null; // { name: { plz, stadt, ortsteil } | null }
 var autoOrtsteil = '';
 
 var SLIDES_BASE = ['slide-0', 'slide-1', 'slide-2', 'slide-3', 'slide-uo-typ'];
@@ -117,6 +116,7 @@ document.querySelectorAll('[data-group]').forEach(function (btn) {
 
 addBesatzung();
 render();
+ladeGueterslohStrassen();
 
 // ── Besatzung ──────────────────────────────────────────────
 
@@ -348,45 +348,86 @@ function ermittleStandort(target) {
 
 document.getElementById('strasse').addEventListener('input', function () {
   var q = this.value.trim();
-  var data = strassenMap[q];
-  if (data) fuelleAdressfelder(data);
-  clearTimeout(strassenTimer);
-  if (q.length < 3) return;
-  strassenTimer = setTimeout(function () { sucheStrassenVorschlaege(q); }, 350);
+  var qLow = q.toLowerCase();
+
+  if (GT_STREETS) {
+    var hit = GT_STREETS[q];
+    if (hit) {
+      fuelleAdressfelder(hit);
+    } else if (hit === null) {
+      strasseDetailLaden(q);
+    }
+  }
+
+  var dl = document.getElementById('strassen-vorschlaege');
+  dl.innerHTML = '';
+  if (!GT_STREETS || q.length < 2) return;
+
+  Object.keys(GT_STREETS)
+    .filter(function (n) {
+      var low = n.toLowerCase();
+      return low.startsWith(qLow) || low.indexOf(' ' + qLow) !== -1;
+    })
+    .sort()
+    .slice(0, 12)
+    .forEach(function (n) {
+      var opt = document.createElement('option');
+      opt.value = n;
+      dl.appendChild(opt);
+    });
 });
 
 function fuelleAdressfelder(data) {
-  document.getElementById('plz').value = data.plz || document.getElementById('plz').value;
-  document.getElementById('stadt').value = data.stadt || document.getElementById('stadt').value;
+  if (!data) return;
+  if (data.plz) document.getElementById('plz').value = data.plz;
+  if (data.stadt) document.getElementById('stadt').value = data.stadt;
   if (data.ortsteil) autoOrtsteil = data.ortsteil;
 }
 
-function sucheStrassenVorschlaege(query) {
+function strasseDetailLaden(name) {
   fetch('https://nominatim.openstreetmap.org/search?' +
-    'q=' + encodeURIComponent(query + ', Gütersloh') +
-    '&format=json&addressdetails=1&limit=10&countrycodes=de&accept-language=de')
+    'street=' + encodeURIComponent(name) +
+    '&city=G%C3%BCtersloh&format=json&addressdetails=1&limit=1&countrycodes=de&accept-language=de')
     .then(function (r) { return r.json(); })
     .then(function (results) {
-      var dl = document.getElementById('strassen-vorschlaege');
-      dl.innerHTML = '';
-      strassenMap = {};
-      results.forEach(function (item) {
-        var a = item.address || {};
-        var road = a.road;
-        if (!road) return;
-        var ort = a.city || a.town || a.village || '';
-        if (ort.toLowerCase().indexOf('gütersloh') === -1) return;
-        var plz = a.postcode || '';
-        var ortsteil = a.suburb || a.quarter || a.neighbourhood || '';
-        if (!strassenMap[road]) {
-          strassenMap[road] = { plz: plz, stadt: 'Gütersloh', ortsteil: ortsteil };
-          var opt = document.createElement('option');
-          opt.value = road;
-          dl.appendChild(opt);
-        }
-      });
+      if (!results.length) return;
+      var a = results[0].address || {};
+      var data = {
+        plz: a.postcode || '',
+        stadt: a.city || a.town || a.village || 'Gütersloh',
+        ortsteil: a.suburb || a.quarter || a.neighbourhood || ''
+      };
+      if (GT_STREETS) GT_STREETS[name] = data;
+      fuelleAdressfelder(data);
     })
     .catch(function () {});
+}
+
+function ladeGueterslohStrassen() {
+  try {
+    var cached = localStorage.getItem('gt_streets_v2');
+    if (cached) {
+      var obj = JSON.parse(cached);
+      if (obj.ts && Date.now() - obj.ts < 7 * 24 * 3600 * 1000) {
+        GT_STREETS = obj.data;
+        return;
+      }
+    }
+  } catch (e) {}
+
+  var q = '[out:json][timeout:25];area[name="Gütersloh"]["admin_level"="8"]->.gt;way["highway"]["name"](area.gt);out tags;';
+  fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q) })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      var names = {};
+      data.elements.forEach(function (el) {
+        var name = el.tags && el.tags.name;
+        if (name) names[name] = null;
+      });
+      GT_STREETS = names;
+      try { localStorage.setItem('gt_streets_v2', JSON.stringify({ ts: Date.now(), data: names })); } catch (e) {}
+    })
+    .catch(function () { GT_STREETS = {}; });
 }
 
 // ── Chip-Wert lesen ─────────────────────────────────────────
@@ -562,7 +603,6 @@ function resetAll() {
   document.getElementById('uo-spuren').value = '';
   document.getElementById('keineSpurenCheck').checked = false;
   document.getElementById('spurenFields').classList.remove('hidden');
-  strassenMap = {};
   autoOrtsteil = '';
   document.getElementById('strassen-vorschlaege').innerHTML = '';
   document.querySelectorAll('[data-group]').forEach(function (b) { b.classList.remove('active'); });
