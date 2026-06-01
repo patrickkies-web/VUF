@@ -104,6 +104,8 @@ document.querySelectorAll('[data-group]').forEach(function (btn) {
     var group = this.dataset.group;
     document.querySelectorAll('[data-group="' + group + '"]').forEach(function (b) { b.classList.remove('active'); });
     this.classList.add('active');
+    var wrap = this.closest('.suggestions');
+    if (wrap) wrap.classList.remove('chip-error');
     if (group === 'uo-typ') {
       branch = this.dataset.value;
       nextSlide();
@@ -227,6 +229,29 @@ function renderBesatzung() {
 
 function nextSlide() {
   var slides = getActiveSlides();
+  var slideId = slides[current];
+  var slideEl = document.getElementById(slideId);
+  if (slideEl) {
+    var groups = {};
+    slideEl.querySelectorAll('[data-group]').forEach(function (b) { groups[b.dataset.group] = true; });
+    var missing = false;
+    Object.keys(groups).forEach(function (g) {
+      var wrap = slideEl.querySelector('.suggestions:has([data-group="' + g + '"])') ||
+        (function() {
+          // fallback: find first btn with this group and get parent .suggestions
+          var btn = slideEl.querySelector('[data-group="' + g + '"]');
+          return btn ? btn.closest('.suggestions') : null;
+        })();
+      var hasActive = !!slideEl.querySelector('[data-group="' + g + '"].active');
+      if (!hasActive) {
+        missing = true;
+        if (wrap) { wrap.classList.add('chip-error'); }
+      } else {
+        if (wrap) { wrap.classList.remove('chip-error'); }
+      }
+    });
+    if (missing) return;
+  }
   if (current < slides.length - 1) { current++; render(); }
 }
 
@@ -289,15 +314,27 @@ function buildErsterSatz(anlass) {
 }
 
 function updateAdresseVorschlaege() {
-  var dl = document.getElementById('adresse-vorschlaege');
-  if (!dl) return;
-  dl.innerHTML = '';
+  var chips = document.getElementById('adresse-chips');
+  if (!chips) return;
+  chips.innerHTML = '';
   var strasse = document.getElementById('strasse').value;
+  var hausnummer = document.getElementById('hausnummer').value;
   var plz = document.getElementById('plz').value;
   var stadt = document.getElementById('stadt').value;
-  var kombiniert = [strasse, plz, stadt].filter(Boolean).join(', ');
-  if (strasse) { var o1 = document.createElement('option'); o1.value = strasse; dl.appendChild(o1); }
-  if (kombiniert && kombiniert !== strasse) { var o2 = document.createElement('option'); o2.value = kombiniert; dl.appendChild(o2); }
+  var strasseVoll = strasse + (hausnummer ? ' ' + hausnummer : '');
+  var options = [];
+  if (strasseVoll) options.push(strasseVoll);
+  if (strasse && strasse !== strasseVoll) options.push(strasse);
+  options.forEach(function (val) {
+    var btn = document.createElement('button');
+    btn.className = 'btn-suggestion';
+    btn.type = 'button';
+    btn.textContent = val;
+    btn.addEventListener('click', function () {
+      document.getElementById('pk-adresse').value = val;
+    });
+    chips.appendChild(btn);
+  });
 }
 
 function updatePreview() {
@@ -325,7 +362,8 @@ function ermittleStandort(target) {
         if (target === 'pk') {
           document.getElementById('pk-adresse').value = (a.road || '') + nr;
         } else {
-          document.getElementById('strasse').value = (a.road || '') + nr;
+          document.getElementById('strasse').value = a.road || '';
+          document.getElementById('hausnummer').value = a.house_number || '';
           document.getElementById('plz').value = a.postcode || '';
           document.getElementById('stadt').value = a.city || a.town || a.village || a.municipality || '';
         }
@@ -502,26 +540,19 @@ function generateAbschnitt2() {
   var stadt = document.getElementById('stadt').value || '[Stadt]';
 
   if (branch === 'strasse') {
-    var lage = getChipValue('lage') || '[innerorts/außerorts]';
-    var strassentyp = getChipValue('strassentyp') || '[Straßentyp]';
+    var lage = getChipValue('lage');
+    var strassentyp = getChipValue('strassentyp');
     var ortsteil = document.getElementById('uo-ortsteil').value;
-    var woGenau = document.getElementById('uo-wo-genau').value || '[Unfallstelle]';
-    var tempo = document.getElementById('uo-tempo').value || '[Tempo]';
-    var tempoGrund = getChipValue('tempo-grund');
+    var woGenau = document.getElementById('uo-wo-genau').value;
+    var tempo = document.getElementById('uo-tempo').value;
     var vz274 = document.getElementById('uo-vz274').value || '[VZ]';
-    var fahrstreifen = document.getElementById('uo-fahrstreifen').value || '[Anzahl]';
+    var fahrstreifen = document.getElementById('uo-fahrstreifen').value;
     var trennung = getChipValue('trennung');
     var verkehr = getChipValue('verkehr');
     var beleuchtung = getChipValue('beleuchtung');
     var verlauf = getChipValue('verlauf');
     var fahrtrichtung = document.getElementById('uo-fahrtrichtung').value || '[Richtung]';
     var steigung = getChipValue('steigung');
-
-    var ortsteilText = ortsteil ? ' (Ortsteil: ' + ortsteil + ')' : '';
-
-    var tempoGrundText = tempoGrund === 'vz274'
-      ? 'vorgegeben durch das VZ. 274-' + vz274 + '.'
-      : 'welche sich aus der Lage innerhalb geschlossener Ortschaft ergibt.';
 
     var trennungMap = {
       'mittellinie': 'eine durchgezogene Mittellinie',
@@ -546,19 +577,53 @@ function generateAbschnitt2() {
       'steigung-stark': 'eine starke Steigung'
     };
 
-    return 'Bei der Unfallörtlichkeit handelt es sich um die ' + lage + ' gelegene ' +
-      strasse + ' (' + strassentyp + '), in ' + plz + ' ' + stadt + ortsteilText + '.\n\n' +
-      'Der Unfall ereignete sich ' + woGenau + '.\n\n' +
-      'Die zulässige Höchstgeschwindigkeit auf diesem Abschnitt der Straße beträgt ' + tempo +
-      ' km/h, ' + tempoGrundText + '\n\n' +
-      'Es bestehen ' + fahrstreifen + ' Fahrstreifen je Richtung. Die Richtungsfahrbahnen sind durch ' +
-      (trennungMap[trennung] || '[Trennung]') + ' voneinander getrennt.\n\n' +
-      'Zum Zeitpunkt der Unfallaufnahme herrschte ' + (verkehrMap[verkehr] || '[Verkehr]') + ' Verkehrsaufkommen.\n\n' +
-      (beleuchtungMap[beleuchtung] || '[Beleuchtung]') + '\n\n' +
-      'Der Streckenabschnitt verläuft auf Höhe der Unfallstelle ' +
-      (verlaufMap[verlauf] || '[Verlauf]') + ' und weist in Fahrtrichtung ' + fahrtrichtung +
-      ' ' + (steigungMap[steigung] || '[Steigung]') + ' auf.' +
-      spurenText();
+    var lageText = (lage && lage !== 'none') ? lage + ' ' : '';
+    var strassentypText = (strassentyp && strassentyp !== 'none') ? ' (' + strassentyp + ')' : '';
+    var ortsteilText = ortsteil ? ' (Ortsteil: ' + ortsteil + ')' : '';
+
+    var lines = [];
+    lines.push('Bei der Unfallörtlichkeit handelt es sich um die ' + lageText + 'gelegene ' +
+      strasse + strassentypText + ', in ' + plz + ' ' + stadt + ortsteilText + '.');
+
+    if (woGenau) lines.push('Der Unfall ereignete sich ' + woGenau + '.');
+
+    if (tempo) {
+      var tempoGrundVal = getChipValue('tempo-grund');
+      var tempoSatz = 'Die zulässige Höchstgeschwindigkeit auf diesem Abschnitt der Straße beträgt ' + tempo + ' km/h';
+      if (tempoGrundVal && tempoGrundVal !== 'none') {
+        tempoSatz += ', ' + (tempoGrundVal === 'vz274'
+          ? 'vorgegeben durch das VZ. 274-' + vz274
+          : 'welche sich aus der Lage innerhalb geschlossener Ortschaft ergibt');
+      }
+      tempoSatz += '.';
+      lines.push(tempoSatz);
+    }
+
+    if (fahrstreifen && trennung && trennung !== 'none') {
+      lines.push('Es bestehen ' + fahrstreifen + ' Fahrstreifen je Richtung. Die Richtungsfahrbahnen sind durch ' +
+        (trennungMap[trennung] || '[Trennung]') + ' voneinander getrennt.');
+    } else if (fahrstreifen) {
+      lines.push('Es bestehen ' + fahrstreifen + ' Fahrstreifen je Richtung.');
+    }
+
+    if (verkehr && verkehr !== 'none') {
+      lines.push('Zum Zeitpunkt der Unfallaufnahme herrschte ' + (verkehrMap[verkehr] || '[Verkehr]') + ' Verkehrsaufkommen.');
+    }
+
+    if (beleuchtung && beleuchtung !== 'none') {
+      lines.push(beleuchtungMap[beleuchtung] || '');
+    }
+
+    var verlaufVal = (verlauf && verlauf !== 'none') ? (verlaufMap[verlauf] || null) : null;
+    var steigungVal = (steigung && steigung !== 'none') ? (steigungMap[steigung] || null) : null;
+    if (verlaufVal || steigungVal) {
+      var strecke = 'Der Streckenabschnitt verläuft auf Höhe der Unfallstelle';
+      if (verlaufVal) strecke += ' ' + verlaufVal;
+      if (steigungVal) strecke += (verlaufVal ? ' und' : '') + ' weist in Fahrtrichtung ' + fahrtrichtung + ' ' + steigungVal + ' auf';
+      lines.push(strecke + '.');
+    }
+
+    return lines.filter(Boolean).join('\n\n') + spurenText();
   }
 
   if (branch === 'parkplatz') {
