@@ -440,13 +440,15 @@ function getChipValue(group) {
 
 function generateResult() {
   var strasse = document.getElementById('strasse').value || '[Straße]';
+  var hausnummer = document.getElementById('hausnummer').value;
+  var strasseVoll = strasse + (hausnummer ? ' ' + hausnummer : '');
   var plz = document.getElementById('plz').value || '[PLZ]';
   var stadt = document.getElementById('stadt').value || '[Stadt]';
   var anlass = document.getElementById('einsatzanlass').value || '[Einsatzbeschreibung]';
 
   var text1 =
     buildErsterSatz(anlass) + '\n\n' +
-    'Einsatzörtlichkeit: ' + strasse + ', ' + plz + ' ' + stadt + '.';
+    'Einsatzörtlichkeit: ' + strasseVoll + ', ' + plz + ' ' + stadt + '.';
 
   document.getElementById('resultText').textContent = text1;
 
@@ -586,6 +588,7 @@ function resetAll() {
   current = 0;
   branch = null;
   document.getElementById('strasse').value = '';
+  document.getElementById('hausnummer').value = '';
   document.getElementById('plz').value = '';
   document.getElementById('stadt').value = '';
   document.getElementById('datum').value = today;
