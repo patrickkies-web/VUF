@@ -10,6 +10,54 @@ var GT_STREETS = null; // { name: { plz, stadt, ortsteil } | null }
 var autoOrtsteil = '';
 var fahrzeugSpuren = [];
 var fzCounter = 0;
+var teilCounter = 0;
+
+var KAROSSERIETEILE = [
+  'Motorhaube',
+  'Frontschürze / Stoßstange vorne',
+  'Kotflügel vorne links',
+  'Kotflügel vorne rechts',
+  'Vordertür links',
+  'Vordertür rechts',
+  'Hintertür links',
+  'Hintertür rechts',
+  'Kotflügel / Heckseitenblech links',
+  'Kotflügel / Heckseitenblech rechts',
+  'Heckschürze / Stoßstange hinten',
+  'Heckklappe / Kofferraumdeckel',
+  'Schweller links',
+  'Schweller rechts',
+  'Dach',
+  'A-Säule links',
+  'A-Säule rechts',
+  'B-Säule links',
+  'B-Säule rechts',
+  'C-Säule links',
+  'C-Säule rechts',
+  'Außenspiegel links',
+  'Außenspiegel rechts',
+  'Scheinwerfer links',
+  'Scheinwerfer rechts',
+  'Nebelscheinwerfer links',
+  'Nebelscheinwerfer rechts',
+  'Rückleuchte links',
+  'Rückleuchte rechts',
+  'Seitenscheibe vorne links',
+  'Seitenscheibe vorne rechts',
+  'Seitenscheibe hinten links',
+  'Seitenscheibe hinten rechts',
+  'Frontscheibe',
+  'Heckscheibe',
+  'Felge vorne links',
+  'Felge vorne rechts',
+  'Felge hinten links',
+  'Felge hinten rechts',
+  'Radlauf vorne links',
+  'Radlauf vorne rechts',
+  'Radlauf hinten links',
+  'Radlauf hinten rechts',
+  'Unterfahrschutz'
+];
 
 var SLIDES_BASE = ['slide-0', 'slide-1', 'slide-2', 'slide-3', 'slide-uo-typ'];
 var SLIDES_STRASSE = ['slide-uo-s1', 'slide-uo-s2', 'slide-uo-s3', 'slide-uo-s4', 'slide-uo-s5', 'slide-uo-spuren', 'slide-uo-fahrzeug'];
@@ -614,12 +662,36 @@ function getChipValue(group) {
 
 function addFahrzeugSpur() {
   fzCounter++;
-  fahrzeugSpuren.push({ id: fzCounter, zugehoerigkeit: '', teil: '', verlauf: '', anstoesshoehe: '', farbe: '', wert: '' });
+  teilCounter++;
+  fahrzeugSpuren.push({
+    id: fzCounter,
+    zugehoerigkeit: '02',
+    teile: [{ id: teilCounter, teil: '', verlauf: '', von: '', bis: '' }],
+    lackanhaftungen: null,
+    farbe: '',
+    pergamintute: null,
+    spurfix: null,
+    aufgrundText: null,
+    wert: '',
+    lichtbilder: null
+  });
   renderFahrzeugSpuren();
 }
 
 function removeFahrzeugSpur(id) {
   fahrzeugSpuren = fahrzeugSpuren.filter(function (f) { return f.id !== id; });
+  renderFahrzeugSpuren();
+}
+
+function addTeil(fz) {
+  teilCounter++;
+  fz.teile.push({ id: teilCounter, teil: '', verlauf: '', von: '', bis: '' });
+  renderFahrzeugSpuren();
+}
+
+function removeTeil(fz, teilId) {
+  if (fz.teile.length <= 1) return;
+  fz.teile = fz.teile.filter(function (t) { return t.id !== teilId; });
   renderFahrzeugSpuren();
 }
 
@@ -630,23 +702,41 @@ function renderFahrzeugSpuren() {
 
   fahrzeugSpuren.forEach(function (fz, idx) {
     var card = document.createElement('div');
-    card.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px;';
+    card.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px;';
 
-    function mkRow(lbl, inp) {
+    function mkGroup(lbl, content) {
       var g = document.createElement('div');
       g.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
-      var l = document.createElement('div');
-      l.className = 'input-label';
-      l.textContent = lbl;
-      g.appendChild(l); g.appendChild(inp);
+      if (lbl) {
+        var l = document.createElement('div');
+        l.className = 'input-label';
+        l.textContent = lbl;
+        g.appendChild(l);
+      }
+      if (content) g.appendChild(content);
       return g;
     }
 
-    // Header
+    function mkChipRow(options, current, onChange) {
+      var sugg = document.createElement('div');
+      sugg.className = 'suggestions';
+      options.forEach(function (o) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn-suggestion' + (current === o.v ? ' active' : '');
+        btn.textContent = o.label;
+        btn.onclick = function () { onChange(o.v); renderFahrzeugSpuren(); };
+        sugg.appendChild(btn);
+      });
+      return sugg;
+    }
+
+    // ── Header ──
     var hdr = document.createElement('div');
     hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;';
     var ttl = document.createElement('div');
     ttl.className = 'input-label';
+    ttl.style.fontWeight = '700';
     ttl.textContent = 'Fahrzeug ' + (idx + 1);
     var rb = document.createElement('button');
     rb.className = 'btn-remove';
@@ -656,70 +746,145 @@ function renderFahrzeugSpuren() {
     hdr.appendChild(ttl); hdr.appendChild(rb);
     card.appendChild(hdr);
 
-    // Zugehörigkeit
-    var zuInput = document.createElement('input');
-    zuInput.type = 'text'; zuInput.className = 'field-input';
-    zuInput.placeholder = 'z.B. des Geschädigten'; zuInput.value = fz.zugehoerigkeit;
-    zuInput.oninput = function () { fz.zugehoerigkeit = this.value; };
-    card.appendChild(mkRow('Fahrzeug-Zugehörigkeit', zuInput));
+    // ── Zugehörigkeit ──
+    card.appendChild(mkGroup('Zugehörigkeit', mkChipRow(
+      [{ v: '01', label: '01' }, { v: '02', label: '02' }],
+      fz.zugehoerigkeit,
+      function (v) { fz.zugehoerigkeit = v; }
+    )));
 
-    // Fahrzeugteil
-    var teilInput = document.createElement('input');
-    teilInput.type = 'text'; teilInput.className = 'field-input';
-    teilInput.placeholder = 'z.B. linke hintere Stoßstange'; teilInput.value = fz.teil;
-    teilInput.oninput = function () { fz.teil = this.value; };
-    card.appendChild(mkRow('Fahrzeugteil (Wo)', teilInput));
+    // ── Fahrzeugteile ──
+    var teileWrap = document.createElement('div');
+    teileWrap.style.cssText = 'display:flex;flex-direction:column;gap:10px;';
+    var teileLabel = document.createElement('div');
+    teileLabel.className = 'input-label';
+    teileLabel.textContent = 'Fahrzeugteile';
+    teileWrap.appendChild(teileLabel);
 
-    // Verlauf chips
-    var verlaufOpts = [
-      { v: 'horizontal', label: 'horizontal' },
-      { v: 'diagonal', label: 'diagonal' },
-      { v: 'horizontal-diagonal', label: 'horiz. + diag.' },
-      { v: 'vertikal', label: 'vertikal' }
-    ];
-    var verlaufSugg = document.createElement('div');
-    verlaufSugg.className = 'suggestions';
-    verlaufOpts.forEach(function (o) {
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'btn-suggestion' + (fz.verlauf === o.v ? ' active' : '');
-      btn.textContent = o.label;
-      btn.onclick = function () {
-        fz.verlauf = o.v;
-        verlaufSugg.querySelectorAll('.btn-suggestion').forEach(function (b) { b.classList.remove('active'); });
-        btn.classList.add('active');
-      };
-      verlaufSugg.appendChild(btn);
+    fz.teile.forEach(function (teil) {
+      var row = document.createElement('div');
+      row.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px;';
+
+      // Dropdown + remove
+      var teilHdr = document.createElement('div');
+      teilHdr.style.cssText = 'display:flex;gap:8px;align-items:center;';
+      var sel = document.createElement('select');
+      sel.className = 'field-select';
+      sel.style.flex = '1';
+      var emptyOpt = document.createElement('option');
+      emptyOpt.value = '';
+      emptyOpt.textContent = '— Fahrzeugteil wählen —';
+      if (!teil.teil) emptyOpt.selected = true;
+      sel.appendChild(emptyOpt);
+      KAROSSERIETEILE.forEach(function (k) {
+        var opt = document.createElement('option');
+        opt.value = k; opt.textContent = k;
+        if (k === teil.teil) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      sel.onchange = function () { teil.teil = this.value; };
+
+      var rb2 = document.createElement('button');
+      rb2.className = 'btn-remove';
+      rb2.type = 'button';
+      rb2.innerHTML = '&times;';
+      if (fz.teile.length <= 1) rb2.style.cssText = 'opacity:0.3;pointer-events:none;';
+      (function (tid) { rb2.onclick = function () { removeTeil(fz, tid); }; })(teil.id);
+      teilHdr.appendChild(sel);
+      teilHdr.appendChild(rb2);
+      row.appendChild(teilHdr);
+
+      // Verlauf chips
+      row.appendChild(mkGroup('Verlauf', mkChipRow(
+        [{ v: 'punktuell', label: 'punktuell' }, { v: 'horizontal', label: 'horizontal' }, { v: 'vertikal', label: 'vertikal' }],
+        teil.verlauf,
+        function (v) { teil.verlauf = v; }
+      )));
+
+      // Anstoßhöhe von/bis
+      var hoehe = document.createElement('div');
+      hoehe.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;';
+      function mkMiniInput(placeholder, val, onChange) {
+        var inp = document.createElement('input');
+        inp.type = 'text'; inp.className = 'field-input';
+        inp.style.cssText = 'width:70px;padding:10px 12px;font-size:15px;';
+        inp.placeholder = placeholder; inp.value = val;
+        inp.oninput = function () { onChange(this.value); };
+        return inp;
+      }
+      function lbl(t) {
+        var s = document.createElement('span');
+        s.className = 'input-label';
+        s.style.cssText = 'margin:0;white-space:nowrap;';
+        s.textContent = t;
+        return s;
+      }
+      hoehe.appendChild(lbl('Anstoßhöhe'));
+      hoehe.appendChild(mkMiniInput('von', teil.von, function (v) { teil.von = v; }));
+      hoehe.appendChild(lbl('–'));
+      hoehe.appendChild(mkMiniInput('bis', teil.bis, function (v) { teil.bis = v; }));
+      hoehe.appendChild(lbl('cm'));
+      row.appendChild(mkGroup(null, hoehe));
+
+      teileWrap.appendChild(row);
     });
-    var verlaufG = document.createElement('div');
-    verlaufG.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
-    var verlaufL = document.createElement('div');
-    verlaufL.className = 'input-label';
-    verlaufL.textContent = 'Verlauf der Beschädigung';
-    verlaufG.appendChild(verlaufL); verlaufG.appendChild(verlaufSugg);
-    card.appendChild(verlaufG);
 
-    // Anstoßhöhe + Farbe (grid)
-    var grid = document.createElement('div');
-    grid.style.cssText = 'display:grid;grid-template-columns:110px 1fr;gap:10px;';
-    var ansInput = document.createElement('input');
-    ansInput.type = 'number'; ansInput.className = 'field-input';
-    ansInput.placeholder = 'cm'; ansInput.value = fz.anstoesshoehe;
-    ansInput.oninput = function () { fz.anstoesshoehe = this.value; };
-    var farbeInput = document.createElement('input');
-    farbeInput.type = 'text'; farbeInput.className = 'field-input';
-    farbeInput.placeholder = 'z.B. weißer'; farbeInput.value = fz.farbe;
-    farbeInput.oninput = function () { fz.farbe = this.value; };
-    grid.appendChild(mkRow('Anstoßhöhe (cm)', ansInput));
-    grid.appendChild(mkRow('Farbe Lackaufrieb', farbeInput));
-    card.appendChild(grid);
+    var addTeilBtn = document.createElement('button');
+    addTeilBtn.type = 'button';
+    addTeilBtn.className = 'btn-add';
+    addTeilBtn.innerHTML = '<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Fahrzeugteil hinzufügen';
+    addTeilBtn.style.cssText = 'font-size:13px;padding:7px 14px;';
+    (function (fzRef) { addTeilBtn.onclick = function () { addTeil(fzRef); }; })(fz);
+    teileWrap.appendChild(addTeilBtn);
+    card.appendChild(teileWrap);
 
-    // Schadenshöhe
-    var wertInput = document.createElement('input');
-    wertInput.type = 'number'; wertInput.className = 'field-input';
-    wertInput.placeholder = 'z.B. 500'; wertInput.value = fz.wert;
-    wertInput.oninput = function () { fz.wert = this.value; };
-    card.appendChild(mkRow('Schadenshöhe ca. (€)', wertInput));
+    // ── Lackanhaftungen ──
+    card.appendChild(mkGroup('Lackanhaftungen vorhanden?', mkChipRow(
+      [{ v: 'ja', label: 'Ja' }, { v: 'nein', label: 'Nein' }],
+      fz.lackanhaftungen,
+      function (v) { fz.lackanhaftungen = v; }
+    )));
+
+    if (fz.lackanhaftungen === 'ja') {
+      var farbeInp = document.createElement('input');
+      farbeInp.type = 'text'; farbeInp.className = 'field-input';
+      farbeInp.placeholder = 'z.B. weißer'; farbeInp.value = fz.farbe;
+      farbeInp.oninput = function () { fz.farbe = this.value; };
+      card.appendChild(mkGroup('Farbe des Lackabriebs', farbeInp));
+
+      card.appendChild(mkGroup('Pergamintütchen genutzt?', mkChipRow(
+        [{ v: 'ja', label: 'Ja' }, { v: 'nein', label: 'Nein' }],
+        fz.pergamintute,
+        function (v) { fz.pergamintute = v; }
+      )));
+
+      card.appendChild(mkGroup('SPURFIX-Folie genutzt?', mkChipRow(
+        [{ v: 'ja', label: 'Ja' }, { v: 'nein', label: 'Nein' }],
+        fz.spurfix,
+        function (v) { fz.spurfix = v; }
+      )));
+    }
+
+    // ── Aufgrund-Satz ──
+    card.appendChild(mkGroup('"Aufgrund ..."-Satz einfügen?', mkChipRow(
+      [{ v: 'ja', label: 'Ja' }, { v: 'nein', label: 'Nein' }],
+      fz.aufgrundText,
+      function (v) { fz.aufgrundText = v; }
+    )));
+
+    // ── Schadenshöhe ──
+    var wertInp = document.createElement('input');
+    wertInp.type = 'text'; wertInp.className = 'field-input';
+    wertInp.placeholder = 'z.B. 1.500'; wertInp.value = fz.wert;
+    wertInp.oninput = function () { fz.wert = this.value; };
+    card.appendChild(mkGroup('Schadenshöhe ca. (€) – geschätzt', wertInp));
+
+    // ── Lichtbilder ──
+    card.appendChild(mkGroup('Lichtbilder gefertigt?', mkChipRow(
+      [{ v: 'ja', label: 'Ja' }, { v: 'nein', label: 'Nein' }],
+      fz.lichtbilder,
+      function (v) { fz.lichtbilder = v; }
+    )));
 
     list.appendChild(card);
   });
@@ -728,27 +893,49 @@ function renderFahrzeugSpuren() {
 function generateFahrzeugText() {
   if (!fahrzeugSpuren.length) return '';
   var verlaufMap = {
-    'horizontal': 'horizontaler',
-    'diagonal': 'diagonaler',
-    'horizontal-diagonal': 'horizontaler diagonaler',
-    'vertikal': 'vertikaler'
+    'punktuell': 'punktuelle Beschädigung',
+    'horizontal': 'horizontaler Verlauf',
+    'vertikal': 'vertikaler Verlauf'
   };
   return fahrzeugSpuren.map(function (fz) {
     var zu = fz.zugehoerigkeit || '[Zugehörigkeit]';
-    var teil = fz.teil || '[Fahrzeugteil]';
-    var verlaufAdj = fz.verlauf ? (verlaufMap[fz.verlauf] || fz.verlauf) : '[Verlauf]';
-    var hoehe = fz.anstoesshoehe ? fz.anstoesshoehe + ' cm' : '[Höhe] cm';
-
     var lines = [];
     lines.push('Am Fahrzeug ' + zu + ' zeigten sich folgende unfallbedingte Beschädigungen/Spuren an folgenden Fahrzeugteilen:');
-    lines.push('    - ' + teil + ': ' + verlaufAdj + ' Verlauf – Anstoßhöhe: ' + hoehe);
-    if (fz.farbe) {
-      lines.push('An dieser Stelle konnte ' + fz.farbe + ' Lackaufrieb festgestellt werden. Aus diesem Grund wurde hier der Lack abgetragen und in einer Pergamintüte gesichert (liegt dem Vorgang bei).');
-      lines.push('Für ermittlungstaktische Zwecke wurde eine Spurensicherungsfolie auf der Stelle aufgetragen und im Anschluss gesichert (SPURFIX-Folie).');
+
+    fz.teile.forEach(function (teil) {
+      var t = teil.teil || '[Fahrzeugteil]';
+      var verlaufText = teil.verlauf ? (verlaufMap[teil.verlauf] || teil.verlauf) : '[Verlauf]';
+      var vonBis = '';
+      if (teil.von && teil.bis) vonBis = teil.von + ' bis ' + teil.bis + ' cm';
+      else if (teil.von) vonBis = 'ab ' + teil.von + ' cm';
+      else if (teil.bis) vonBis = 'bis ' + teil.bis + ' cm';
+      else vonBis = '[Höhe] cm';
+      lines.push('    - ' + t + ': ' + verlaufText + ' – Anstoßhöhe: ' + vonBis);
+    });
+
+    if (fz.lackanhaftungen === 'ja') {
+      var farbe = fz.farbe ? fz.farbe + ' ' : '';
+      lines.push('An dieser Stelle konnte ' + farbe + 'Lackaufrieb festgestellt werden.');
+      if (fz.pergamintute === 'ja') {
+        lines.push('Der Lack wurde abgetragen und in einer Pergamintüte gesichert (liegt dem Vorgang bei).');
+      }
+      if (fz.spurfix === 'ja') {
+        lines.push('Für ermittlungstaktische Zwecke wurde eine Spurensicherungsfolie auf der Stelle aufgetragen und im Anschluss gesichert (SPURFIX-Folie).');
+      }
     }
-    lines.push('Aufgrund der festgestellten äußeren Beschädigungen können verdeckte Schäden, insbesondere an Trägerstrukturen, Befestigungspunkten, Verformungselementen nicht ausgeschlossen werden.');
-    if (fz.wert) lines.push('Die Höhe der sichtbaren Beschädigungen liegt bei ca. ' + fz.wert + ' €.');
-    lines.push('Es wurden Lichtbilder gefertigt, welche dem Vorgang digital beigefügt werden.');
+
+    if (fz.aufgrundText === 'ja') {
+      lines.push('Aufgrund der festgestellten äußeren Beschädigungen können verdeckte Schäden, insbesondere an Trägerstrukturen, Befestigungspunkten, Verformungselementen nicht ausgeschlossen werden.');
+    }
+
+    if (fz.wert) {
+      lines.push('Die Höhe der sichtbaren Beschädigungen wird auf ca. ' + fz.wert + ' € geschätzt.');
+    }
+
+    if (fz.lichtbilder === 'ja') {
+      lines.push('Es wurden Lichtbilder gefertigt, welche dem Vorgang digital beigefügt werden.');
+    }
+
     return lines.join('\n');
   }).join('\n\n');
 }
@@ -999,6 +1186,7 @@ function resetAll() {
   document.querySelectorAll('[data-group]').forEach(function (b) { b.classList.remove('active'); });
   fahrzeugSpuren = [];
   fzCounter = 0;
+  teilCounter = 0;
   addBesatzung();
   addFahrzeugSpur();
   render();
