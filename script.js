@@ -75,12 +75,14 @@ var schildCounter = 0;
 function getActiveSlides() {
   if (!branch) return SLIDES_BASE;
   var fzDetailSlides = [];
+  var fzAbschluss = [];
   if (fzCurrentIdx !== null && fahrzeugSpuren[fzCurrentIdx]) {
     var n = fahrzeugSpuren[fzCurrentIdx].selectedTeile.length;
     for (var i = 0; i < n; i++) fzDetailSlides.push('slide-fz-detail-' + i);
+    if (n > 0) fzAbschluss = ['slide-fz-abschluss'];
   }
   var pre = branch === 'strasse' ? SLIDES_STRASSE_PRE : SLIDES_PARKPLATZ_PRE;
-  return SLIDES_BASE.concat(pre).concat(['slide-fz-nummer', 'slide-fz-picker']).concat(fzDetailSlides).concat(['slide-schilderungen']);
+  return SLIDES_BASE.concat(pre).concat(['slide-fz-nummer', 'slide-fz-picker']).concat(fzDetailSlides).concat(fzAbschluss).concat(['slide-schilderungen']);
 }
 
 // Touch drag
@@ -433,6 +435,7 @@ function render() {
   if (slides[current] && slides[current].indexOf('slide-fz-detail-') === 0) {
     renderFzDetail(parseInt(slides[current].replace('slide-fz-detail-', ''), 10));
   }
+  if (slides[current] === 'slide-fz-abschluss') renderFzAbschluss();
 }
 
 // ── Einsatzanlass-Vorschau ──────────────────────────────────
@@ -989,26 +992,6 @@ function renderFzDetail(idx) {
   }
   slide.appendChild(form);
 
-  if (isLast) {
-    var sep = document.createElement('hr'); sep.style.cssText = 'border:none;border-top:1px solid var(--border);margin:16px 0;';
-    slide.appendChild(sep);
-    var aufgrundGroup = document.createElement('div'); aufgrundGroup.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
-    var aufgrundLblRow = document.createElement('div'); aufgrundLblRow.style.cssText = 'display:flex;align-items:center;gap:8px;';
-    var aufgrundLbl = document.createElement('div'); aufgrundLbl.className = 'input-label'; aufgrundLbl.textContent = '"Aufgrund ..."-Satz einfügen?';
-    var infoBtn = document.createElement('button'); infoBtn.type = 'button'; infoBtn.className = 'btn-info'; infoBtn.textContent = 'ⓘ';
-    var infoBox = document.createElement('div'); infoBox.className = 'info-box'; infoBox.style.display = 'none';
-    infoBox.textContent = 'Aufgrund der festgestellten äußeren Beschädigungen können verdeckte Schäden, insbesondere an Trägerstrukturen, Befestigungspunkten, Verformungselementen nicht ausgeschlossen werden.';
-    infoBtn.onclick = function () { infoBox.style.display = infoBox.style.display === 'none' ? '' : 'none'; };
-    aufgrundLblRow.appendChild(aufgrundLbl); aufgrundLblRow.appendChild(infoBtn);
-    aufgrundGroup.appendChild(aufgrundLblRow); aufgrundGroup.appendChild(infoBox);
-    aufgrundGroup.appendChild(mkChipRow([{v:'ja',label:'Ja'},{v:'nein',label:'Nein'}], fz.aufgrundText, function (v) { fz.aufgrundText = v; }));
-    slide.appendChild(aufgrundGroup);
-    var wertInp = document.createElement('input'); wertInp.type = 'text'; wertInp.className = 'field-input';
-    wertInp.placeholder = 'z.B. 1.500'; wertInp.value = fz.wert; wertInp.oninput = function () { fz.wert = this.value; };
-    slide.appendChild(mkGroup('Schadenshöhe ca. (€) – geschätzt', wertInp));
-    slide.appendChild(mkGroup('Lichtbilder gefertigt?', mkChipRow([{v:'ja',label:'Ja'},{v:'nein',label:'Nein'}], fz.lichtbilder, function (v) { fz.lichtbilder = v; })));
-  }
-
   var nav = document.createElement('div'); nav.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;';
   var backBtn = document.createElement('button'); backBtn.type = 'button'; backBtn.className = 'btn-det-back'; backBtn.textContent = '← Teile';
   backBtn.onclick = function () { var slides = getActiveSlides(); var pi = slides.indexOf('slide-fz-picker'); if (pi !== -1) { current = pi; render(); } };
@@ -1018,17 +1001,65 @@ function renderFzDetail(idx) {
     prevBtn.textContent = '← ' + parts[idx - 1]; prevBtn.onclick = function () { current--; render(); };
     nav.appendChild(prevBtn);
   }
-  if (!isLast) {
-    var nextBtn = document.createElement('button'); nextBtn.type = 'button'; nextBtn.className = 'btn-det-next';
-    nextBtn.textContent = parts[idx + 1] + ' →'; nextBtn.onclick = function () { current++; render(); };
-    nav.appendChild(nextBtn);
-  } else {
-    var fertigBtn = document.createElement('button'); fertigBtn.type = 'button'; fertigBtn.className = 'btn-det-next';
-    fertigBtn.textContent = 'Fertig →';
-    fertigBtn.onclick = function () { fzCurrentIdx = null; fzSelectedNum = null; jumpToSlide('slide-fz-nummer'); };
-    nav.appendChild(fertigBtn);
-  }
+  var nextBtn = document.createElement('button'); nextBtn.type = 'button'; nextBtn.className = 'btn-det-next';
+  nextBtn.textContent = isLast ? 'Weiter →' : parts[idx + 1] + ' →';
+  nextBtn.onclick = function () { current++; render(); };
+  nav.appendChild(nextBtn);
   slide.appendChild(nav);
+}
+
+function renderFzAbschluss() {
+  if (fzCurrentIdx === null || !fahrzeugSpuren[fzCurrentIdx]) return;
+  var fz = fahrzeugSpuren[fzCurrentIdx];
+  var titleEl = document.getElementById('fz-abschluss-title');
+  if (titleEl) titleEl.innerHTML = 'Fahrzeug <strong>' + fz.zugehoerigkeit + '</strong>';
+  var cont = document.getElementById('fz-abschluss-content');
+  if (!cont) return;
+  cont.innerHTML = '';
+
+  function mkGroup(lbl, content) {
+    var g = document.createElement('div'); g.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
+    if (lbl) { var l = document.createElement('div'); l.className = 'input-label'; l.textContent = lbl; g.appendChild(l); }
+    if (content) g.appendChild(content);
+    return g;
+  }
+  function mkChipRow(options, cur, onChange) {
+    var sugg = document.createElement('div'); sugg.className = 'suggestions';
+    options.forEach(function (o) {
+      var btn = document.createElement('button'); btn.type = 'button';
+      btn.className = 'btn-suggestion' + (cur === o.v ? ' active' : ''); btn.textContent = o.label;
+      btn.onclick = function () { onChange(o.v); renderFzAbschluss(); };
+      sugg.appendChild(btn);
+    });
+    return sugg;
+  }
+
+  var aufgrundGroup = document.createElement('div'); aufgrundGroup.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
+  var aufgrundLblRow = document.createElement('div'); aufgrundLblRow.style.cssText = 'display:flex;align-items:center;gap:8px;';
+  var aufgrundLbl = document.createElement('div'); aufgrundLbl.className = 'input-label'; aufgrundLbl.textContent = '"Aufgrund ..."-Satz einfügen?';
+  var infoBtn = document.createElement('button'); infoBtn.type = 'button'; infoBtn.className = 'btn-info'; infoBtn.textContent = 'ⓘ';
+  var infoBox = document.createElement('div'); infoBox.className = 'info-box'; infoBox.style.display = 'none';
+  infoBox.textContent = 'Aufgrund der festgestellten äußeren Beschädigungen können verdeckte Schäden, insbesondere an Trägerstrukturen, Befestigungspunkten, Verformungselementen nicht ausgeschlossen werden.';
+  infoBtn.onclick = function () { infoBox.style.display = infoBox.style.display === 'none' ? '' : 'none'; };
+  aufgrundLblRow.appendChild(aufgrundLbl); aufgrundLblRow.appendChild(infoBtn);
+  aufgrundGroup.appendChild(aufgrundLblRow); aufgrundGroup.appendChild(infoBox);
+  aufgrundGroup.appendChild(mkChipRow([{v:'ja',label:'Ja'},{v:'nein',label:'Nein'}], fz.aufgrundText, function (v) { fz.aufgrundText = v; }));
+  cont.appendChild(aufgrundGroup);
+
+  var wertInp = document.createElement('input'); wertInp.type = 'text'; wertInp.className = 'field-input';
+  wertInp.placeholder = 'z.B. 1.500'; wertInp.value = fz.wert; wertInp.oninput = function () { fz.wert = this.value; };
+  cont.appendChild(mkGroup('Schadenshöhe ca. (€) – geschätzt', wertInp));
+  cont.appendChild(mkGroup('Lichtbilder gefertigt?', mkChipRow([{v:'ja',label:'Ja'},{v:'nein',label:'Nein'}], fz.lichtbilder, function (v) { fz.lichtbilder = v; })));
+
+  var nav = document.createElement('div'); nav.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:20px;';
+  var backBtn = document.createElement('button'); backBtn.type = 'button'; backBtn.className = 'btn-det-back';
+  backBtn.textContent = '← Zurück'; backBtn.onclick = function () { current--; render(); };
+  nav.appendChild(backBtn);
+  var fertigBtn = document.createElement('button'); fertigBtn.type = 'button'; fertigBtn.className = 'btn-det-next';
+  fertigBtn.textContent = 'Fertig →';
+  fertigBtn.onclick = function () { fzCurrentIdx = null; fzSelectedNum = null; jumpToSlide('slide-fz-nummer'); };
+  nav.appendChild(fertigBtn);
+  cont.appendChild(nav);
 }
 
 function renderFahrzeugSpuren_REMOVED() {
