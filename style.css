@@ -668,3 +668,20 @@ body::before {
   background: rgba(74, 158, 255, .1);
   color: var(--accent);
 }
+
+.btn-keine {
+  opacity: .6;
+  border-style: dashed;
+  min-width: 36px;
+}
+.btn-keine.active {
+  border-style: dashed;
+  border-color: var(--muted);
+  color: var(--muted);
+  background: rgba(160, 174, 192, .08);
+}
+.suggestions.chip-error {
+  outline: 1.5px solid var(--danger);
+  border-radius: 8px;
+  padding: 6px;
+}

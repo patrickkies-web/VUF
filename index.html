@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>Polizeibericht v2.0</title>
+  <title>Polizeibericht v2.1</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -178,6 +178,7 @@
         <div class="suggestions">
           <button class="btn-suggestion" data-group="lage" data-value="innerorts">innerorts</button>
           <button class="btn-suggestion" data-group="lage" data-value="außerorts">au&szlig;erorts</button>
+          <button class="btn-suggestion btn-keine" data-group="lage" data-value="none">—</button>
         </div>
       </div>
       <div class="input-group">
@@ -187,6 +188,7 @@
           <button class="btn-suggestion" data-group="strassentyp" data-value="Landstraße">Landstra&szlig;e</button>
           <button class="btn-suggestion" data-group="strassentyp" data-value="Kreisstraße">Kreisstra&szlig;e</button>
           <button class="btn-suggestion" data-group="strassentyp" data-value="Gemeindestraße">Gemeindestra&szlig;e</button>
+          <button class="btn-suggestion btn-keine" data-group="strassentyp" data-value="none">—</button>
         </div>
       </div>
       <div class="input-group">
@@ -223,6 +225,7 @@
         <div class="suggestions">
           <button class="btn-suggestion" data-group="tempo-grund" data-value="vz274">VZ. 274</button>
           <button class="btn-suggestion" data-group="tempo-grund" data-value="ortschaft">geschlossene Ortschaft</button>
+          <button class="btn-suggestion btn-keine" data-group="tempo-grund" data-value="none">—</button>
         </div>
       </div>
       <div class="input-group" id="vzRow" style="display:none">
@@ -251,6 +254,7 @@
           <button class="btn-suggestion" data-group="trennung" data-value="doppelte-linie">doppelte durchgezogene Linie</button>
           <button class="btn-suggestion" data-group="trennung" data-value="mittelstreifen">begr&uuml;nter Mittelstreifen</button>
           <button class="btn-suggestion" data-group="trennung" data-value="mittelinsel">bauliche Mittelinsel</button>
+          <button class="btn-suggestion btn-keine" data-group="trennung" data-value="none">—</button>
         </div>
       </div>
       <div class="input-group">
@@ -259,6 +263,7 @@
           <button class="btn-suggestion" data-group="verkehr" data-value="schwach">schwach</button>
           <button class="btn-suggestion" data-group="verkehr" data-value="moderat">moderat</button>
           <button class="btn-suggestion" data-group="verkehr" data-value="stark">stark</button>
+          <button class="btn-suggestion btn-keine" data-group="verkehr" data-value="none">—</button>
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
@@ -278,6 +283,7 @@
           <button class="btn-suggestion" data-group="beleuchtung" data-value="in-betrieb">in Betrieb</button>
           <button class="btn-suggestion" data-group="beleuchtung" data-value="nicht-vorhanden">nicht vorhanden</button>
           <button class="btn-suggestion" data-group="beleuchtung" data-value="ausgeschaltet">ausgeschaltet (Tageszeit)</button>
+          <button class="btn-suggestion btn-keine" data-group="beleuchtung" data-value="none">—</button>
         </div>
       </div>
       <div class="input-group">
@@ -286,6 +292,7 @@
           <button class="btn-suggestion" data-group="verlauf" data-value="gerade">gerade</button>
           <button class="btn-suggestion" data-group="verlauf" data-value="linkskurve">Linkskurve</button>
           <button class="btn-suggestion" data-group="verlauf" data-value="rechtskurve">Rechtskurve</button>
+          <button class="btn-suggestion btn-keine" data-group="verlauf" data-value="none">—</button>
         </div>
       </div>
       <div class="input-group">
@@ -302,6 +309,7 @@
           <button class="btn-suggestion" data-group="steigung" data-value="steigung-gering">Steigung gering</button>
           <button class="btn-suggestion" data-group="steigung" data-value="steigung-maessig">Steigung m&auml;&szlig;ig</button>
           <button class="btn-suggestion" data-group="steigung" data-value="steigung-stark">Steigung stark</button>
+          <button class="btn-suggestion btn-keine" data-group="steigung" data-value="none">—</button>
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
@@ -317,8 +325,8 @@
       <div class="question-text">Parkplatz<br><strong>Details</strong></div>
       <div class="input-group">
         <div class="input-label">Adresse des Parkplatzes</div>
-        <input class="field-input" type="text" id="pk-adresse" list="adresse-vorschlaege" placeholder="z.B. Hauptstra&szlig;e 12">
-        <datalist id="adresse-vorschlaege"></datalist>
+        <input class="field-input" type="text" id="pk-adresse" autocomplete="off">
+        <div id="adresse-chips" class="suggestions" style="margin-top:8px;flex-wrap:wrap"></div>
       </div>
       <button class="btn-locate" id="btnLocatePk">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
