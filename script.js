@@ -1899,7 +1899,8 @@ function generateSchilderungenText() {
       var uzeit = s.abstelltUhrzeit || '[Uhrzeit]';
       var ort   = s.abstelltOrt || '[Ort]';
       var rueck = s.rueckUhrzeit || '[Uhrzeit]';
-      body = rm.er + ' habe ' + rm.sein + ' Fahrzeug am ' + datum + ' gegen ' + uzeit + ' Uhr ' + ort + ' abgestellt. Bei ' + rm.seiner + ' Rückkehr gegen ' + rueck + ' Uhr habe ' + rm.erLow + ' festgestellt, dass ' + rm.sein + ' Fahrzeug beschädigt worden war.';
+      var dispCap = rm.disp.charAt(0).toUpperCase() + rm.disp.slice(1);
+      body = rm.er + ' habe ' + rm.sein + ' Fahrzeug am ' + datum + ' gegen ' + uzeit + ' Uhr ' + ort + ' abgestellt. Bei ' + rm.seiner + ' Rückkehr gegen ' + rueck + ' Uhr habe ' + rm.erLow + ' ' + rm.sein + ' Fahrzeug beschädigt vorgefunden.\n' + dispCap + ' geht davon aus, dass es in diesem Zeitraum zu einem Verkehrsunfall gekommen ist, bei welchem ' + rm.sein + ' Fahrzeug beschädigt wurde.';
       if (s.zwischenzeit === 'ja' && s.zwischenzeitText) {
         body += ' In der Zwischenzeit habe ' + rm.erLow + ' folgendes festgestellt: ' + s.zwischenzeitText;
       } else {
