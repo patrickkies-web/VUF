@@ -200,6 +200,16 @@ addFahrzeugSpur();
 render();
 ladeGueterslohStrassen();
 
+// ── Dev-Skip-Button ─────────────────────────────────────────
+document.querySelectorAll('.btn-next').forEach(function (btn) {
+  var skip = document.createElement('button');
+  skip.type = 'button';
+  skip.className = 'btn-dev-skip';
+  skip.textContent = 'DEV ▶';
+  skip.onclick = skipSlide;
+  btn.parentNode.insertBefore(skip, btn.nextSibling);
+});
+
 // ── Besatzung ──────────────────────────────────────────────
 
 function addBesatzung() {
@@ -360,6 +370,12 @@ document.addEventListener('input', function (e) {
 
 function prevSlide() {
   if (current > 0) { current--; render(); }
+}
+
+function skipSlide() {
+  var slides = getActiveSlides();
+  if (current < slides.length - 1) { current++; render(); }
+  else generateResult();
 }
 
 function render() {
