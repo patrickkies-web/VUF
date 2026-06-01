@@ -169,6 +169,7 @@
       </div>
     </div>
 
+    <!-- Slide UO-S1: Adresse, Lage & Straßentyp -->
     <!-- Slide UO-S1: Adresse -->
     <div class="slide" id="slide-uo-s1">
       <div class="question-number">Abschnitt 2 &middot; Frage 1</div>
@@ -337,7 +338,7 @@
     <!-- Slide UO-S4b: Steigung & Gefälle -->
     <div class="slide" id="slide-uo-s4b">
       <div class="question-number">Abschnitt 2 &middot; Frage 6</div>
-      <div class="question-text">Steigung &amp;<br><strong>Gefälle</strong></div>
+      <div class="question-text">Steigung &amp;<br><strong>Gef&auml;lle</strong></div>
       <p class="question-hint">Wie ist das Höhenprofil der Straße an der Unfallörtlichkeit?</p>
       <div class="input-group">
         <div class="input-label">Steigung / Gef&auml;lle</div>
@@ -362,7 +363,7 @@
     <!-- Slide UO-S5: Wetter & Sichtverhältnisse -->
     <div class="slide" id="slide-uo-s5">
       <div class="question-number">Abschnitt 2 &middot; Frage 7</div>
-      <div class="question-text">Wetter &amp;<br><strong>Sichtverhältnisse</strong></div>
+      <div class="question-text">Wetter &amp;<br><strong>Sichtverh&auml;ltnisse</strong></div>
       <div class="input-group">
         <div class="input-label">Witterung</div>
         <div class="suggestions">
@@ -389,7 +390,7 @@
         <div class="input-label">Sichtverh&auml;ltnisse</div>
         <div class="suggestions">
           <button class="btn-suggestion" data-group="sicht" data-value="gut">gut</button>
-          <button class="btn-suggestion" data-group="sicht" data-value="eingeschraenkt">eingeschränkt</button>
+          <button class="btn-suggestion" data-group="sicht" data-value="eingeschraenkt">eingeschr&auml;nkt</button>
           <button class="btn-suggestion" data-group="sicht" data-value="schlecht">schlecht</button>
           <button class="btn-suggestion btn-keine" data-group="sicht" data-value="none">—</button>
         </div>
@@ -417,7 +418,7 @@
         Standort ermitteln
       </button>
       <div class="input-group">
-        <div class="input-label">Zugehörigkeit</div>
+        <div class="input-label">Zugeh&ouml;rigkeit</div>
         <input class="field-input" type="text" id="pk-zugehoerigkeit" placeholder="z.B. Parkplatz des REWE-Marktes">
       </div>
       <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
@@ -476,8 +477,30 @@
         Fahrzeug hinzuf&uuml;gen
       </button>
       <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
-        <button class="btn-next" id="btnGenerateFahrzeug">Bericht erstellen
+        <button class="btn-next" id="btnGenerateFahrzeug">Weiter
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+        <div class="hint">oder <kbd>Enter</kbd></div>
+      </div>
+    </div>
+
+    <!-- Schilderungen -->
+    <div class="slide" id="slide-schilderungen">
+      <div class="question-number">Abschnitt 4 &middot; Schilderungen</div>
+      <div class="question-text">Schilderungen &amp;<br><strong>&Auml;u&szlig;erungen</strong></div>
+      <p class="question-hint">Zeugen und Unfallbeteiligte schildern sinngem&auml;&szlig;, was sie wahrgenommen haben.</p>
+      <div id="schilderungList" style="display:flex;flex-direction:column;gap:32px"></div>
+      <button class="btn-add" id="btnAddSchilderung">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        Person hinzuf&uuml;gen
+      </button>
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
+        <button class="btn-next" id="btnGenerateSchilderungen">Bericht erstellen
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
         </button>
         <div class="hint">oder <kbd>Enter</kbd></div>
       </div>
