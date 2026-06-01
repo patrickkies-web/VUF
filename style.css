@@ -625,6 +625,19 @@ body::before {
   background: rgba(74, 158, 255, .07);
 }
 
+.suggestions-anlass .btn-suggestion {
+  opacity: .45;
+}
+.suggestions-anlass .btn-suggestion:hover {
+  opacity: 1;
+}
+.suggestions-anlass .btn-suggestion.active {
+  opacity: 1;
+}
+.suggestions-anlass.has-selection .btn-suggestion:not(.active) {
+  opacity: .25;
+}
+
 .field-textarea {
   resize: vertical;
   min-height: 80px;

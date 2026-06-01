@@ -151,6 +151,8 @@ document.querySelectorAll('[data-text]').forEach(function (btn) {
     document.getElementById('einsatzanlass').value = this.dataset.text;
     document.querySelectorAll('[data-text]').forEach(function (b) { b.classList.remove('active'); });
     this.classList.add('active');
+    var wrap = this.closest('.suggestions');
+    if (wrap) wrap.classList.add('has-selection');
     updatePreview();
   });
 });
@@ -1462,6 +1464,8 @@ function resetAll() {
   document.getElementById('strassen-dropdown').innerHTML = '';
   document.getElementById('strassen-dropdown').classList.remove('open');
   document.querySelectorAll('[data-group]').forEach(function (b) { b.classList.remove('active'); });
+  document.querySelectorAll('[data-text]').forEach(function (b) { b.classList.remove('active'); });
+  document.querySelectorAll('.suggestions-anlass').forEach(function (el) { el.classList.remove('has-selection'); });
   fahrzeugSpuren = [];
   fzCounter = 0;
   teilCounter = 0;
