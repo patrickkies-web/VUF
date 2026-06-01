@@ -1,12 +1,23 @@
 var DIENSTGRADE = ['PKin', 'PK', 'POKin', 'POK', 'PHKin', 'PHK', 'KAin', 'KA'];
-var TOTAL = 4;
 var current = 0;
 var besatzung = [];
 var idCounter = 0;
 var dragSrc = null;
+var branch = null; // 'strasse' | 'parkplatz'
 var touchData = { active: false, srcId: null, overItem: null };
 var today = new Date().toISOString().split('T')[0];
 
+var SLIDES_BASE = ['slide-0', 'slide-1', 'slide-2', 'slide-3', 'slide-uo-typ'];
+var SLIDES_STRASSE = ['slide-uo-s1', 'slide-uo-s2', 'slide-uo-s3', 'slide-uo-s4'];
+var SLIDES_PARKPLATZ = ['slide-uo-p1', 'slide-uo-p2'];
+
+function getActiveSlides() {
+  if (branch === 'strasse') return SLIDES_BASE.concat(SLIDES_STRASSE);
+  if (branch === 'parkplatz') return SLIDES_BASE.concat(SLIDES_PARKPLATZ);
+  return SLIDES_BASE;
+}
+
+// Touch drag
 document.addEventListener('touchmove', function (e) {
   if (!touchData.active) return;
   e.preventDefault();
@@ -40,37 +51,66 @@ document.addEventListener('touchend', function () {
   touchData.overItem = null;
 });
 
+// Init
 document.getElementById('datum').value = today;
 document.getElementById('btnAdd').onclick = addBesatzung;
 document.getElementById('btnNext0').onclick = nextSlide;
 document.getElementById('btnNext1').onclick = nextSlide;
 document.getElementById('btnNext2').onclick = nextSlide;
-document.getElementById('btnGenerate').onclick = generateResult;
+document.getElementById('btnNext3').onclick = nextSlide;
+document.getElementById('btnUoS1').onclick = nextSlide;
+document.getElementById('btnUoS2').onclick = nextSlide;
+document.getElementById('btnUoS3').onclick = nextSlide;
+document.getElementById('btnGenerateS').onclick = generateResult;
+document.getElementById('btnUoP1').onclick = nextSlide;
+document.getElementById('btnGenerateP').onclick = generateResult;
 document.getElementById('btnBack').onclick = prevSlide;
 document.getElementById('btnCopy').onclick = copyText;
 document.getElementById('btnReset').onclick = resetAll;
-document.getElementById('btnLocate').onclick = ermittleStandort;
-document.getElementById('einsatzanlass').oninput = function () {
-  updatePreview();
-  document.querySelectorAll('.btn-suggestion').forEach(function (b) {
-    b.classList.toggle('active', b.dataset.text === this.value);
-  }, this);
-};
-document.querySelectorAll('.btn-suggestion').forEach(function (btn) {
-  btn.onclick = function () {
-    var ta = document.getElementById('einsatzanlass');
-    ta.value = this.dataset.text;
-    document.querySelectorAll('.btn-suggestion').forEach(function (b) { b.classList.remove('active'); });
-    this.classList.add('active');
-    updatePreview();
-  };
-});
+document.getElementById('btnLocate').onclick = function () { ermittleStandort('haupt'); };
+document.getElementById('btnLocatePk').onclick = function () { ermittleStandort('pk'); };
+
 document.getElementById('nachtragenCheck').onchange = function () {
   document.getElementById('timeFields').classList.toggle('hidden', this.checked);
 };
 
+document.getElementById('einsatzanlass').oninput = function () {
+  updatePreview();
+  document.querySelectorAll('[data-text]').forEach(function (b) {
+    b.classList.toggle('active', b.dataset.text === this.value);
+  }, this);
+};
+
+// Einsatzanlass-Chips (data-text)
+document.querySelectorAll('[data-text]').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    document.getElementById('einsatzanlass').value = this.dataset.text;
+    document.querySelectorAll('[data-text]').forEach(function (b) { b.classList.remove('active'); });
+    this.classList.add('active');
+    updatePreview();
+  });
+});
+
+// Generische Chip-Gruppen (data-group)
+document.querySelectorAll('[data-group]').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var group = this.dataset.group;
+    document.querySelectorAll('[data-group="' + group + '"]').forEach(function (b) { b.classList.remove('active'); });
+    this.classList.add('active');
+    if (group === 'uo-typ') {
+      branch = this.dataset.value;
+      nextSlide();
+    }
+    if (group === 'tempo-grund') {
+      document.getElementById('vzRow').style.display = this.dataset.value === 'vz274' ? '' : 'none';
+    }
+  });
+});
+
 addBesatzung();
 render();
+
+// ── Besatzung ──────────────────────────────────────────────
 
 function addBesatzung() {
   idCounter++;
@@ -175,8 +215,11 @@ function renderBesatzung() {
   });
 }
 
+// ── Navigation ─────────────────────────────────────────────
+
 function nextSlide() {
-  if (current < TOTAL - 1) { current++; render(); }
+  var slides = getActiveSlides();
+  if (current < slides.length - 1) { current++; render(); }
 }
 
 function prevSlide() {
@@ -184,22 +227,24 @@ function prevSlide() {
 }
 
 function render() {
-  var slides = [
-    document.getElementById('slide-0'),
-    document.getElementById('slide-1'),
-    document.getElementById('slide-2'),
-    document.getElementById('slide-3')
-  ];
-  slides.forEach(function (s, i) {
+  var slides = getActiveSlides();
+  var TOTAL = slides.length;
+
+  document.querySelectorAll('.slide:not(#slide-result)').forEach(function (s) {
     s.classList.remove('active', 'exit-left');
+  });
+  slides.forEach(function (id, i) {
+    var s = document.getElementById(id);
     if (i === current) s.classList.add('active');
     else if (i < current) s.classList.add('exit-left');
   });
   document.getElementById('slide-result').classList.remove('active', 'exit-left');
+
   document.getElementById('progress').style.width = ((current + 1) / TOTAL * 100) + '%';
   document.getElementById('stepCounter').textContent =
     ('0' + (current + 1)).slice(-2) + ' / ' + ('0' + TOTAL).slice(-2);
   document.getElementById('btnBack').disabled = (current === 0);
+
   var dots = document.getElementById('dots');
   dots.innerHTML = '';
   for (var i = 0; i < TOTAL; i++) {
@@ -207,8 +252,11 @@ function render() {
     d.className = 'dot' + (i === current ? ' active' : i < current ? ' done' : '');
     dots.appendChild(d);
   }
-  if (current === 3) updatePreview();
+
+  if (slides[current] === 'slide-3') updatePreview();
 }
+
+// ── Einsatzanlass-Vorschau ──────────────────────────────────
 
 function buildErsterSatz(anlass) {
   var nachtr = document.getElementById('nachtragenCheck').checked;
@@ -233,8 +281,12 @@ function updatePreview() {
   if (ta && box) box.textContent = buildErsterSatz(ta.value);
 }
 
-function ermittleStandort() {
-  var btn = document.getElementById('btnLocate');
+// ── GPS-Standort ────────────────────────────────────────────
+
+function ermittleStandort(target) {
+  var btnId = target === 'pk' ? 'btnLocatePk' : 'btnLocate';
+  var btn = document.getElementById(btnId);
+  var svgHtml = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Standort ermitteln';
   if (!navigator.geolocation) { alert('GPS nicht verfügbar'); return; }
   btn.textContent = 'Wird ermittelt…';
   btn.disabled = true;
@@ -245,42 +297,58 @@ function ermittleStandort() {
       .then(function (data) {
         var a = data.address || {};
         var nr = a.house_number ? ' ' + a.house_number : '';
-        document.getElementById('strasse').value = (a.road || '') + nr;
-        document.getElementById('plz').value = a.postcode || '';
-        document.getElementById('stadt').value = a.city || a.town || a.village || a.municipality || '';
+        if (target === 'pk') {
+          document.getElementById('pk-adresse').value = (a.road || '') + nr;
+        } else {
+          document.getElementById('strasse').value = (a.road || '') + nr;
+          document.getElementById('plz').value = a.postcode || '';
+          document.getElementById('stadt').value = a.city || a.town || a.village || a.municipality || '';
+        }
         btn.textContent = 'Standort ermittelt ✓';
         btn.disabled = false;
-        setTimeout(function () {
-          btn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Standort ermitteln';
-        }, 3000);
+        setTimeout(function () { btn.innerHTML = svgHtml; }, 3000);
       })
       .catch(function () {
-        btn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Standort ermitteln';
+        btn.innerHTML = svgHtml;
         btn.disabled = false;
       });
   }, function () {
-    btn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg> Standort ermitteln';
+    btn.innerHTML = svgHtml;
     btn.disabled = false;
     alert('GPS-Zugriff wurde verweigert.');
   }, { timeout: 10000 });
 }
 
+// ── Chip-Wert lesen ─────────────────────────────────────────
+
+function getChipValue(group) {
+  var active = document.querySelector('[data-group="' + group + '"].active');
+  return active ? active.dataset.value : null;
+}
+
+// ── Bericht generieren ──────────────────────────────────────
+
 function generateResult() {
-  var strasse = document.getElementById('strasse').value || '[Strasse]';
+  var strasse = document.getElementById('strasse').value || '[Straße]';
   var plz = document.getElementById('plz').value || '[PLZ]';
-  var stadt = document.getElementById('stadt').value || '[Ort]';
+  var stadt = document.getElementById('stadt').value || '[Stadt]';
   var anlass = document.getElementById('einsatzanlass').value || '[Einsatzbeschreibung]';
 
-  var text =
+  var text1 =
     buildErsterSatz(anlass) + '\n\n' +
     'Einsatzörtlichkeit: ' + strasse + ', ' + plz + ' ' + stadt + '.';
 
-  document.getElementById('resultText').textContent = text;
+  document.getElementById('resultText').textContent = text1;
 
-  var allSlides = document.querySelectorAll('.slide');
-  allSlides.forEach(function (s) { s.classList.remove('active', 'exit-left'); });
-  ['slide-0', 'slide-1', 'slide-2', 'slide-3'].forEach(function (id) {
-    document.getElementById(id).classList.add('exit-left');
+  var text2 = generateAbschnitt2();
+  document.getElementById('resultText2').textContent = text2;
+  document.getElementById('section2Result').style.display = text2 ? '' : 'none';
+
+  var slides = getActiveSlides();
+  slides.forEach(function (id) {
+    var s = document.getElementById(id);
+    s.classList.remove('active');
+    s.classList.add('exit-left');
   });
   document.getElementById('slide-result').classList.add('active');
   document.getElementById('progress').style.width = '100%';
@@ -289,15 +357,102 @@ function generateResult() {
   document.getElementById('dots').innerHTML = '';
 }
 
+function generateAbschnitt2() {
+  if (!branch) return '';
+
+  var strasse = document.getElementById('strasse').value || '[Straße]';
+  var plz = document.getElementById('plz').value || '[PLZ]';
+  var stadt = document.getElementById('stadt').value || '[Stadt]';
+
+  if (branch === 'strasse') {
+    var lage = getChipValue('lage') || '[innerorts/außerorts]';
+    var strassentyp = getChipValue('strassentyp') || '[Straßentyp]';
+    var ortsteil = document.getElementById('uo-ortsteil').value;
+    var woGenau = document.getElementById('uo-wo-genau').value || '[Unfallstelle]';
+    var tempo = document.getElementById('uo-tempo').value || '[Tempo]';
+    var tempoGrund = getChipValue('tempo-grund');
+    var vz274 = document.getElementById('uo-vz274').value || '[VZ]';
+    var fahrstreifen = document.getElementById('uo-fahrstreifen').value || '[Anzahl]';
+    var trennung = getChipValue('trennung');
+    var verkehr = getChipValue('verkehr');
+    var beleuchtung = getChipValue('beleuchtung');
+    var verlauf = getChipValue('verlauf');
+    var fahrtrichtung = document.getElementById('uo-fahrtrichtung').value || '[Richtung]';
+    var steigung = getChipValue('steigung');
+
+    var ortsteilText = ortsteil ? ' (Ortsteil: ' + ortsteil + ')' : '';
+
+    var tempoGrundText = tempoGrund === 'vz274'
+      ? 'vorgegeben durch das VZ. 274-' + vz274 + '.'
+      : 'welche sich aus der Lage innerhalb geschlossener Ortschaft ergibt.';
+
+    var trennungMap = {
+      'mittellinie': 'eine durchgezogene Mittellinie',
+      'doppelte-linie': 'eine doppelte durchgezogene Linie',
+      'mittelstreifen': 'einen begrünten Mittelstreifen, baulich',
+      'mittelinsel': 'eine bauliche Mittelinsel'
+    };
+    var verkehrMap = { 'schwach': 'schwaches', 'moderat': 'moderates', 'stark': 'starkes' };
+    var beleuchtungMap = {
+      'in-betrieb': 'Die Straßenbeleuchtung war in Betrieb und gewährleistete eine ausreichende, gleichmäßige Ausleuchtung der Fahrbahn.',
+      'nicht-vorhanden': 'Eine Straßenbeleuchtung war nicht vorhanden.',
+      'ausgeschaltet': 'Die Straßenbeleuchtung war vorhanden, aufgrund der Tageszeit bestimmungsgemäß ausgeschaltet.'
+    };
+    var verlaufMap = { 'gerade': 'gerade', 'linkskurve': 'in einer Linkskurve', 'rechtskurve': 'in einer Rechtskurve' };
+    var steigungMap = {
+      'keine': 'keine Steigung oder Gefälle',
+      'gefaelle-gering': 'ein geringes Gefälle',
+      'gefaelle-maessig': 'ein mäßiges Gefälle',
+      'gefaelle-stark': 'ein starkes Gefälle',
+      'steigung-gering': 'eine geringe Steigung',
+      'steigung-maessig': 'eine mäßige Steigung',
+      'steigung-stark': 'eine starke Steigung'
+    };
+
+    return 'Bei der Unfallörtlichkeit handelt es sich um die ' + lage + ' gelegene ' +
+      strasse + ' (' + strassentyp + '), in ' + plz + ' ' + stadt + ortsteilText + '.\n\n' +
+      'Der Unfall ereignete sich ' + woGenau + '.\n\n' +
+      'Die zulässige Höchstgeschwindigkeit auf diesem Abschnitt der Straße beträgt ' + tempo +
+      ' km/h, ' + tempoGrundText + '\n\n' +
+      'Es bestehen ' + fahrstreifen + ' Fahrstreifen je Richtung. Die Richtungsfahrbahnen sind durch ' +
+      (trennungMap[trennung] || '[Trennung]') + ' voneinander getrennt.\n\n' +
+      'Zum Zeitpunkt der Unfallaufnahme herrschte ' + (verkehrMap[verkehr] || '[Verkehr]') + ' Verkehrsaufkommen.\n\n' +
+      (beleuchtungMap[beleuchtung] || '[Beleuchtung]') + '\n\n' +
+      'Der Streckenabschnitt verläuft auf Höhe der Unfallstelle ' +
+      (verlaufMap[verlauf] || '[Verlauf]') + ' und weist in Fahrtrichtung ' + fahrtrichtung +
+      ' ' + (steigungMap[steigung] || '[Steigung]') + ' auf.';
+  }
+
+  if (branch === 'parkplatz') {
+    var pkAdresse = document.getElementById('pk-adresse').value || '[Adresse]';
+    var pkZugehoerigkeit = document.getElementById('pk-zugehoerigkeit').value || '[Zugehörigkeit]';
+    var pkPosition = document.getElementById('pk-position').value || '[Position]';
+
+    return 'Bei der Unfallörtlichkeit handelt es sich um den ' + pkZugehoerigkeit +
+      ', ' + pkAdresse + ', ' + plz + ' ' + stadt + '.\n\n' + pkPosition;
+  }
+
+  return '';
+}
+
+// ── Kopieren ────────────────────────────────────────────────
+
 function copyText() {
-  var el = document.getElementById('resultText');
-  var range = document.createRange();
-  range.selectNodeContents(el);
-  var sel = window.getSelection();
-  sel.removeAllRanges();
-  sel.addRange(range);
-  try { document.execCommand('copy'); } catch (e) { }
-  sel.removeAllRanges();
+  var text = document.getElementById('resultText').textContent;
+  var text2El = document.getElementById('section2Result');
+  if (text2El.style.display !== 'none') {
+    text += '\n\n' + document.getElementById('resultText2').textContent;
+  }
+  navigator.clipboard.writeText(text).catch(function () {
+    var el = document.getElementById('resultText');
+    var range = document.createRange();
+    range.selectNodeContents(el);
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    try { document.execCommand('copy'); } catch (e) { }
+    sel.removeAllRanges();
+  });
   var btn = document.getElementById('btnCopy');
   btn.classList.add('copied');
   btn.textContent = 'Kopiert!';
@@ -307,9 +462,12 @@ function copyText() {
   }, 2000);
 }
 
+// ── Reset ───────────────────────────────────────────────────
+
 function resetAll() {
   besatzung = [];
   current = 0;
+  branch = null;
   document.getElementById('strasse').value = '';
   document.getElementById('plz').value = '';
   document.getElementById('stadt').value = '';
@@ -318,16 +476,25 @@ function resetAll() {
   document.getElementById('einsatzanlass').value = '';
   document.getElementById('nachtragenCheck').checked = false;
   document.getElementById('timeFields').classList.remove('hidden');
+  // Abschnitt 2
+  ['uo-ortsteil', 'uo-wo-genau', 'uo-tempo', 'uo-vz274', 'uo-fahrstreifen', 'uo-fahrtrichtung',
+    'pk-adresse', 'pk-zugehoerigkeit', 'pk-position'].forEach(function (id) {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('vzRow').style.display = 'none';
+  document.querySelectorAll('[data-group]').forEach(function (b) { b.classList.remove('active'); });
   addBesatzung();
   render();
-  var allSlides = document.querySelectorAll('.slide');
-  allSlides.forEach(function (s) { s.classList.remove('active', 'exit-left'); });
+  document.querySelectorAll('.slide').forEach(function (s) { s.classList.remove('active', 'exit-left'); });
   document.getElementById('slide-0').classList.add('active');
 }
 
+// ── Enter-Taste ─────────────────────────────────────────────
+
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Enter' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'TEXTAREA') {
-    if (current === TOTAL - 1) generateResult();
+    var slides = getActiveSlides();
+    if (current === slides.length - 1) generateResult();
     else nextSlide();
   }
 });
