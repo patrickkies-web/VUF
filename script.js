@@ -346,35 +346,54 @@ function ermittleStandort(target) {
 
 // ── Straßen-Autocomplete (Gütersloh) ────────────────────────
 
-document.getElementById('strasse').addEventListener('input', function () {
-  var q = this.value.trim();
-  var dl = document.getElementById('strassen-vorschlaege');
+(function () {
+  var input = document.getElementById('strasse');
+  var dd = document.getElementById('strassen-dropdown');
 
-  if (GT_STREETS && Object.prototype.hasOwnProperty.call(GT_STREETS, q)) {
-    var hit = GT_STREETS[q];
-    if (hit) fuelleAdressfelder(hit);
-    else strasseDetailLaden(q);
-    dl.innerHTML = '';
-    return;
+  function closeDropdown() {
+    dd.classList.remove('open');
+    dd.innerHTML = '';
   }
 
-  dl.innerHTML = '';
-  if (!GT_STREETS || q.length < 2) return;
+  function selectStreet(name) {
+    input.value = name;
+    closeDropdown();
+    var hit = GT_STREETS ? GT_STREETS[name] : null;
+    if (hit) fuelleAdressfelder(hit);
+    else strasseDetailLaden(name);
+  }
 
-  var qLow = q.toLowerCase();
-  Object.keys(GT_STREETS)
-    .filter(function (n) {
-      var low = n.toLowerCase();
-      return low.startsWith(qLow) || low.indexOf(' ' + qLow) !== -1;
-    })
-    .sort()
-    .slice(0, 12)
-    .forEach(function (n) {
-      var opt = document.createElement('option');
-      opt.value = n;
-      dl.appendChild(opt);
+  function openDropdown(matches) {
+    dd.innerHTML = '';
+    matches.forEach(function (name) {
+      var item = document.createElement('div');
+      item.className = 'street-dropdown-item';
+      item.textContent = name;
+      item.addEventListener('mousedown', function (e) { e.preventDefault(); selectStreet(name); });
+      item.addEventListener('touchstart', function (e) { e.preventDefault(); selectStreet(name); }, { passive: false });
+      dd.appendChild(item);
     });
-});
+    dd.classList.add('open');
+  }
+
+  input.addEventListener('input', function () {
+    var q = this.value.trim();
+    if (!GT_STREETS || q.length < 2) { closeDropdown(); return; }
+    var qLow = q.toLowerCase();
+    var matches = Object.keys(GT_STREETS)
+      .filter(function (n) {
+        var low = n.toLowerCase();
+        return low.startsWith(qLow) || low.indexOf(' ' + qLow) !== -1;
+      })
+      .sort()
+      .slice(0, 12);
+    if (matches.length) openDropdown(matches); else closeDropdown();
+  });
+
+  input.addEventListener('blur', function () {
+    setTimeout(closeDropdown, 150);
+  });
+}());
 
 function fuelleAdressfelder(data) {
   if (!data) return;
@@ -606,7 +625,8 @@ function resetAll() {
   document.getElementById('keineSpurenCheck').checked = false;
   document.getElementById('spurenFields').classList.remove('hidden');
   autoOrtsteil = '';
-  document.getElementById('strassen-vorschlaege').innerHTML = '';
+  document.getElementById('strassen-dropdown').innerHTML = '';
+  document.getElementById('strassen-dropdown').classList.remove('open');
   document.querySelectorAll('[data-group]').forEach(function (b) { b.classList.remove('active'); });
   addBesatzung();
   render();
