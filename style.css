@@ -197,7 +197,7 @@ body::before {
   padding: 14px 18px;
   color: #fff;
   font-family: 'IBM Plex Sans', sans-serif;
-  font-size: 15px;
+  font-size: 16px;
   width: 100%;
   outline: none;
   transition: border-color .2s, box-shadow .2s;
