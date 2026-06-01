@@ -283,6 +283,17 @@ body::before {
   border-radius: 2px;
 }
 
+.drag-hint {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .15em;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: .6;
+}
+
 .besatzung-fields {
   display: flex;
   gap: 8px;
@@ -292,14 +303,14 @@ body::before {
 .besatzung-fields .field-input {
   flex: 1;
   padding: 10px 14px;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .besatzung-fields .field-select {
   width: 110px;
   flex-shrink: 0;
   padding: 10px 32px 10px 12px;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .btn-remove {
