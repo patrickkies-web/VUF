@@ -50,7 +50,21 @@ document.getElementById('btnBack').onclick = prevSlide;
 document.getElementById('btnCopy').onclick = copyText;
 document.getElementById('btnReset').onclick = resetAll;
 document.getElementById('btnLocate').onclick = ermittleStandort;
-document.getElementById('einsatzanlass').oninput = updatePreview;
+document.getElementById('einsatzanlass').oninput = function () {
+  updatePreview();
+  document.querySelectorAll('.btn-suggestion').forEach(function (b) {
+    b.classList.toggle('active', b.dataset.text === this.value);
+  }, this);
+};
+document.querySelectorAll('.btn-suggestion').forEach(function (btn) {
+  btn.onclick = function () {
+    var ta = document.getElementById('einsatzanlass');
+    ta.value = this.dataset.text;
+    document.querySelectorAll('.btn-suggestion').forEach(function (b) { b.classList.remove('active'); });
+    this.classList.add('active');
+    updatePreview();
+  };
+});
 document.getElementById('nachtragenCheck').onchange = function () {
   document.getElementById('timeFields').classList.toggle('hidden', this.checked);
 };

@@ -557,6 +557,32 @@ body::before {
   cursor: default;
 }
 
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.btn-suggestion {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: .08em;
+  padding: 8px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: border-color .2s, color .2s, background .2s;
+}
+
+.btn-suggestion:hover,
+.btn-suggestion.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(74, 158, 255, .07);
+}
+
 .field-textarea {
   resize: vertical;
   min-height: 80px;
