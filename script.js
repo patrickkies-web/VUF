@@ -405,7 +405,7 @@ function render() {
   slides.forEach(function (id, i) {
     var s = document.getElementById(id);
     if (!s) return;
-    if (i === current) s.classList.add('active');
+    if (i === current) { s.classList.add('active'); s.scrollTop = 0; }
     else if (i < current) s.classList.add('exit-left');
   });
   document.getElementById('slide-result').classList.remove('active', 'exit-left');
