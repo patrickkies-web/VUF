@@ -1016,15 +1016,30 @@ function generateResult() {
     buildErsterSatz(anlass) + '\n\n' +
     'Einsatzörtlichkeit: ' + strasseVoll + ', ' + plz + ' ' + stadt + '.';
 
-  document.getElementById('resultText').textContent = text1;
-
   var text2 = generateAbschnitt2();
-  document.getElementById('resultText2').textContent = text2;
-  document.getElementById('section2Result').style.display = text2 ? '' : 'none';
-
   var text3 = generateFahrzeugText();
-  document.getElementById('resultText3').textContent = text3;
-  document.getElementById('section3Result').style.display = text3 ? '' : 'none';
+
+  var doc = document.getElementById('reportDoc');
+  doc.innerHTML = '';
+  function appendSection(num, title, text) {
+    if (!text) return;
+    if (doc.children.length > 0) {
+      var sp = document.createElement('div');
+      sp.className = 'report-spacer';
+      doc.appendChild(sp);
+    }
+    var h = document.createElement('div');
+    h.className = 'report-heading';
+    h.textContent = num + ' ' + title;
+    doc.appendChild(h);
+    var b = document.createElement('div');
+    b.className = 'report-body';
+    b.textContent = text;
+    doc.appendChild(b);
+  }
+  appendSection('1', 'Allgemeines / Einsatzanlass', text1);
+  appendSection('2', 'Unfallörtlichkeit', text2);
+  appendSection('3', 'Spuren an den Fahrzeugen', text3);
 
   var slides = getActiveSlides();
   slides.forEach(function (id) {
@@ -1194,13 +1209,15 @@ function generateAbschnitt2() {
 // ── Kopieren ────────────────────────────────────────────────
 
 function copyText() {
-  var text = document.getElementById('resultText').textContent;
-  var text2El = document.getElementById('section2Result');
-  if (text2El.style.display !== 'none') text += '\n\n' + document.getElementById('resultText2').textContent;
-  var text3El = document.getElementById('section3Result');
-  if (text3El.style.display !== 'none') text += '\n\n' + document.getElementById('resultText3').textContent;
+  var parts = [];
+  var headings = document.querySelectorAll('#reportDoc .report-heading');
+  var bodies = document.querySelectorAll('#reportDoc .report-body');
+  headings.forEach(function (h, i) {
+    parts.push(h.textContent + '\n' + (bodies[i] ? bodies[i].textContent : ''));
+  });
+  var text = parts.join('\n\n');
   navigator.clipboard.writeText(text).catch(function () {
-    var el = document.getElementById('resultText');
+    var el = document.getElementById('reportDoc');
     var range = document.createRange();
     range.selectNodeContents(el);
     var sel = window.getSelection();
