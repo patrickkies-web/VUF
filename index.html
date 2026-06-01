@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Polizeibericht</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="progress-track">
+  <div class="progress-fill" id="progress"></div>
+</div>
+
+<div class="topbar">
+  <div class="logo">BPOL <span>//</span> Bericht</div>
+  <div class="step-counter" id="stepCounter">01 / 03</div>
+</div>
+
+<div class="app">
+  <div class="slides">
+
+    <!-- Slide 1: Streifenwagenbesatzung -->
+    <div class="slide active" id="slide-0">
+      <div class="question-number">Abschnitt 1 &middot; Frage 1</div>
+      <div class="question-text">Wer ist die<br><strong>Streifenwagenbesatzung?</strong></div>
+      <div class="besatzung-list" id="besatzungList"></div>
+      <button class="btn-add" id="btnAdd">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        Besatzungsmitglied hinzuf&uuml;gen
+      </button>
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
+        <button class="btn-next" id="btnNext0">
+          Weiter
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+        <div class="hint">oder <kbd>Enter</kbd></div>
+      </div>
+    </div>
+
+    <!-- Slide 2: Einsatzörtlichkeit -->
+    <div class="slide" id="slide-1">
+      <div class="question-number">Abschnitt 1 &middot; Frage 2</div>
+      <div class="question-text">Wo ist die<br><strong>Einsatz&ouml;rtlichkeit?</strong></div>
+      <div class="input-group">
+        <div class="input-label">Stra&szlig;e &amp; Hausnummer</div>
+        <input class="field-input" type="text" id="strasse" placeholder="z.B. Hauptstra&szlig;e 12">
+      </div>
+      <div class="row">
+        <div class="input-group">
+          <div class="input-label">PLZ</div>
+          <input class="field-input" type="text" id="plz" placeholder="33330" maxlength="5">
+        </div>
+        <div class="input-group">
+          <div class="input-label">Stadt / Ortsteil</div>
+          <input class="field-input" type="text" id="stadt" placeholder="G&uuml;tersloh">
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
+        <button class="btn-next" id="btnNext1">
+          Weiter
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+        <div class="hint">oder <kbd>Enter</kbd></div>
+      </div>
+    </div>
+
+    <!-- Slide 3: Einsatzzeit -->
+    <div class="slide" id="slide-2">
+      <div class="question-number">Abschnitt 1 &middot; Frage 3</div>
+      <div class="question-text">Wann wurde der<br><strong>Einsatz vergeben?</strong></div>
+      <div class="nachtragen-wrap" id="nachtragenWrap">
+        <input type="checkbox" id="nachtragenCheck" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">
+        <label for="nachtragenCheck">Wird nachgetragen (Uhrzeit unbekannt)</label>
+      </div>
+      <div class="time-fields" id="timeFields">
+        <div class="row">
+          <div class="input-group">
+            <div class="input-label">Datum</div>
+            <input class="field-input" type="date" id="datum">
+          </div>
+          <div class="input-group">
+            <div class="input-label">Uhrzeit</div>
+            <input class="field-input" type="time" id="uhrzeit">
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
+        <button class="btn-next" id="btnGenerate">
+          Bericht erstellen
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+        <div class="hint">oder <kbd>Enter</kbd></div>
+      </div>
+    </div>
+
+    <!-- Ergebnis -->
+    <div class="slide" id="slide-result">
+      <div class="question-number">Fertig</div>
+      <div class="question-text"><strong>Einsatzbericht</strong></div>
+      <div>
+        <div class="result-label">1 Allgemeines / Einsatzanlass</div>
+        <div class="result-box" id="resultText"></div>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <button class="btn-copy" id="btnCopy">Text kopieren</button>
+        <button class="btn-copy" id="btnReset">Neu starten</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="bottombar">
+  <button class="btn-back" id="btnBack" disabled>&larr; Zur&uuml;ck</button>
+  <div class="dots" id="dots"></div>
+  <div style="width:80px"></div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
