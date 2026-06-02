@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>Polizeibericht v3.15</title>
-  <link rel="stylesheet" href="style.css?v=3.18">
+  <link rel="stylesheet" href="style.css?v=3.19">
 </head>
 <body>
 
@@ -666,6 +666,20 @@
       </div>
     </div>
 
+    <!-- PsychKG -->
+    <div class="slide" id="slide-psychkg">
+      <div class="question-number">Ma&szlig;nahmen nach PsychKG</div>
+      <div class="question-text">Zwangsweise<br><strong>Unterbringung</strong></div>
+      <div id="psychkgContent"></div>
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;margin-top:20px">
+        <button class="btn-next" id="btnGeneratePsychKG">Bericht erstellen
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
     <!-- Ergebnis -->
     <div class="slide" id="slide-result">
       <div class="question-number">Fertig</div>
@@ -688,7 +702,7 @@
   <div style="width:80px"></div>
 </div>
 
-<script src="script.js?v=3.18"></script>
+<script src="script.js?v=3.19"></script>
 <script>if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js').catch(function(){});}</script>
 
 <!-- Bericht-Generierungs-Overlay -->

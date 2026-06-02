@@ -125,6 +125,10 @@ var SECTION_DEFS = {
   massnahmen: {
     label: 'Maßnahmen', desc: 'Unfallmitteilungen, Bescheinigungen & Sonstiges', icon: '📋',
     getSlides: function() { return ['slide-massnahmen']; }
+  },
+  psychkg: {
+    label: 'Maßnahmen nach PsychKG', desc: 'SPD, ärztliches Zeugnis & zwangsweise Unterbringung', icon: '🏥',
+    getSlides: function() { return ['slide-psychkg']; }
   }
 };
 
@@ -341,10 +345,11 @@ var schilderungen = [];
 var schildCounter = 0;
 var schildCurrentIdx = null;
 var massnahmenData = { unfallmitteilungen: false, bescheinigungen: [], bescheinigungenUhrzeit: '', bescheinigungenNwKennung: '' };
+var psychkgData = { personRolle: '', anlass: '', arztGender: 'm', arztName: '', transport: '', begleitung: null };
 
 function getActiveSlides() {
   var slides = [];
-  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','massnahmen'];
+  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','massnahmen','psychkg'];
   ORDER.forEach(function(key) {
     if (selectedSections.indexOf(key) === -1) return;
     var def = SECTION_DEFS[key];
@@ -417,6 +422,7 @@ document.getElementById('btnGenerateAlkoholTest').onclick = nextSlide;
 document.getElementById('btnGenerateBtmTest').onclick = nextSlide;
 document.getElementById('btnGenerateAngaben').onclick = nextSlide;
 document.getElementById('btnGenerateMassnahmen').onclick = nextSlide;
+document.getElementById('btnGeneratePsychKG').onclick = nextSlide;
 
 document.getElementById('btnAuffCustomAdd').onclick = function() {
   var inp = document.getElementById('auffCustomInput');
@@ -515,7 +521,7 @@ function renderLibrary() {
   var cont = document.getElementById('libraryBausteins');
   if (!cont) return;
   cont.innerHTML = '';
-  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','massnahmen'];
+  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','massnahmen','psychkg'];
   ORDER.forEach(function(key) {
     var def = SECTION_DEFS[key];
     var isOn = selectedSections.indexOf(key) !== -1;
@@ -837,6 +843,7 @@ function render() {
   if (slides[current] === 'slide-schilderungen-angaben') renderSchilderungenAngaben();
   if (slides[current] === 'slide-schilderungen-overview') renderSchilderungenOverview();
   if (slides[current] === 'slide-massnahmen') renderMassnahmen();
+  if (slides[current] === 'slide-psychkg') renderPsychKG();
   var activeSlideEl = document.getElementById(slides[current]);
   if (activeSlideEl) injectOrUpdatePreview(activeSlideEl, slides[current]);
 }
@@ -3207,6 +3214,182 @@ function renderMassnahmen() {
   cont.appendChild(bescWrap);
 }
 
+// ── PsychKG ────────────────────────────────────────────────────────────────
+
+var PSYCHKG_PERSON_MAP = {
+  beschm:   { nom: 'Der Beschuldigte',  gen: 'des Beschuldigten',  dat: 'dem Beschuldigten'  },
+  beschw:   { nom: 'Die Beschuldigte',  gen: 'der Beschuldigten',  dat: 'der Beschuldigten'  },
+  betroffm: { nom: 'Der Betroffene',    gen: 'des Betroffenen',    dat: 'dem Betroffenen'    },
+  betroffw: { nom: 'Die Betroffene',    gen: 'der Betroffenen',    dat: 'der Betroffenen'    }
+};
+
+function generatePsychKGText() {
+  var p = psychkgData;
+  var pm = PSYCHKG_PERSON_MAP[p.personRolle] || { nom: '[Person]', gen: '[Person (Genitiv)]', dat: '[Person (Dativ)]' };
+  var anlass = p.anlass || '[Gefährdungssituation]';
+  var arztAnrede = p.arztGender === 'w' ? 'die Ärztin' : 'den Arzt';
+  var arztDurch  = p.arztGender === 'w' ? 'die Ärztin' : 'den Arzt';
+  var arztName   = p.arztName || '[Arztname]';
+  var transport  = p.transport || '[KTW/RTW]';
+
+  var lines = [];
+  lines.push(
+    'Aufgrund der benannten Verhaltensweise ' + pm.gen + ', welche augenscheinlich krankheitsbedingt ist, ist auszugehen, dass ein schadenstiftendes Ereignis unmittelbar bevorsteht bzw. sein Eintritt jederzeit zu erwarten ist (' + anlass + '). Dabei handelt es sich um bedeutende Rechtsgüter.'
+  );
+  lines.push(
+    'Aus diesem Grund wurde der Sozialpsychiatrische Dienst hinzugezogen. Dieser bestellte ' + arztAnrede + ' (Sozialpsychiatrischer Dienst) ' + arztName + '. Beide machten sich ein umfangreiches Bild von ' + pm.dat + ', woraufhin durch ' + arztDurch + ' ein entsprechendes ärztliches Zeugnis erstellt wurde.'
+  );
+  lines.push(
+    arztName + ' stellte einen Antrag auf eine zwangsweise Unterbringung in ein psychiatrisches Fachkrankenhaus.'
+  );
+  lines.push(
+    pm.nom + ' wurde daraufhin mit einem ' + transport + ' in die psychiatrische Abteilung des LWL-Klinikums transportiert.'
+  );
+  if (p.begleitung === true) {
+    lines.push('Der Transport wurde von den eingesetzten Beamten begleitet.');
+  } else if (p.begleitung === false) {
+    lines.push('Eine Begleitung durch die eingesetzten Beamten wurde von den beteiligten Kräften nicht als erforderlich angesehen.');
+  }
+  return lines.join('\n\n');
+}
+
+function renderPsychKG() {
+  var cont = document.getElementById('psychkgContent');
+  if (!cont) return;
+  cont.innerHTML = '';
+
+  var p = psychkgData;
+
+  function field(labelText, el) {
+    var wrap = document.createElement('div');
+    wrap.style.marginBottom = '16px';
+    var lbl = document.createElement('div');
+    lbl.className = 'input-label'; lbl.style.marginBottom = '6px';
+    lbl.textContent = labelText;
+    wrap.appendChild(lbl);
+    wrap.appendChild(el);
+    return wrap;
+  }
+
+  function chips(opts, getter, setter) {
+    var row = document.createElement('div');
+    row.className = 'suggestions';
+    opts.forEach(function(o) {
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.textContent = o.label;
+      btn.className = 'btn-suggestion' + (getter() === o.v ? ' active' : '');
+      btn.addEventListener('click', function() {
+        setter(o.v);
+        row.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        refreshPreview();
+      });
+      row.appendChild(btn);
+    });
+    return row;
+  }
+
+  // Person
+  cont.appendChild(field('Betroffene Person', chips(
+    [
+      { v: 'beschm',   label: 'Beschuldigter (m)' },
+      { v: 'beschw',   label: 'Beschuldigte (f)'  },
+      { v: 'betroffm', label: 'Betroffener (m)'   },
+      { v: 'betroffw', label: 'Betroffene (f)'    }
+    ],
+    function() { return p.personRolle; },
+    function(v) { p.personRolle = v; }
+  )));
+
+  // Anlass / Gefährdung
+  var anlassWrap = document.createElement('div');
+  var anlassChips = document.createElement('div');
+  anlassChips.className = 'suggestions';
+  anlassChips.style.marginBottom = '8px';
+  [
+    { v: 'einer akuten Selbstgefährdung',   label: 'Selbstgefährdung' },
+    { v: 'einer akuten Fremdgefährdung',    label: 'Fremdgefährdung'  },
+    { v: 'einer erheblichen Eigen- und Fremdgefährdung', label: 'Eigen- & Fremdgefährdung' }
+  ].forEach(function(o) {
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.textContent = o.label;
+    btn.className = 'btn-suggestion' + (p.anlass === o.v ? ' active' : '');
+    btn.addEventListener('click', function() {
+      p.anlass = o.v;
+      anlassInput.value = o.v;
+      anlassChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      refreshPreview();
+    });
+    anlassChips.appendChild(btn);
+  });
+  var anlassInput = document.createElement('input');
+  anlassInput.type = 'text'; anlassInput.className = 'text-input';
+  anlassInput.placeholder = 'z.B. einer akuten Selbstgefährdung';
+  anlassInput.value = p.anlass;
+  anlassInput.addEventListener('input', function() {
+    p.anlass = this.value;
+    anlassChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+    refreshPreview();
+  });
+  anlassWrap.appendChild(anlassChips);
+  anlassWrap.appendChild(anlassInput);
+  cont.appendChild(field('Gefährdungssituation', anlassWrap));
+
+  // SPD-Arzt/-Ärztin
+  cont.appendChild(field('SPD-Ärztliche Fachkraft', chips(
+    [
+      { v: 'm', label: 'Arzt (m)' },
+      { v: 'w', label: 'Ärztin (f)' }
+    ],
+    function() { return p.arztGender; },
+    function(v) { p.arztGender = v; }
+  )));
+
+  // Arztname
+  var arztInp = document.createElement('input');
+  arztInp.type = 'text'; arztInp.className = 'text-input';
+  arztInp.placeholder = 'z.B. Dr. Mustermann';
+  arztInp.value = p.arztName;
+  arztInp.addEventListener('input', function() { p.arztName = this.value; refreshPreview(); });
+  cont.appendChild(field('Name ' + (p.arztGender === 'w' ? 'der Ärztin' : 'des Arztes'), arztInp));
+
+  // Transportmittel
+  cont.appendChild(field('Transportmittel', chips(
+    [{ v: 'KTW', label: 'KTW' }, { v: 'RTW', label: 'RTW' }],
+    function() { return p.transport; },
+    function(v) { p.transport = v; }
+  )));
+
+  // Begleitung
+  cont.appendChild(field('Begleitung durch eingesetzte Beamte', chips(
+    [
+      { v: 'nein', label: 'Nicht erforderlich' },
+      { v: 'ja',   label: 'Transport begleitet' }
+    ],
+    function() { return p.begleitung === true ? 'ja' : p.begleitung === false ? 'nein' : ''; },
+    function(v) { p.begleitung = (v === 'ja'); }
+  )));
+
+  // Live-Vorschau
+  var prevBox = document.createElement('div');
+  prevBox.className = 'schild-preview-box';
+  prevBox.style.marginTop = '20px';
+  var prevLbl = document.createElement('div');
+  prevLbl.className = 'input-label'; prevLbl.style.marginBottom = '6px';
+  prevLbl.textContent = 'Vorschau';
+  var prevText = document.createElement('div');
+  prevText.className = 'verletzung-preview';
+  prevBox.appendChild(prevLbl);
+  prevBox.appendChild(prevText);
+  cont.appendChild(prevBox);
+
+  function refreshPreview() {
+    prevText.textContent = generatePsychKGText();
+  }
+  refreshPreview();
+}
+
 function generateResult() {
   var doc = document.getElementById('reportDoc');
   doc.innerHTML = '';
@@ -3250,7 +3433,8 @@ function generateResult() {
     spuren:        function() { var t = spurenText(); return t ? t.replace(/^\n+/, '') : ''; },
     fahrzeug:      function() { return generateFahrzeugText(); },
     schilderungen: function() { return generateSchilderungenText(); },
-    massnahmen:    function() { return generateMassnahmenText(); }
+    massnahmen:    function() { return generateMassnahmenText(); },
+    psychkg:       function() { return generatePsychKGText(); }
   };
 
   var titles = {
@@ -3260,7 +3444,8 @@ function generateResult() {
     spuren:        'Spuren auf der Fahrbahn',
     fahrzeug:      'Spuren an den Fahrzeugen',
     schilderungen: 'Schilderungen',
-    massnahmen:    'Maßnahmen / Sonstiges'
+    massnahmen:    'Maßnahmen / Sonstiges',
+    psychkg:       'Maßnahmen nach dem PsychKG'
   };
 
   selectedSections.forEach(function(key) {
@@ -3484,6 +3669,7 @@ function resetAll() {
   schildCounter = 0;
   schildCurrentIdx = null;
   massnahmenData = { unfallmitteilungen: false, bescheinigungen: [], bescheinigungenUhrzeit: '', bescheinigungenNwKennung: '' };
+  psychkgData = { personRolle: '', anlass: '', arztGender: 'm', arztName: '', transport: '', begleitung: null };
   addStreifenwagen();
   // Show library screen again
   var startEl = document.getElementById('screen-start');
