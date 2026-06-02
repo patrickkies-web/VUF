@@ -308,6 +308,19 @@ var STOFFGRUPPEN = [
   { v: 'MET',  label: 'MET (Methamphetamin)' }
 ];
 
+var ANGABEN_VORLAGEN = [
+  {
+    v: 'vuf',
+    label: 'VUF · Fahrzeug abgestellt',
+    desc: 'Fahrzeug wurde abgestellt – bei Rückkehr beschädigt vorgefunden'
+  },
+  {
+    v: 'frei',
+    label: 'Freitext',
+    desc: 'Angaben in eigenen Worten frei formulieren'
+  }
+];
+
 var ROLLEN_MAP = {
   zeuge:  { disp: 'der Zeuge',               dativ: 'dem Zeugen',               btyp: 'zeuge', er: 'Er',  erLow: 'er',  sein: 'sein', seiner: 'seiner' },
   zeugin: { disp: 'die Zeugin',              dativ: 'der Zeugin',               btyp: 'zeuge', er: 'Sie', erLow: 'sie', sein: 'ihr',  seiner: 'ihrer'  },
@@ -2308,31 +2321,55 @@ function renderSchilderungenAngaben() {
 
   var rm = ROLLEN_MAP[s.rolle];
   var personLbl = document.createElement('div'); personLbl.className = 'input-label';
-  personLbl.style.marginBottom = '10px';
+  personLbl.style.marginBottom = '12px';
   personLbl.textContent = (s.name || ('Person ' + (schildCurrentIdx + 1))) + (rm ? ' – ' + rm.disp : '');
   cont.appendChild(personLbl);
 
-  // Modus chips
-  var modusLabel = document.createElement('div'); modusLabel.className = 'input-label';
-  modusLabel.style.marginBottom = '6px'; modusLabel.textContent = 'Art der Angaben';
-  cont.appendChild(modusLabel);
+  // ── Vorlagen-Picker ──────────────────────────────────────────
+  var curVorlage = ANGABEN_VORLAGEN.find(function(v) { return v.v === s.modus; }) || null;
 
-  var prevBox = document.createElement('div');
-  prevBox.style.cssText = 'margin-top:14px;font-size:13px;color:var(--c-text);background:var(--c-surface,#f5f5f7);border-radius:10px;padding:12px 14px;white-space:pre-wrap;line-height:1.5;';
+  var picker = document.createElement('details');
+  picker.className = 'vorlage-picker';
+  if (!s.modus) picker.open = true; // open by default if nothing selected yet
+
+  var summary = document.createElement('summary');
+  summary.className = 'vorlage-picker-summary';
+  var summaryLabel = document.createElement('span'); summaryLabel.className = 'vp-label';
+  summaryLabel.textContent = curVorlage ? curVorlage.label : 'Vorlage wählen …';
+  var chevron = document.createElement('span'); chevron.className = 'vp-chevron';
+  chevron.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>';
+  summary.appendChild(summaryLabel);
+  summary.appendChild(chevron);
+  picker.appendChild(summary);
+
+  var pickerBody = document.createElement('div'); pickerBody.className = 'vorlage-picker-body';
+  ANGABEN_VORLAGEN.forEach(function(vorlage) {
+    var item = document.createElement('button');
+    item.type = 'button'; item.className = 'vorlage-picker-item' + (s.modus === vorlage.v ? ' active' : '');
+    var lbl = document.createElement('span'); lbl.className = 'vpi-label'; lbl.textContent = vorlage.label;
+    var desc = document.createElement('span'); desc.className = 'vpi-desc'; desc.textContent = vorlage.desc;
+    item.appendChild(lbl); item.appendChild(desc);
+    item.addEventListener('click', function() {
+      s.modus = vorlage.v;
+      summaryLabel.textContent = vorlage.label;
+      pickerBody.querySelectorAll('.vorlage-picker-item').forEach(function(b) { b.classList.toggle('active', b === item); });
+      picker.open = false;
+      vufWrap.style.display = s.modus === 'vuf' ? '' : 'none';
+      freiWrap.style.display = s.modus === 'frei' ? '' : 'none';
+      refreshPreview();
+    });
+    pickerBody.appendChild(item);
+  });
+  picker.appendChild(pickerBody);
+  cont.appendChild(picker);
+
+  // ── Live-Vorschau ────────────────────────────────────────────
+  var prevBox = document.createElement('div'); prevBox.className = 'preview-box';
+  prevBox.style.marginTop = '14px';
   prevBox.textContent = buildAngabenText(s);
-
   function refreshPreview() { prevBox.textContent = buildAngabenText(s); }
 
-  var modusChips = document.createElement('div'); modusChips.className = 'suggestions';
-  [{ v: 'vuf', label: 'VUF-Vorlage' }, { v: 'frei', label: 'Freitext' }].forEach(function(opt) {
-    var btn = document.createElement('button');
-    btn.type = 'button'; btn.dataset.v = opt.v; btn.textContent = opt.label;
-    btn.className = 'btn-suggestion' + (s.modus === opt.v ? ' active' : '');
-    modusChips.appendChild(btn);
-  });
-  cont.appendChild(modusChips);
-
-  // VUF form
+  // ── VUF-Formular ─────────────────────────────────────────────
   var vufWrap = document.createElement('div');
   vufWrap.style.display = s.modus === 'vuf' ? '' : 'none';
   vufWrap.style.marginTop = '14px';
@@ -2387,7 +2424,7 @@ function renderSchilderungenAngaben() {
   vufWrap.appendChild(zwTextWrap);
   cont.appendChild(vufWrap);
 
-  // Freitext
+  // ── Freitext ─────────────────────────────────────────────────
   var freiWrap = document.createElement('div');
   freiWrap.style.display = s.modus === 'frei' ? '' : 'none';
   freiWrap.style.marginTop = '14px';
@@ -2399,16 +2436,6 @@ function renderSchilderungenAngaben() {
   freiArea.oninput = function() { s.freitext = this.value; refreshPreview(); };
   freiWrap.appendChild(freiArea);
   cont.appendChild(freiWrap);
-
-  // Modus chip wiring
-  modusChips.addEventListener('click', function(e) {
-    var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
-    s.modus = btn.dataset.v;
-    modusChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.toggle('active', b.dataset.v === s.modus); });
-    vufWrap.style.display = s.modus === 'vuf' ? '' : 'none';
-    freiWrap.style.display = s.modus === 'frei' ? '' : 'none';
-    refreshPreview();
-  });
 
   cont.appendChild(prevBox);
 }
