@@ -98,7 +98,7 @@ var SECTION_DEFS = {
   },
   schilderungen: {
     label: 'Schilderungen', desc: 'Zeugenaussagen & Angaben', icon: '💬',
-    getSlides: function() { return ['slide-schilderungen']; }
+    getSlides: function() { return ['slide-schilderungen', 'slide-schilderungen-umstaende']; }
   }
 };
 
@@ -106,6 +106,14 @@ var LEITFAEDEN = {
   strasse:   { label: 'VUF Straße',   sections: ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen'] },
   parkplatz: { label: 'VUF Parkplatz', sections: ['allgemeines','oertlichkeit','spuren','fahrzeug','schilderungen'] }
 };
+
+var UMSTAENDE_DEFS = [
+  { v: 'kein-deutsch',    label: 'Nur gebrochen Deutsch' },
+  { v: 'alkohol',         label: 'Alkohol' },
+  { v: 'btm',             label: 'Betäubungsmittel' },
+  { v: 'alkohol-btm',    label: 'Alkohol / BtM' },
+  { v: 'leicht-verletzt', label: 'Leicht verletzt, kein RTW' }
+];
 
 var ROLLEN_MAP = {
   zeuge:  { disp: 'der Zeuge',               btyp: 'zeuge', er: 'Er',  erLow: 'er',  sein: 'sein', seiner: 'seiner' },
@@ -185,7 +193,8 @@ document.getElementById('btnUoP1').onclick = nextSlide;
 document.getElementById('btnUoP2').onclick = nextSlide;
 document.getElementById('btnUoSpuren').onclick = nextSlide;
 document.getElementById('btnAddSchilderung').onclick = addSchilderung;
-document.getElementById('btnGenerateSchilderungen').onclick = generateResult;
+document.getElementById('btnGenerateSchilderungen').onclick = nextSlide;
+document.getElementById('btnGenerateUmstaende').onclick = nextSlide;
 document.getElementById('btnBack').onclick = prevSlide;
 document.getElementById('btnCopy').onclick = copyText;
 document.getElementById('btnReset').onclick = resetAll;
@@ -530,6 +539,8 @@ function render() {
     renderFzDetail(parseInt(slides[current].replace('slide-fz-detail-', ''), 10));
   }
   if (slides[current] === 'slide-fz-abschluss') renderFzAbschluss();
+  if (slides[current] === 'slide-schilderungen') renderSchilderungen();
+  if (slides[current] === 'slide-schilderungen-umstaende') renderSchilderungenUmstaende();
   var activeSlideEl = document.getElementById(slides[current]);
   if (activeSlideEl) injectOrUpdatePreview(activeSlideEl, slides[current]);
 }
@@ -657,7 +668,7 @@ function getSlidePreviewText(slideId) {
     var st = spurenText(); return st ? st.replace(/^\n+/, '') : '';
   }
   if (slideId.indexOf('slide-fz-') === 0) return generateFahrzeugText() || '';
-  if (slideId === 'slide-schilderungen') return generateSchilderungenText() || '';
+  if (slideId === 'slide-schilderungen' || slideId === 'slide-schilderungen-umstaende') return generateSchilderungenText() || '';
   return '';
 }
 
@@ -1848,6 +1859,7 @@ function addSchilderung() {
     rolle: '',
     belehrender: '',
     gegenueber: '',
+    umstaende: [],
     modus: '',
     abstelltDatum: document.getElementById('datum').value || '',
     abstelltUhrzeit: '',
@@ -1968,6 +1980,59 @@ function renderSchilderungen() {
     }
 
     list.appendChild(card);
+  });
+}
+
+function renderSchilderungenUmstaende() {
+  var cont = document.getElementById('umstaendeList');
+  if (!cont) return;
+  cont.innerHTML = '';
+
+  if (!schilderungen.length) {
+    var note = document.createElement('div');
+    note.className = 'schild-note';
+    note.style.marginBottom = '12px';
+    note.textContent = 'Keine Personen eingetragen.';
+    cont.appendChild(note);
+    return;
+  }
+
+  schilderungen.forEach(function(s, idx) {
+    if (schilderungen.length > 1) {
+      var lbl = document.createElement('div');
+      lbl.className = 'input-label';
+      lbl.style.marginBottom = '8px';
+      var rm = ROLLEN_MAP[s.rolle];
+      lbl.textContent = (s.name ? s.name : 'Person ' + (idx + 1)) + (rm ? ' – ' + rm.disp : '');
+      cont.appendChild(lbl);
+    }
+
+    var chips = document.createElement('div');
+    chips.className = 'suggestions umst-chips';
+    UMSTAENDE_DEFS.forEach(function(def) {
+      var isOn = s.umstaende && s.umstaende.indexOf(def.v) !== -1;
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn-suggestion' + (isOn ? ' active' : '');
+      btn.textContent = def.label;
+      btn.onclick = (function(sd, v) {
+        return function() {
+          if (!sd.umstaende) sd.umstaende = [];
+          var i = sd.umstaende.indexOf(v);
+          if (i !== -1) sd.umstaende.splice(i, 1);
+          else sd.umstaende.push(v);
+          renderSchilderungenUmstaende();
+        };
+      })(s, def.v);
+      chips.appendChild(btn);
+    });
+    cont.appendChild(chips);
+
+    if (idx < schilderungen.length - 1) {
+      var div = document.createElement('div');
+      div.style.cssText = 'border-top:1px solid var(--border);margin:16px 0 12px;';
+      cont.appendChild(div);
+    }
   });
 }
 
