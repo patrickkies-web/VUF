@@ -75,8 +75,12 @@ var SECTION_DEFS = {
   verhaeltnisse: {
     label: 'Verkehrsverhältnisse', desc: 'Fahrbahn, Tempo, Licht, Wetter & Sicht', icon: '🌦',
     getSlides: function() {
-      if (!branch || branch !== 'strasse') return [];
-      return ['slide-uo-s1b', 'slide-uo-s2', 'slide-uo-s3', 'slide-uo-s4', 'slide-uo-s4b', 'slide-uo-s5'];
+      var slides = [];
+      if (selectedSections.indexOf('oertlichkeit') === -1) {
+        slides.push('slide-uo-typ'); // Typ (Straße/Parkplatz) muss bekannt sein
+      }
+      if (!branch || branch !== 'strasse') return slides;
+      return slides.concat(['slide-uo-s1b', 'slide-uo-s2', 'slide-uo-s3', 'slide-uo-s4', 'slide-uo-s4b', 'slide-uo-s5']);
     }
   },
   spuren: {
@@ -98,7 +102,14 @@ var SECTION_DEFS = {
   },
   schilderungen: {
     label: 'Schilderungen', desc: 'Zeugenaussagen & Angaben', icon: '💬',
-    getSlides: function() { return ['slide-schilderungen', 'slide-schilderungen-umstaende']; }
+    getSlides: function() {
+      var slides = [];
+      if (selectedSections.indexOf('allgemeines') === -1) {
+        slides.push('slide-0'); // Besatzung für Beamten-Auswahl erforderlich
+      }
+      slides.push('slide-schilderungen', 'slide-schilderungen-umstaende');
+      return slides;
+    }
   }
 };
 
@@ -283,6 +294,16 @@ function renderLibrary() {
   ORDER.forEach(function(key) {
     var def = SECTION_DEFS[key];
     var isOn = selectedSections.indexOf(key) !== -1;
+
+    // Compute dependency notes
+    var depNote = '';
+    if (key === 'schilderungen' && isOn && selectedSections.indexOf('allgemeines') === -1) {
+      depNote = '+ Besatzung wird automatisch abgefragt';
+    }
+    if (key === 'verhaeltnisse' && isOn && selectedSections.indexOf('oertlichkeit') === -1) {
+      depNote = 'Örtlichkeit wird automatisch vorangestellt';
+    }
+
     var card = document.createElement('button');
     card.type = 'button';
     card.className = 'baustein-card' + (isOn ? ' selected' : '');
@@ -291,6 +312,7 @@ function renderLibrary() {
       '<div class="baustein-text">' +
         '<span class="baustein-label">' + def.label + '</span>' +
         '<span class="baustein-desc">' + def.desc + '</span>' +
+        (depNote ? '<span class="baustein-dep">' + depNote + '</span>' : '') +
       '</div>' +
       '<span class="baustein-check">' + (isOn ? '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</span>';
     card.onclick = function() {
