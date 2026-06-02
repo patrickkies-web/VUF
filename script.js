@@ -1206,10 +1206,20 @@ function renderFzNummer() {
   cont.appendChild(erfassenBtn);
 
   if (fahrzeugSpuren.length > 0) {
+    var fzSlides = getActiveSlides();
+    var afterFzSlide = null;
+    for (var k = fzSlides.length - 1; k >= 0; k--) {
+      if (fzSlides[k].indexOf('slide-fz-') === 0) { afterFzSlide = fzSlides[k + 1] || null; break; }
+    }
     var skipBtn = document.createElement('button');
     skipBtn.type = 'button'; skipBtn.className = 'btn-det-back'; skipBtn.style.marginTop = '14px';
-    skipBtn.textContent = 'Zu den Schilderungen →';
-    skipBtn.onclick = function () { fzCurrentIdx = null; jumpToSlide('slide-schilderungen'); };
+    if (afterFzSlide) {
+      skipBtn.textContent = afterFzSlide === 'slide-schilderungen' ? 'Zu den Schilderungen →' : 'Weiter →';
+      skipBtn.onclick = function () { fzCurrentIdx = null; jumpToSlide(afterFzSlide); };
+    } else {
+      skipBtn.textContent = 'Bericht erstellen →';
+      skipBtn.onclick = function () { fzCurrentIdx = null; generateResult(); };
+    }
     cont.appendChild(skipBtn);
   }
 }
