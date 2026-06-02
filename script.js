@@ -120,12 +120,16 @@ var SECTION_DEFS = {
       slides.push('slide-schilderungen-angaben', 'slide-schilderungen-overview');
       return slides;
     }
+  },
+  massnahmen: {
+    label: 'Maßnahmen', desc: 'Unfallmitteilungen, Bescheinigungen & Sonstiges', icon: '📋',
+    getSlides: function() { return ['slide-massnahmen']; }
   }
 };
 
 var LEITFAEDEN = {
-  strasse:   { label: 'VUF Straße',   sections: ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen'] },
-  parkplatz: { label: 'VUF Parkplatz', sections: ['allgemeines','oertlichkeit','spuren','fahrzeug','schilderungen'] }
+  strasse:   { label: 'VUF Straße',   sections: ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','massnahmen'] },
+  parkplatz: { label: 'VUF Parkplatz', sections: ['allgemeines','oertlichkeit','spuren','fahrzeug','schilderungen','massnahmen'] }
 };
 
 var UMSTAENDE_DEFS = [
@@ -335,10 +339,11 @@ var ROLLEN_MAP = {
 var schilderungen = [];
 var schildCounter = 0;
 var schildCurrentIdx = null;
+var massnahmenData = { unfallmitteilungen: false, bescheinigungen: [] };
 
 function getActiveSlides() {
   var slides = [];
-  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen'];
+  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','massnahmen'];
   ORDER.forEach(function(key) {
     if (selectedSections.indexOf(key) === -1) return;
     var def = SECTION_DEFS[key];
@@ -409,6 +414,7 @@ document.getElementById('btnGenerateAnweisungen').onclick = nextSlide;
 document.getElementById('btnGenerateAlkoholTest').onclick = nextSlide;
 document.getElementById('btnGenerateBtmTest').onclick = nextSlide;
 document.getElementById('btnGenerateAngaben').onclick = nextSlide;
+document.getElementById('btnGenerateMassnahmen').onclick = nextSlide;
 
 document.getElementById('btnAuffCustomAdd').onclick = function() {
   var inp = document.getElementById('auffCustomInput');
@@ -507,7 +513,7 @@ function renderLibrary() {
   var cont = document.getElementById('libraryBausteins');
   if (!cont) return;
   cont.innerHTML = '';
-  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen'];
+  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','massnahmen'];
   ORDER.forEach(function(key) {
     var def = SECTION_DEFS[key];
     var isOn = selectedSections.indexOf(key) !== -1;
@@ -789,6 +795,7 @@ function render() {
   if (slides[current] === 'slide-schilderungen-btm-test') renderSchilderungenBtmTest();
   if (slides[current] === 'slide-schilderungen-angaben') renderSchilderungenAngaben();
   if (slides[current] === 'slide-schilderungen-overview') renderSchilderungenOverview();
+  if (slides[current] === 'slide-massnahmen') renderMassnahmen();
   var activeSlideEl = document.getElementById(slides[current]);
   if (activeSlideEl) injectOrUpdatePreview(activeSlideEl, slides[current]);
 }
@@ -2893,6 +2900,92 @@ function generateSchilderungenText() {
   }).filter(Boolean).join('\n\n');
 }
 
+function generateMassnahmenText() {
+  var parts = [];
+  if (massnahmenData.unfallmitteilungen) {
+    parts.push('Den Unfallbeteiligten wurden vor Ort jeweils eine Durchschrift der Unfallmitteilung ausgehändigt.');
+  }
+  massnahmenData.bescheinigungen.forEach(function(rolle) {
+    var rm = ROLLEN_MAP[rolle]; if (!rm) return;
+    var dativCap = rm.dativ.charAt(0).toUpperCase() + rm.dativ.slice(1);
+    parts.push(dativCap + ' wurde eine Bescheinigung über die Erstattung einer Anzeige per E-Mail übersandt.');
+  });
+  return parts.join('\n\n');
+}
+
+function renderMassnahmen() {
+  var cont = document.getElementById('massnahmenList');
+  if (!cont) return;
+  cont.innerHTML = '';
+
+  // ── Unfallmitteilungen ──────────────────────────────────────
+  var umBtn = document.createElement('button');
+  umBtn.type = 'button';
+  umBtn.className = 'massnahme-btn' + (massnahmenData.unfallmitteilungen ? ' active' : '');
+  umBtn.innerHTML =
+    '<span class="mb-check"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>' +
+    '<span class="mb-label">Unfallmitteilungen ausgehändigt</span>';
+  umBtn.onclick = function() {
+    massnahmenData.unfallmitteilungen = !massnahmenData.unfallmitteilungen;
+    umBtn.classList.toggle('active', massnahmenData.unfallmitteilungen);
+  };
+  cont.appendChild(umBtn);
+
+  // ── Bescheinigung per E-Mail ────────────────────────────────
+  var bescWrap = document.createElement('div');
+
+  var bescBtn = document.createElement('button');
+  bescBtn.type = 'button';
+  bescBtn.className = 'massnahme-btn' + (massnahmenData.bescheinigungen.length > 0 ? ' active' : '');
+  bescBtn.innerHTML =
+    '<span class="mb-check"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>' +
+    '<span class="mb-label">Bescheinigung über Anzeigeerstattung per E-Mail</span>' +
+    '<span class="mb-chevron"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span>';
+
+  var bescDetail = document.createElement('div');
+  bescDetail.className = 'massnahme-sub';
+  bescDetail.style.display = massnahmenData.bescheinigungen.length > 0 ? '' : 'none';
+
+  var rolleLabel = document.createElement('div'); rolleLabel.className = 'input-label';
+  rolleLabel.style.marginBottom = '6px'; rolleLabel.textContent = 'Person(en)';
+  bescDetail.appendChild(rolleLabel);
+
+  var rolleChips = document.createElement('div'); rolleChips.className = 'suggestions';
+  [
+    { v: 'zeuge',  label: 'Zeuge'         },
+    { v: 'zeugin', label: 'Zeugin'        },
+    { v: 'ub01m',  label: 'UB 01 (m)'    },
+    { v: 'ub01w',  label: 'UB 01 (w)'    },
+    { v: 'ub02m',  label: 'UB 02 (m)'    },
+    { v: 'ub02w',  label: 'UB 02 (w)'    },
+    { v: 'beschm', label: 'Beschuldigter' },
+    { v: 'beschw', label: 'Beschuldigte'  }
+  ].forEach(function(opt) {
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.dataset.v = opt.v; btn.textContent = opt.label;
+    btn.className = 'btn-suggestion' + (massnahmenData.bescheinigungen.indexOf(opt.v) !== -1 ? ' active' : '');
+    rolleChips.appendChild(btn);
+  });
+  rolleChips.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
+    var v = btn.dataset.v;
+    var i = massnahmenData.bescheinigungen.indexOf(v);
+    if (i !== -1) { massnahmenData.bescheinigungen.splice(i, 1); btn.classList.remove('active'); }
+    else          { massnahmenData.bescheinigungen.push(v);       btn.classList.add('active'); }
+    bescBtn.classList.toggle('active', massnahmenData.bescheinigungen.length > 0);
+  });
+  bescDetail.appendChild(rolleChips);
+
+  bescBtn.onclick = function() {
+    var isOpen = bescDetail.style.display !== 'none';
+    bescDetail.style.display = isOpen ? 'none' : '';
+    bescBtn.classList.toggle('open', !isOpen);
+  };
+  bescWrap.appendChild(bescBtn);
+  bescWrap.appendChild(bescDetail);
+  cont.appendChild(bescWrap);
+}
+
 function generateResult() {
   var doc = document.getElementById('reportDoc');
   doc.innerHTML = '';
@@ -2935,7 +3028,8 @@ function generateResult() {
     verhaeltnisse: function() { return generateVerkehrsText(); },
     spuren:        function() { var t = spurenText(); return t ? t.replace(/^\n+/, '') : ''; },
     fahrzeug:      function() { return generateFahrzeugText(); },
-    schilderungen: function() { return generateSchilderungenText(); }
+    schilderungen: function() { return generateSchilderungenText(); },
+    massnahmen:    function() { return generateMassnahmenText(); }
   };
 
   var titles = {
@@ -2944,7 +3038,8 @@ function generateResult() {
     verhaeltnisse: 'Verkehrsverhältnisse',
     spuren:        'Spuren auf der Fahrbahn',
     fahrzeug:      'Spuren an den Fahrzeugen',
-    schilderungen: 'Schilderungen'
+    schilderungen: 'Schilderungen',
+    massnahmen:    'Maßnahmen / Sonstiges'
   };
 
   selectedSections.forEach(function(key) {
@@ -3166,6 +3261,7 @@ function resetAll() {
   schilderungen = [];
   schildCounter = 0;
   schildCurrentIdx = null;
+  massnahmenData = { unfallmitteilungen: false, bescheinigungen: [] };
   addBesatzung();
   // Show library screen again
   var startEl = document.getElementById('screen-start');
