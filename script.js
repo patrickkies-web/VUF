@@ -2117,6 +2117,7 @@ function addSchilderung() {
     btmTestDurchgefuehrt: null,
     btmTestMethode: null,
     btmTestErgebnis: null,
+    btmTestUhrzeit: '',
     btmStoffgruppen: [],
     verletzungText: '',
     verletzungRtw: null,
@@ -2711,6 +2712,15 @@ function renderSchilderungenBtmTest() {
   var detailWrap = document.createElement('div');
   detailWrap.style.marginTop = '16px'; detailWrap.style.display = s.btmTestDurchgefuehrt === 'ja' ? '' : 'none';
 
+  var uhrLbl = document.createElement('div'); uhrLbl.className = 'input-label'; uhrLbl.style.marginBottom = '4px'; uhrLbl.textContent = 'Uhrzeit des Tests';
+  detailWrap.appendChild(uhrLbl);
+  var uhrInp = document.createElement('input');
+  uhrInp.type = 'text'; uhrInp.className = 'field-input';
+  uhrInp.placeholder = 'z. B. 21:45'; uhrInp.value = s.btmTestUhrzeit || '';
+  uhrInp.oninput = function() { s.btmTestUhrzeit = this.value; };
+  uhrInp.style.marginBottom = '12px';
+  detailWrap.appendChild(uhrInp);
+
   var methLbl = document.createElement('div'); methLbl.className = 'input-label'; methLbl.textContent = 'Testmethode';
   detailWrap.appendChild(methLbl);
   var methChips = document.createElement('div'); methChips.className = 'suggestions';
@@ -2853,14 +2863,14 @@ function generateSchilderungenText() {
 
     if (s.btmTestDurchgefuehrt === 'ja') {
       var meth = s.btmTestMethode === 'speichel' ? 'Speichel' : 'Urin';
-      var methLow = s.btmTestMethode === 'speichel' ? 'Speichel' : 'Urin';
       var intro2 = dispCap + ' erklärte sich mit der Durchführung eines freiwilligen Drogenvortests mittels ' + meth + ' einverstanden.';
+      var btmUhrPfx = s.btmTestUhrzeit ? 'Der um ' + s.btmTestUhrzeit + ' Uhr durchgeführte Test' : 'Der durchgeführte Test';
       if (s.btmTestErgebnis === 'positiv' && s.btmStoffgruppen && s.btmStoffgruppen.length) {
-        parts.push(intro2 + ' Der Test reagierte positiv auf folgende Stoffgruppen: ' + s.btmStoffgruppen.join(', ') + '.');
+        parts.push(intro2 + ' ' + btmUhrPfx + ' reagierte positiv auf folgende Stoffgruppen: ' + s.btmStoffgruppen.join(', ') + '.');
       } else if (s.btmTestErgebnis === 'positiv') {
-        parts.push(intro2 + ' Der Test reagierte positiv.');
+        parts.push(intro2 + ' ' + btmUhrPfx + ' reagierte positiv.');
       } else if (s.btmTestErgebnis === 'negativ') {
-        parts.push(intro2 + ' Der Test verlief negativ.');
+        parts.push(intro2 + ' ' + btmUhrPfx + ' verlief negativ.');
       } else {
         parts.push(intro2);
       }
