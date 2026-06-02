@@ -2017,6 +2017,7 @@ function addSchilderung() {
     btmAuffaelligkeiten: [],
     btmCustom: [],
     btmTestDurchgefuehrt: null,
+    btmTestMethode: null,
     btmTestErgebnis: null,
     btmStoffgruppen: [],
     modus: '',
@@ -2343,7 +2344,7 @@ function renderSchilderungenBtmTest() {
   if (!s) return;
 
   var lbl = document.createElement('div'); lbl.className = 'input-label'; lbl.style.marginBottom = '8px';
-  lbl.textContent = 'Wurde ein freiwilliger Drogenvortest (Urin) durchgeführt?';
+  lbl.textContent = 'Wurde ein freiwilliger Drogenvortest durchgeführt?';
   cont.appendChild(lbl);
 
   var testChips = document.createElement('div'); testChips.className = 'suggestions';
@@ -2357,7 +2358,17 @@ function renderSchilderungenBtmTest() {
   var detailWrap = document.createElement('div');
   detailWrap.style.marginTop = '16px'; detailWrap.style.display = s.btmTestDurchgefuehrt === 'ja' ? '' : 'none';
 
-  var ergLbl = document.createElement('div'); ergLbl.className = 'input-label'; ergLbl.textContent = 'Ergebnis';
+  var methLbl = document.createElement('div'); methLbl.className = 'input-label'; methLbl.textContent = 'Testmethode';
+  detailWrap.appendChild(methLbl);
+  var methChips = document.createElement('div'); methChips.className = 'suggestions';
+  [{ v: 'urin', label: 'Urin' }, { v: 'speichel', label: 'Speichel' }].forEach(function(opt) {
+    var btn = document.createElement('button'); btn.type = 'button'; btn.dataset.v = opt.v; btn.textContent = opt.label;
+    btn.className = 'btn-suggestion' + (s.btmTestMethode === opt.v ? ' active' : '');
+    methChips.appendChild(btn);
+  });
+  detailWrap.appendChild(methChips);
+
+  var ergLbl = document.createElement('div'); ergLbl.className = 'input-label'; ergLbl.style.marginTop = '12px'; ergLbl.textContent = 'Ergebnis';
   detailWrap.appendChild(ergLbl);
   var ergChips = document.createElement('div'); ergChips.className = 'suggestions';
   [{ v: 'positiv', label: 'Positiv' }, { v: 'negativ', label: 'Negativ' }].forEach(function(opt) {
@@ -2397,6 +2408,13 @@ function renderSchilderungenBtmTest() {
     testChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
     btn.classList.add('active');
     detailWrap.style.display = s.btmTestDurchgefuehrt === 'ja' ? '' : 'none';
+  });
+
+  methChips.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
+    s.btmTestMethode = btn.dataset.v;
+    methChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
   });
 
   ergChips.addEventListener('click', function(e) {
@@ -2457,22 +2475,27 @@ function generateSchilderungenText() {
     }
 
     if (s.aatDurchgefuehrt === 'ja' && s.aatWert) {
-      var uhrStr = s.aatUhrzeit ? ' um ' + s.aatUhrzeit + ' Uhr' : '';
-      parts.push('Auf Nachfrage führte ' + rm.disp + ' freiwillig einen Atemalkoholtest durch. Der Test ergab' + uhrStr + ' einen Atemalkoholwert von ' + s.aatWert.replace('.', ',') + ' mg/l.');
+      var uhrPfx = s.aatUhrzeit ? 'Der um ' + s.aatUhrzeit + ' Uhr durchgeführte Test' : 'Der durchgeführte Test';
+      parts.push(dispCap + ' erklärte sich mit der Durchführung eines freiwilligen Atemalkoholtests einverstanden. ' + uhrPfx + ' ergab einen Atemalkoholwert von ' + s.aatWert.replace('.', ',') + ' mg/l.');
     } else if (s.aatDurchgefuehrt === 'abgelehnt') {
       parts.push(dispCap + ' lehnte die Durchführung eines freiwilligen Atemalkoholtests ab.');
     }
 
     if (s.btmTestDurchgefuehrt === 'ja') {
+      var meth = s.btmTestMethode === 'speichel' ? 'Speichel' : 'Urin';
+      var methLow = s.btmTestMethode === 'speichel' ? 'Speichel' : 'Urin';
+      var intro2 = dispCap + ' erklärte sich mit der Durchführung eines freiwilligen Drogenvortests mittels ' + meth + ' einverstanden.';
       if (s.btmTestErgebnis === 'positiv' && s.btmStoffgruppen && s.btmStoffgruppen.length) {
-        parts.push(dispCap + ' führte vor Ort freiwillig einen Drogenvortest mittels Urin durch, welcher positiv auf folgende Stoffgruppen reagierte: ' + s.btmStoffgruppen.join(', ') + '.');
+        parts.push(intro2 + ' Der Test reagierte positiv auf folgende Stoffgruppen: ' + s.btmStoffgruppen.join(', ') + '.');
       } else if (s.btmTestErgebnis === 'positiv') {
-        parts.push(dispCap + ' führte vor Ort freiwillig einen Drogenvortest mittels Urin durch, welcher positiv reagierte.');
+        parts.push(intro2 + ' Der Test reagierte positiv.');
       } else if (s.btmTestErgebnis === 'negativ') {
-        parts.push(dispCap + ' führte vor Ort freiwillig einen Drogenvortest mittels Urin durch, welcher negativ verlief.');
+        parts.push(intro2 + ' Der Test verlief negativ.');
+      } else {
+        parts.push(intro2);
       }
     } else if (s.btmTestDurchgefuehrt === 'abgelehnt') {
-      parts.push(dispCap + ' lehnte die Durchführung eines freiwilligen Drogenvortests mittels Urin ab.');
+      parts.push(dispCap + ' lehnte die Durchführung eines freiwilligen Drogenvortests ab.');
     }
 
     var intro = 'Nach erfolgter ' + belTyp + ' durch ' + bel + ' machte ' + rm.disp + ' gegenüber ' + geg + ' sinngemäß folgende Angaben:';
