@@ -457,7 +457,7 @@ document.getElementById('auffCustomInput').addEventListener('keydown', function(
   if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btnAuffCustomAdd').click(); }
 });
 document.getElementById('btnAddWeiterePerson').onclick = function() { addSchilderung(); jumpToSlide('slide-schilderungen'); };
-document.getElementById('btnErstelleBericht').onclick = generateResult;
+document.getElementById('btnErstelleBericht').onclick = nextSlide;
 document.getElementById('btnBack').onclick = prevSlide;
 document.getElementById('btnCopy').onclick = copyText;
 document.getElementById('btnReset').onclick = resetAll;
