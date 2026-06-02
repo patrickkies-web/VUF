@@ -112,8 +112,9 @@ var SECTION_DEFS = {
       var umst = s ? (s.umstaende || []) : [];
       var hasAlk = umst.indexOf('alkohol') !== -1 || umst.indexOf('alkohol-btm') !== -1;
       var hasBtm = umst.indexOf('btm') !== -1 || umst.indexOf('alkohol-btm') !== -1;
-      if (hasAlk) slides.push('slide-schilderungen-alkohol', 'slide-schilderungen-alkohol-test');
-      if (hasBtm) slides.push('slide-schilderungen-btm', 'slide-schilderungen-btm-test');
+      if (hasAlk || hasBtm) slides.push('slide-schilderungen-auffaelligkeiten');
+      if (hasAlk) slides.push('slide-schilderungen-alkohol-test');
+      if (hasBtm) slides.push('slide-schilderungen-btm-test');
       slides.push('slide-schilderungen-overview');
       return slides;
     }
@@ -133,76 +134,165 @@ var UMSTAENDE_DEFS = [
   { v: 'leicht-verletzt', label: 'War leicht verletzt, benötigte keinen RTW' }
 ];
 
-var ALKOHOL_AUFFAELLIGKEITEN = [
-  { category: 'Augen', items: [
-    { v: 'alk-augen-geroetet',  label: 'gerötete Bindehäute' },
-    { v: 'alk-augen-glasig',    label: 'glasige Augen' },
-    { v: 'alk-augen-waessrig',  label: 'wässrige Augen' }
+var AUFFAELLIGKEITEN = [
+  { category: '1 · Augen & Pupillen', items: [
+    { v: 'au-01', label: 'gerötete Bindehäute' },
+    { v: 'au-02', label: 'glasige Augen' },
+    { v: 'au-03', label: 'wässrige Augen' },
+    { v: 'au-04', label: 'trockene Augen' },
+    { v: 'au-05', label: 'müde wirkende Augen' },
+    { v: 'au-06', label: 'halb geschlossene Augenlider' },
+    { v: 'au-07', label: 'starrer Blick' },
+    { v: 'au-08', label: 'auffällig unruhiger Blick' },
+    { v: 'au-09', label: 'Lidflattern' },
+    { v: 'au-10', label: 'häufiges Blinzeln' },
+    { v: 'au-11', label: 'auffällig geweitete Pupillen' },
+    { v: 'au-12', label: 'auffällig verengte Pupillen' },
+    { v: 'au-13', label: 'unterschiedlich große Pupillen' },
+    { v: 'au-14', label: 'träge Pupillenreaktion' },
+    { v: 'au-15', label: 'verzögerte Lichtreaktion' },
+    { v: 'au-16', label: 'fehlende erkennbare Pupillenreaktion' },
+    { v: 'au-17', label: 'unkontrollierte Augenbewegungen' },
+    { v: 'au-18', label: 'Schwierigkeiten, Blickkontakt zu halten' }
   ]},
-  { category: 'Aussprache', items: [
-    { v: 'alk-spr-verwaschen',  label: 'verwaschene Aussprache' },
-    { v: 'alk-spr-lallend',     label: 'lallende Aussprache' },
-    { v: 'alk-spr-undeutlich',  label: 'undeutliche Aussprache' }
+  { category: '2 · Sprache & Aussprache', items: [
+    { v: 'sp-01', label: 'verwaschene Aussprache' },
+    { v: 'sp-02', label: 'lallende Aussprache' },
+    { v: 'sp-03', label: 'undeutliche Aussprache' },
+    { v: 'sp-04', label: 'verlangsamte Sprache' },
+    { v: 'sp-05', label: 'auffällig schnelle Sprache' },
+    { v: 'sp-06', label: 'sehr leise Sprache' },
+    { v: 'sp-07', label: 'sehr laute Sprache' },
+    { v: 'sp-08', label: 'stockende Sprache' },
+    { v: 'sp-09', label: 'sprunghafte Sprache' },
+    { v: 'sp-10', label: 'zusammenhanglose Äußerungen' },
+    { v: 'sp-11', label: 'Wortfindungsstörungen' },
+    { v: 'sp-12', label: 'wiederholende Äußerungen' },
+    { v: 'sp-13', label: 'unpassende Antworten' },
+    { v: 'sp-14', label: 'verzögerte Reaktion auf Ansprache' },
+    { v: 'sp-15', label: 'schwer verständliche Äußerungen' }
   ]},
-  { category: 'Gang & Koordination', items: [
-    { v: 'alk-gang-schwankend', label: 'schwankender Gang' },
-    { v: 'alk-gang-taumel',     label: 'Taumelgang' },
-    { v: 'alk-stand-unsicher',  label: 'unsicherer Stand' },
-    { v: 'alk-stand-breit',     label: 'breitbeiniger Stand' }
+  { category: '3 · Gang, Stand & Gleichgewicht', items: [
+    { v: 'gs-01', label: 'schwankender Gang' },
+    { v: 'gs-02', label: 'Taumelgang' },
+    { v: 'gs-03', label: 'unsicherer Gang' },
+    { v: 'gs-04', label: 'breitbeiniger Gang' },
+    { v: 'gs-05', label: 'unsicherer Stand' },
+    { v: 'gs-06', label: 'breitbeiniger Stand' },
+    { v: 'gs-07', label: 'Festhalten an Gegenständen erforderlich' },
+    { v: 'gs-08', label: 'Stolpern' },
+    { v: 'gs-09', label: 'Wegknicken der Beine' },
+    { v: 'gs-10', label: 'unsicheres Aufstehen' },
+    { v: 'gs-11', label: 'unsicheres Hinsetzen' },
+    { v: 'gs-12', label: 'Gleichgewichtsstörungen' },
+    { v: 'gs-13', label: 'Schwierigkeiten beim Richtungswechsel' },
+    { v: 'gs-14', label: 'verlangsamte Bewegungsabläufe' },
+    { v: 'gs-15', label: 'auffällig hastige Bewegungen' }
   ]},
-  { category: 'Verhalten', items: [
-    { v: 'alk-verh-verlangsamt', label: 'verlangsamte Reaktionsfähigkeit' },
-    { v: 'alk-verh-aggressiv',   label: 'aggressives Auftreten' },
-    { v: 'alk-verh-euphorisch',  label: 'euphorisches / ausgelassenes Verhalten' },
-    { v: 'alk-verh-apathisch',   label: 'apathisches Verhalten' },
-    { v: 'alk-verh-stimmung',    label: 'Stimmungsschwankungen' },
-    { v: 'alk-verh-einsicht',    label: 'fehlende Einsichtsfähigkeit' }
+  { category: '4 · Koordination & Motorik', items: [
+    { v: 'ko-01', label: 'motorische Unsicherheit' },
+    { v: 'ko-02', label: 'Koordinationsstörungen' },
+    { v: 'ko-03', label: 'fahrige Bewegungen' },
+    { v: 'ko-04', label: 'unruhige Hände' },
+    { v: 'ko-05', label: 'zitternde Hände' },
+    { v: 'ko-06', label: 'Zittern am gesamten Körper' },
+    { v: 'ko-07', label: 'Schwierigkeiten beim Greifen' },
+    { v: 'ko-08', label: 'Schwierigkeiten beim Festhalten von Gegenständen' },
+    { v: 'ko-09', label: 'Gegenstände fallen lassen' },
+    { v: 'ko-10', label: 'auffällige Feinmotorikstörungen' },
+    { v: 'ko-11', label: 'unkontrollierte Bewegungen' },
+    { v: 'ko-12', label: 'Muskelzuckungen' },
+    { v: 'ko-13', label: 'Kiefermahlen' },
+    { v: 'ko-14', label: 'auffällige Kaubewegungen' },
+    { v: 'ko-15', label: 'nestelnde Bewegungen' },
+    { v: 'ko-16', label: 'verlangsamte Reaktionsfähigkeit' },
+    { v: 'ko-17', label: 'übersteigerte Reaktionsfähigkeit' }
   ]},
-  { category: 'Geruch', items: [
-    { v: 'alk-geruch',           label: 'Atemalkohol wahrnehmbar' }
+  { category: '5 · Bewusstsein & Orientierung', items: [
+    { v: 'bo-01', label: 'benommen wirkend' },
+    { v: 'bo-02', label: 'schläfrig wirkend' },
+    { v: 'bo-03', label: 'sediert wirkend' },
+    { v: 'bo-04', label: 'schwer ansprechbar' },
+    { v: 'bo-05', label: 'kurzzeitig nicht ansprechbar' },
+    { v: 'bo-06', label: 'wechselnde Wachheit' },
+    { v: 'bo-07', label: 'Abdriften im Gespräch' },
+    { v: 'bo-08', label: 'verzögerte Auffassungsgabe' },
+    { v: 'bo-09', label: 'zeitlich desorientiert' },
+    { v: 'bo-10', label: 'örtlich desorientiert' },
+    { v: 'bo-11', label: 'situativ desorientiert' },
+    { v: 'bo-12', label: 'zur eigenen Person desorientiert' },
+    { v: 'bo-13', label: 'Erinnerungslücken angegeben' },
+    { v: 'bo-14', label: 'Erinnerungslücken erkennbar' },
+    { v: 'bo-15', label: 'eingeschränkte Konzentrationsfähigkeit' },
+    { v: 'bo-16', label: 'reduzierte Aufmerksamkeit' },
+    { v: 'bo-17', label: 'verwirrter Eindruck' }
   ]},
-  { category: 'Äußeres Erscheinungsbild', items: [
-    { v: 'alk-gesicht-geroetet', label: 'gerötetes Gesicht' },
-    { v: 'alk-schweiss',         label: 'erhöhte Schweißbildung' },
-    { v: 'alk-zittern',          label: 'zitternde Hände' }
-  ]}
-];
-
-var BTM_AUFFAELLIGKEITEN = [
-  { category: 'Augen', items: [
-    { v: 'btm-augen-erweitert',  label: 'deutlich erweiterte Pupillen' },
-    { v: 'btm-augen-verengt',    label: 'deutlich verengte Pupillen' },
-    { v: 'btm-augen-geroetet',   label: 'gerötete Bindehäute' },
-    { v: 'btm-augen-glasig',     label: 'glasige Augen' },
-    { v: 'btm-augen-nystagmus',  label: 'Nystagmus (Augenzittern)' }
+  { category: '6 · Verhalten & psychischer Eindruck', items: [
+    { v: 've-01', label: 'aggressives Auftreten' },
+    { v: 've-02', label: 'gereiztes Auftreten' },
+    { v: 've-03', label: 'distanzloses Verhalten' },
+    { v: 've-04', label: 'enthemmtes Verhalten' },
+    { v: 've-05', label: 'euphorisches Verhalten' },
+    { v: 've-06', label: 'ausgelassenes Verhalten' },
+    { v: 've-07', label: 'apathisches Verhalten' },
+    { v: 've-08', label: 'auffällige Stimmungsschwankungen' },
+    { v: 've-09', label: 'fehlende Einsichtsfähigkeit' },
+    { v: 've-10', label: 'fehlende Kooperationsbereitschaft' },
+    { v: 've-11', label: 'übersteigerte Gesprächigkeit' },
+    { v: 've-12', label: 'auffällige Nervosität' },
+    { v: 've-13', label: 'innere Unruhe' },
+    { v: 've-14', label: 'sprunghafte Gedankenführung' },
+    { v: 've-15', label: 'paranoide Äußerungen' },
+    { v: 've-16', label: 'ängstliches Verhalten' },
+    { v: 've-17', label: 'panikartiges Verhalten' },
+    { v: 've-18', label: 'halluzinatorisch wirkendes Verhalten' },
+    { v: 've-19', label: 'realitätsverkennende Äußerungen' },
+    { v: 've-20', label: 'weinerliches Verhalten' },
+    { v: 've-21', label: 'unangemessenes Lachen' },
+    { v: 've-22', label: 'unangemessene Aggression' },
+    { v: 've-23', label: 'widersprüchliche Angaben' },
+    { v: 've-24', label: 'auffällige Risikobereitschaft' }
   ]},
-  { category: 'Verhalten', items: [
-    { v: 'btm-verh-unruhig',     label: 'motorische Unruhe / Hyperaktivität' },
-    { v: 'btm-verh-redselig',    label: 'übermäßige Redseligkeit' },
-    { v: 'btm-verh-euphorisch',  label: 'Euphorie / Antriebssteigerung' },
-    { v: 'btm-verh-apathisch',   label: 'Apathie / Teilnahmslosigkeit' },
-    { v: 'btm-verh-verwirrt',    label: 'Verwirrtheit / Desorientierung' },
-    { v: 'btm-verh-paranoid',    label: 'paranoide Reaktionen' },
-    { v: 'btm-verh-schlaefrig',  label: 'Schläfrigkeit / Benommenheit' }
+  { category: '7 · Geruch', items: [
+    { v: 'ge-01', label: 'Atemalkohol wahrnehmbar' },
+    { v: 'ge-02', label: 'deutlicher Atemalkoholgeruch' },
+    { v: 'ge-03', label: 'Cannabisgeruch wahrnehmbar' },
+    { v: 'ge-04', label: 'Cannabisgeruch an Kleidung' },
+    { v: 'ge-05', label: 'Cannabisgeruch aus Fahrzeug / Wohnung / Raum' },
+    { v: 'ge-06', label: 'chemischer Geruch' },
+    { v: 'ge-07', label: 'lösungsmittelartiger Geruch' },
+    { v: 'ge-08', label: 'süßlicher Atemgeruch' },
+    { v: 'ge-09', label: 'ungewöhnlicher Körpergeruch' },
+    { v: 'ge-10', label: 'Erbrochenengeruch' },
+    { v: 'ge-11', label: 'kein auffälliger Geruch wahrnehmbar' }
   ]},
-  { category: 'Koordination', items: [
-    { v: 'btm-gang-ataxie',      label: 'ataktischer Gang (Gleichgewichtsstörungen)' },
-    { v: 'btm-gang-verlangsamt', label: 'verlangsamte Bewegungen' },
-    { v: 'btm-reakt-verlangsamt',label: 'verlangsamte Reaktionszeit' }
-  ]},
-  { category: 'Aussprache', items: [
-    { v: 'btm-spr-verwaschen',   label: 'verwaschene Aussprache' },
-    { v: 'btm-spr-verlangsamt',  label: 'verlangsamte Sprache' }
-  ]},
-  { category: 'Haut & Äußeres', items: [
-    { v: 'btm-haut-blass',       label: 'blasse, fahle Gesichtsfarbe' },
-    { v: 'btm-haut-schweiss',    label: 'starkes Schwitzen' },
-    { v: 'btm-einstich',         label: 'sichtbare Einstichstellen' }
-  ]},
-  { category: 'Sonstiges', items: [
-    { v: 'btm-speichelfluss',    label: 'übermäßiger Speichelfluss' },
-    { v: 'btm-tremor',           label: 'Tremor / Zittern' },
-    { v: 'btm-geruch',           label: 'auffälliger körpereigener Geruch' }
+  { category: '8 · Äußeres Erscheinungsbild', items: [
+    { v: 'ae-01', label: 'gerötetes Gesicht' },
+    { v: 'ae-02', label: 'blasse Gesichtsfarbe' },
+    { v: 'ae-03', label: 'fahle Gesichtsfarbe' },
+    { v: 'ae-04', label: 'eingefallener Gesichtsausdruck' },
+    { v: 'ae-05', label: 'auffällig müdes Erscheinungsbild' },
+    { v: 'ae-06', label: 'ungepflegtes Erscheinungsbild' },
+    { v: 'ae-07', label: 'der Witterung nicht angepasste Kleidung' },
+    { v: 'ae-08', label: 'durchnässte Kleidung' },
+    { v: 'ae-09', label: 'verschmutzte Kleidung' },
+    { v: 'ae-10', label: 'beschädigte Kleidung' },
+    { v: 'ae-11', label: 'erhöhte Schweißbildung' },
+    { v: 'ae-12', label: 'kalter Schweiß' },
+    { v: 'ae-13', label: 'trockene Lippen' },
+    { v: 'ae-14', label: 'trockener Mund' },
+    { v: 'ae-15', label: 'vermehrter Speichelfluss' },
+    { v: 'ae-16', label: 'Übelkeit' },
+    { v: 'ae-17', label: 'Erbrechen' },
+    { v: 'ae-18', label: 'Nasenrötung' },
+    { v: 'ae-19', label: 'Reizungen im Nasenbereich' },
+    { v: 'ae-20', label: 'häufiges Reiben an Nase oder Gesicht' },
+    { v: 'ae-21', label: 'sichtbare Einstichstellen' },
+    { v: 'ae-22', label: 'frische Hautrötungen' },
+    { v: 'ae-23', label: 'Kratzspuren' },
+    { v: 'ae-24', label: 'auffällige Verletzungen' },
+    { v: 'ae-25', label: 'Blutungen' },
+    { v: 'ae-26', label: 'auffällige Körperhaltung' }
   ]}
 ];
 
@@ -296,33 +386,20 @@ document.getElementById('btnUoP2').onclick = nextSlide;
 document.getElementById('btnUoSpuren').onclick = nextSlide;
 document.getElementById('btnGenerateSchilderungen').onclick = nextSlide;
 document.getElementById('btnGenerateUmstaende').onclick = nextSlide;
-document.getElementById('btnGenerateAlkohol').onclick = nextSlide;
+document.getElementById('btnGenerateAuffaelligkeiten').onclick = nextSlide;
 document.getElementById('btnGenerateAlkoholTest').onclick = nextSlide;
-document.getElementById('btnGenerateBtm').onclick = nextSlide;
 document.getElementById('btnGenerateBtmTest').onclick = nextSlide;
 
-document.getElementById('btnAlkCustomAdd').onclick = function() {
-  var inp = document.getElementById('alkCustomInput');
+document.getElementById('btnAuffCustomAdd').onclick = function() {
+  var inp = document.getElementById('auffCustomInput');
   var val = inp.value.trim(); if (!val) return;
   var s = schildCurrentIdx !== null ? schilderungen[schildCurrentIdx] : null; if (!s) return;
-  if (!s.alkCustom) s.alkCustom = [];
-  s.alkCustom.push(val); inp.value = '';
-  renderAlkCustomList(); inp.focus();
+  if (!s.auffCustom) s.auffCustom = [];
+  s.auffCustom.push(val); inp.value = '';
+  renderAuffCustomList(); inp.focus();
 };
-document.getElementById('alkCustomInput').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btnAlkCustomAdd').click(); }
-});
-
-document.getElementById('btnBtmCustomAdd').onclick = function() {
-  var inp = document.getElementById('btmCustomInput');
-  var val = inp.value.trim(); if (!val) return;
-  var s = schildCurrentIdx !== null ? schilderungen[schildCurrentIdx] : null; if (!s) return;
-  if (!s.btmCustom) s.btmCustom = [];
-  s.btmCustom.push(val); inp.value = '';
-  renderBtmCustomList(); inp.focus();
-};
-document.getElementById('btmCustomInput').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btnBtmCustomAdd').click(); }
+document.getElementById('auffCustomInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btnAuffCustomAdd').click(); }
 });
 document.getElementById('btnAddWeiterePerson').onclick = function() { addSchilderung(); jumpToSlide('slide-schilderungen'); };
 document.getElementById('btnErstelleBericht').onclick = generateResult;
@@ -685,9 +762,8 @@ function render() {
     renderSchilderungen();
   }
   if (slides[current] === 'slide-schilderungen-umstaende') renderSchilderungenUmstaende();
-  if (slides[current] === 'slide-schilderungen-alkohol') renderSchilderungenAlkohol();
+  if (slides[current] === 'slide-schilderungen-auffaelligkeiten') renderSchilderungenAuffaelligkeiten();
   if (slides[current] === 'slide-schilderungen-alkohol-test') renderSchilderungenAlkoholTest();
-  if (slides[current] === 'slide-schilderungen-btm') renderSchilderungenBtm();
   if (slides[current] === 'slide-schilderungen-btm-test') renderSchilderungenBtmTest();
   if (slides[current] === 'slide-schilderungen-overview') renderSchilderungenOverview();
   var activeSlideEl = document.getElementById(slides[current]);
@@ -2009,13 +2085,11 @@ function addSchilderung() {
     belehrender: '',
     gegenueber: '',
     umstaende: [],
-    alkAuffaelligkeiten: [],
-    alkCustom: [],
+    auffaelligkeiten: [],
+    auffCustom: [],
     aatDurchgefuehrt: null,
     aatWert: '',
     aatUhrzeit: '',
-    btmAuffaelligkeiten: [],
-    btmCustom: [],
     btmTestDurchgefuehrt: null,
     btmTestMethode: null,
     btmTestErgebnis: null,
@@ -2245,45 +2319,23 @@ function renderAuffaelligkeitenSlide(defs, s, field, containerId) {
   });
 }
 
-function renderSchilderungenAlkohol() {
+function renderSchilderungenAuffaelligkeiten() {
   var s = schildCurrentIdx !== null ? schilderungen[schildCurrentIdx] : null;
-  renderAuffaelligkeitenSlide(ALKOHOL_AUFFAELLIGKEITEN, s, 'alkAuffaelligkeiten', 'alkAuffaelligkeitenList');
-  renderAlkCustomList();
+  renderAuffaelligkeitenSlide(AUFFAELLIGKEITEN, s, 'auffaelligkeiten', 'auffaelligkeitenList');
+  renderAuffCustomList();
 }
 
-function renderSchilderungenBtm() {
-  var s = schildCurrentIdx !== null ? schilderungen[schildCurrentIdx] : null;
-  renderAuffaelligkeitenSlide(BTM_AUFFAELLIGKEITEN, s, 'btmAuffaelligkeiten', 'btmAuffaelligkeitenList');
-  renderBtmCustomList();
-}
-
-function renderAlkCustomList() {
-  var cont = document.getElementById('alkCustomList');
+function renderAuffCustomList() {
+  var cont = document.getElementById('auffCustomList');
   if (!cont) return;
   cont.innerHTML = '';
   var s = schildCurrentIdx !== null ? schilderungen[schildCurrentIdx] : null;
-  if (!s || !s.alkCustom || !s.alkCustom.length) return;
+  if (!s || !s.auffCustom || !s.auffCustom.length) return;
   var chips = document.createElement('div'); chips.className = 'suggestions'; chips.style.marginTop = '4px';
-  s.alkCustom.forEach(function(val, i) {
+  s.auffCustom.forEach(function(val, i) {
     var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'btn-suggestion active';
     btn.innerHTML = val + ' <span style="opacity:0.55;margin-left:4px">&times;</span>';
-    btn.onclick = (function(idx) { return function() { s.alkCustom.splice(idx, 1); renderAlkCustomList(); }; })(i);
-    chips.appendChild(btn);
-  });
-  cont.appendChild(chips);
-}
-
-function renderBtmCustomList() {
-  var cont = document.getElementById('btmCustomList');
-  if (!cont) return;
-  cont.innerHTML = '';
-  var s = schildCurrentIdx !== null ? schilderungen[schildCurrentIdx] : null;
-  if (!s || !s.btmCustom || !s.btmCustom.length) return;
-  var chips = document.createElement('div'); chips.className = 'suggestions'; chips.style.marginTop = '4px';
-  s.btmCustom.forEach(function(val, i) {
-    var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'btn-suggestion active';
-    btn.innerHTML = val + ' <span style="opacity:0.55;margin-left:4px">&times;</span>';
-    btn.onclick = (function(idx) { return function() { s.btmCustom.splice(idx, 1); renderBtmCustomList(); }; })(i);
+    btn.onclick = (function(idx) { return function() { s.auffCustom.splice(idx, 1); renderAuffCustomList(); }; })(i);
     chips.appendChild(btn);
   });
   cont.appendChild(chips);
@@ -2455,23 +2507,26 @@ function generateSchilderungenText() {
 
     var dispCap = rm.disp.charAt(0).toUpperCase() + rm.disp.slice(1);
 
-    var alkLabels = getAuffaelligkeitenLabels(ALKOHOL_AUFFAELLIGKEITEN, s.alkAuffaelligkeiten || []).concat(s.alkCustom || []);
-    var btmLabels = getAuffaelligkeitenLabels(BTM_AUFFAELLIGKEITEN, s.btmAuffaelligkeiten || []).concat(s.btmCustom || []);
-    var hasAlk = alkLabels.length > 0;
-    var hasBtm = btmLabels.length > 0;
+    var auffLabels = getAuffaelligkeitenLabels(AUFFAELLIGKEITEN, s.auffaelligkeiten || []).concat(s.auffCustom || []);
+    var umst2 = s.umstaende || [];
+    var istAlk = umst2.indexOf('alkohol') !== -1 || umst2.indexOf('alkohol-btm') !== -1;
+    var istBtm = umst2.indexOf('btm') !== -1 || umst2.indexOf('alkohol-btm') !== -1;
 
-    if (hasAlk && hasBtm) {
-      parts.push('Die bei ' + rm.disp + ' wahrgenommenen körperlichen und verhaltensbezogenen Auffälligkeiten ließen in ihrer Gesamtheit den Schluss auf einen vorangegangenen Alkohol- und Betäubungsmittelkonsum zu. Festgestellt wurden hierbei insbesondere:\n' +
-        alkLabels.concat(btmLabels).map(function(l) { return '– ' + l; }).join('\n') + '\n' +
-        'Die Gesamtheit der Beobachtungen stellte sich als kombiniertes alkohol- und drogentypisches Erscheinungsbild dar.');
-    } else if (hasAlk) {
-      parts.push('Die bei ' + rm.disp + ' wahrgenommenen körperlichen und verhaltensbezogenen Auffälligkeiten ließen in ihrer Gesamtheit den Schluss auf einen vorangegangenen Alkoholkonsum zu. Festgestellt wurden hierbei insbesondere:\n' +
-        alkLabels.map(function(l) { return '– ' + l; }).join('\n') + '\n' +
-        'Die Gesamtheit der Beobachtungen stellte sich als alkoholtypisches Erscheinungsbild dar.');
-    } else if (hasBtm) {
-      parts.push('Die bei ' + rm.disp + ' wahrgenommenen körperlichen und verhaltensbezogenen Auffälligkeiten ließen in ihrer Gesamtheit den Schluss auf einen vorangegangenen Betäubungsmittelkonsum zu. Festgestellt wurden hierbei insbesondere:\n' +
-        btmLabels.map(function(l) { return '– ' + l; }).join('\n') + '\n' +
-        'Die Gesamtheit der Beobachtungen stellte sich als drogentypisches Erscheinungsbild dar.');
+    if (auffLabels.length > 0) {
+      var schluss, abschluss;
+      if (istAlk && istBtm) {
+        schluss  = 'den Schluss auf einen vorangegangenen Alkohol- und Betäubungsmittelkonsum zu';
+        abschluss = 'Die Gesamtheit der Beobachtungen stellte sich als kombiniertes alkohol- und drogentypisches Erscheinungsbild dar.';
+      } else if (istBtm) {
+        schluss  = 'den Schluss auf einen vorangegangenen Betäubungsmittelkonsum zu';
+        abschluss = 'Die Gesamtheit der Beobachtungen stellte sich als drogentypisches Erscheinungsbild dar.';
+      } else {
+        schluss  = 'den Schluss auf einen vorangegangenen Alkoholkonsum zu';
+        abschluss = 'Die Gesamtheit der Beobachtungen stellte sich als alkoholtypisches Erscheinungsbild dar.';
+      }
+      parts.push('Die bei ' + rm.disp + ' wahrgenommenen körperlichen und verhaltensbezogenen Auffälligkeiten ließen in ihrer Gesamtheit ' + schluss + '. Festgestellt wurden hierbei insbesondere:\n' +
+        auffLabels.map(function(l) { return '– ' + l; }).join('\n') + '\n' +
+        abschluss);
     }
 
     if (s.aatDurchgefuehrt === 'ja' && s.aatWert) {
