@@ -129,6 +129,10 @@ var SECTION_DEFS = {
   psychkg: {
     label: 'Maßnahmen nach PsychKG', desc: 'SPD, ärztliches Zeugnis & zwangsweise Unterbringung', icon: '🏥',
     getSlides: function() { return ['slide-psychkg']; }
+  },
+  haftbefehl: {
+    label: 'Haftbefehl', desc: 'Vollstreckung eines Strafbefehls / Haftbefehls', icon: '⚖️',
+    getSlides: function() { return ['slide-haftbefehl']; }
   }
 };
 
@@ -346,10 +350,24 @@ var schildCounter = 0;
 var schildCurrentIdx = null;
 var massnahmenData = { unfallmitteilungen: false, bescheinigungen: [], bescheinigungenUhrzeit: '', bescheinigungenNwKennung: '' };
 var psychkgData = { personRolle: '', anlass: '', arztGender: 'm', arztName: '', transport: '', begleitung: null };
+var haftbefehlData = {
+  personRolle: 'betroffm',
+  hbForm: 'Strafbefehl',
+  gericht: 'Amtsgerichts Gütersloh',
+  hbDatum: '',
+  hbAz: '',
+  rkSeit: '',
+  tagessaetze: '',
+  tagessatzBetrag: '',
+  ersatzTage: '',
+  useEventTime: true,
+  kontrolleUhrzeit: '',
+  zielort: 'ZPG Gütersloh'
+};
 
 function getActiveSlides() {
   var slides = [];
-  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','massnahmen','psychkg'];
+  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','massnahmen','psychkg','haftbefehl'];
   ORDER.forEach(function(key) {
     if (selectedSections.indexOf(key) === -1) return;
     var def = SECTION_DEFS[key];
@@ -423,6 +441,7 @@ document.getElementById('btnGenerateBtmTest').onclick = nextSlide;
 document.getElementById('btnGenerateAngaben').onclick = nextSlide;
 document.getElementById('btnGenerateMassnahmen').onclick = nextSlide;
 document.getElementById('btnGeneratePsychKG').onclick = nextSlide;
+document.getElementById('btnGenerateHaftbefehl').onclick = nextSlide;
 
 document.getElementById('btnAuffCustomAdd').onclick = function() {
   var inp = document.getElementById('auffCustomInput');
@@ -521,7 +540,7 @@ function renderLibrary() {
   var cont = document.getElementById('libraryBausteins');
   if (!cont) return;
   cont.innerHTML = '';
-  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','massnahmen','psychkg'];
+  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','massnahmen','psychkg','haftbefehl'];
   ORDER.forEach(function(key) {
     var def = SECTION_DEFS[key];
     var isOn = selectedSections.indexOf(key) !== -1;
@@ -844,6 +863,7 @@ function render() {
   if (slides[current] === 'slide-schilderungen-overview') renderSchilderungenOverview();
   if (slides[current] === 'slide-massnahmen') renderMassnahmen();
   if (slides[current] === 'slide-psychkg') renderPsychKG();
+  if (slides[current] === 'slide-haftbefehl') renderHaftbefehl();
   var activeSlideEl = document.getElementById(slides[current]);
   if (activeSlideEl) injectOrUpdatePreview(activeSlideEl, slides[current]);
 }
@@ -3390,6 +3410,231 @@ function renderPsychKG() {
   refreshPreview();
 }
 
+// ── Haftbefehl ────────────────────────────────────────────────────────────
+
+var HAFTBEFEHL_PERSON_MAP = {
+  betroffm: { akk: 'den Betroffenen',    nom: 'Der Betroffene',    pron: 'er' },
+  betroffw: { akk: 'die Betroffene',     nom: 'Die Betroffene',    pron: 'sie' },
+  beschm:   { akk: 'den Beschuldigten',  nom: 'Der Beschuldigte',  pron: 'er' },
+  beschw:   { akk: 'die Beschuldigte',   nom: 'Die Beschuldigte',  pron: 'sie' }
+};
+
+function generateHaftbefehlText() {
+  var p = haftbefehlData;
+  var pm = HAFTBEFEHL_PERSON_MAP[p.personRolle] || { akk: '[Person]', nom: '[Person]', pron: 'er/sie' };
+  var form    = p.hbForm   || 'Strafbefehl';
+  var gericht = p.gericht  || '[Gericht]';
+  var hbDate  = p.hbDatum  ? formatDateDE(p.hbDatum)  : '[Datum HB]';
+  var az      = p.hbAz     || '[Az.]';
+  var rkDate  = p.rkSeit   ? formatDateDE(p.rkSeit)   : '[Datum RK]';
+  var ts      = p.tagessaetze   || '[XX]';
+  var tsBetrag = p.tagessatzBetrag || '[XX,XX]';
+  var efTage  = p.ersatzTage   || '[XX]';
+  var ziel    = p.zielort  || 'ZPG Gütersloh';
+
+  var datumStr = '[Datum]';
+  var uhrStr   = '[Uhrzeit]';
+  if (p.useEventTime) {
+    var datEl = document.getElementById('datum');
+    var uhrEl = document.getElementById('uhrzeit');
+    var datVal = datEl ? datEl.value : '';
+    if (datVal) datumStr = formatDateDE(datVal);
+    uhrStr = (uhrEl && uhrEl.value) ? uhrEl.value : '[Uhrzeit]';
+  } else {
+    uhrStr = p.kontrolleUhrzeit || '[Uhrzeit]';
+  }
+
+  var formGen = form.slice(-1) === 's' ? form : form + 's'; // simple genitive
+  var lines = [];
+  lines.push(
+    'Gegen ' + pm.akk + ' besteht ein Haftbefehl in Form eines ' + formGen + ' ' + gericht + ' vom ' + hbDate + ', Az.: ' + az + ', rechtskräftig seit ' + rkDate + '.'
+  );
+  lines.push(
+    'Angesetzt ist eine Geldstrafe von ' + ts + ' Tagessätzen zu je ' + tsBetrag + ' Euro bzw. einer zu verbüßenden Ersatzfreiheitsstrafe von ' + efTage + ' Tagen.'
+  );
+  lines.push(
+    pm.nom + ' wurde am ' + datumStr + ', um ' + uhrStr + ' Uhr kontrolliert. Im Anschluss wurde ' + pm.pron + ' zum ' + ziel + ' transportiert und aufgrund des bestehenden Haftbefehls festgenommen.'
+  );
+  return lines.join('\n\n');
+}
+
+function renderHaftbefehl() {
+  var cont = document.getElementById('haftbefehlContent');
+  if (!cont) return;
+  cont.innerHTML = '';
+  var p = haftbefehlData;
+
+  function field(labelText, el) {
+    var wrap = document.createElement('div');
+    wrap.style.marginBottom = '16px';
+    var lbl = document.createElement('div');
+    lbl.className = 'input-label'; lbl.style.marginBottom = '6px';
+    lbl.textContent = labelText;
+    wrap.appendChild(lbl);
+    wrap.appendChild(el);
+    return wrap;
+  }
+
+  function chips(opts, getter, setter) {
+    var row = document.createElement('div');
+    row.className = 'suggestions';
+    opts.forEach(function(o) {
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.textContent = o.label;
+      btn.className = 'btn-suggestion' + (getter() === o.v ? ' active' : '');
+      btn.addEventListener('click', function() {
+        setter(o.v);
+        row.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        refreshPreview();
+      });
+      row.appendChild(btn);
+    });
+    return row;
+  }
+
+  function textInp(placeholder, val, setter, type) {
+    var inp = document.createElement('input');
+    inp.type = type || 'text'; inp.className = 'text-input';
+    inp.placeholder = placeholder; inp.value = val || '';
+    inp.addEventListener('input', function() { setter(this.value); refreshPreview(); });
+    return inp;
+  }
+
+  // Person
+  cont.appendChild(field('Betroffene Person', chips(
+    [
+      { v: 'betroffm', label: 'Betroffener (m)' },
+      { v: 'betroffw', label: 'Betroffene (f)'  },
+      { v: 'beschm',   label: 'Beschuldigter (m)' },
+      { v: 'beschw',   label: 'Beschuldigte (f)'  }
+    ],
+    function() { return p.personRolle; },
+    function(v) { p.personRolle = v; }
+  )));
+
+  // HB-Form
+  var hbFormWrap = document.createElement('div');
+  var hbFormChips = document.createElement('div');
+  hbFormChips.className = 'suggestions'; hbFormChips.style.marginBottom = '8px';
+  [
+    { v: 'Strafbefehl',                 label: 'Strafbefehl' },
+    { v: 'Vollstreckungshaftbefehl',    label: 'Vollstreckungshaftbefehl' },
+    { v: 'Haftbefehl',                  label: 'Haftbefehl' }
+  ].forEach(function(o) {
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.textContent = o.label;
+    btn.className = 'btn-suggestion' + (p.hbForm === o.v ? ' active' : '');
+    btn.addEventListener('click', function() {
+      p.hbForm = o.v; hbFormInp.value = o.v;
+      hbFormChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      refreshPreview();
+    });
+    hbFormChips.appendChild(btn);
+  });
+  var hbFormInp = document.createElement('input');
+  hbFormInp.type = 'text'; hbFormInp.className = 'text-input';
+  hbFormInp.placeholder = 'z.B. Strafbefehl'; hbFormInp.value = p.hbForm;
+  hbFormInp.addEventListener('input', function() {
+    p.hbForm = this.value;
+    hbFormChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+    refreshPreview();
+  });
+  hbFormWrap.appendChild(hbFormChips); hbFormWrap.appendChild(hbFormInp);
+  cont.appendChild(field('Art des Haftbefehls', hbFormWrap));
+
+  // Gericht
+  cont.appendChild(field('Ausstellendes Gericht (Genitiv)', textInp('z.B. Amtsgerichts Gütersloh', p.gericht, function(v) { p.gericht = v; })));
+
+  // Datum + AZ nebeneinander
+  var row1 = document.createElement('div');
+  row1.className = 'besch-az-row'; row1.style.marginBottom = '16px';
+  var datWrap = document.createElement('div'); datWrap.className = 'besch-az-field';
+  var datLbl = document.createElement('label'); datLbl.textContent = 'Datum des Haftbefehls';
+  var datInp = document.createElement('input'); datInp.type = 'date'; datInp.className = 'text-input';
+  datInp.value = p.hbDatum;
+  datInp.addEventListener('input', function() { p.hbDatum = this.value; refreshPreview(); });
+  datWrap.appendChild(datLbl); datWrap.appendChild(datInp);
+  var azWrap = document.createElement('div'); azWrap.className = 'besch-az-field';
+  var azLbl = document.createElement('label'); azLbl.textContent = 'Aktenzeichen';
+  var azInp = document.createElement('input'); azInp.type = 'text'; azInp.className = 'text-input';
+  azInp.placeholder = 'z.B. 3DS903/25'; azInp.value = p.hbAz;
+  azInp.addEventListener('input', function() { p.hbAz = this.value; refreshPreview(); });
+  azWrap.appendChild(azLbl); azWrap.appendChild(azInp);
+  row1.appendChild(datWrap); row1.appendChild(azWrap);
+  cont.appendChild(row1);
+
+  // Rechtskräftig seit
+  cont.appendChild(field('Rechtskräftig seit', textInp('', p.rkSeit, function(v) { p.rkSeit = v; }, 'date')));
+
+  // Geldstrafe-Zeile
+  var row2 = document.createElement('div');
+  row2.className = 'besch-az-row'; row2.style.marginBottom = '16px';
+  var tsWrap = document.createElement('div'); tsWrap.className = 'besch-az-field';
+  var tsLbl = document.createElement('label'); tsLbl.textContent = 'Tagessätze (Anzahl)';
+  var tsInp = document.createElement('input'); tsInp.type = 'number'; tsInp.className = 'text-input';
+  tsInp.placeholder = '60'; tsInp.min = '1'; tsInp.value = p.tagessaetze;
+  tsInp.addEventListener('input', function() { p.tagessaetze = this.value; refreshPreview(); });
+  tsWrap.appendChild(tsLbl); tsWrap.appendChild(tsInp);
+  var tbWrap = document.createElement('div'); tbWrap.className = 'besch-az-field';
+  var tbLbl = document.createElement('label'); tbLbl.textContent = 'je Tagessatz (€)';
+  var tbInp = document.createElement('input'); tbInp.type = 'text'; tbInp.className = 'text-input';
+  tbInp.placeholder = '15,00'; tbInp.value = p.tagessatzBetrag;
+  tbInp.addEventListener('input', function() { p.tagessatzBetrag = this.value; refreshPreview(); });
+  tbWrap.appendChild(tbLbl); tbWrap.appendChild(tbInp);
+  row2.appendChild(tsWrap); row2.appendChild(tbWrap);
+  cont.appendChild(row2);
+
+  // Ersatzfreiheitsstrafe
+  cont.appendChild(field('Ersatzfreiheitsstrafe (Tage)', textInp('30', p.ersatzTage, function(v) { p.ersatzTage = v; }, 'number')));
+
+  // Kontrollzeit
+  var ktWrap = document.createElement('div'); ktWrap.style.marginBottom = '16px';
+  var ktLbl = document.createElement('div'); ktLbl.className = 'input-label'; ktLbl.style.marginBottom = '6px';
+  ktLbl.textContent = 'Zeitpunkt der Kontrolle';
+  var ktChips = document.createElement('div'); ktChips.className = 'suggestions'; ktChips.style.marginBottom = '8px';
+  [
+    { v: 'auto',    label: 'Aus Einsatzdaten übernehmen' },
+    { v: 'manuell', label: 'Manuell eingeben'             }
+  ].forEach(function(o) {
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.textContent = o.label;
+    var isActive = o.v === (p.useEventTime ? 'auto' : 'manuell');
+    btn.className = 'btn-suggestion' + (isActive ? ' active' : '');
+    btn.addEventListener('click', function() {
+      p.useEventTime = (o.v === 'auto');
+      ktChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      ktOverride.style.display = p.useEventTime ? 'none' : '';
+      refreshPreview();
+    });
+    ktChips.appendChild(btn);
+  });
+  var ktOverride = document.createElement('input');
+  ktOverride.type = 'time'; ktOverride.className = 'text-input';
+  ktOverride.value = p.kontrolleUhrzeit;
+  ktOverride.style.display = p.useEventTime ? 'none' : '';
+  ktOverride.addEventListener('input', function() { p.kontrolleUhrzeit = this.value; refreshPreview(); });
+  ktWrap.appendChild(ktLbl); ktWrap.appendChild(ktChips); ktWrap.appendChild(ktOverride);
+  cont.appendChild(ktWrap);
+
+  // Zielort
+  cont.appendChild(field('Zielort nach Festnahme', textInp('z.B. ZPG Gütersloh', p.zielort, function(v) { p.zielort = v; })));
+
+  // Live-Vorschau
+  var prevBox = document.createElement('div');
+  prevBox.className = 'schild-preview-box'; prevBox.style.marginTop = '20px';
+  var prevLbl = document.createElement('div');
+  prevLbl.className = 'input-label'; prevLbl.style.marginBottom = '6px'; prevLbl.textContent = 'Vorschau';
+  var prevText = document.createElement('div'); prevText.className = 'verletzung-preview';
+  prevBox.appendChild(prevLbl); prevBox.appendChild(prevText);
+  cont.appendChild(prevBox);
+
+  function refreshPreview() { prevText.textContent = generateHaftbefehlText(); }
+  refreshPreview();
+}
+
 function generateResult() {
   var doc = document.getElementById('reportDoc');
   doc.innerHTML = '';
@@ -3434,7 +3679,8 @@ function generateResult() {
     fahrzeug:      function() { return generateFahrzeugText(); },
     schilderungen: function() { return generateSchilderungenText(); },
     massnahmen:    function() { return generateMassnahmenText(); },
-    psychkg:       function() { return generatePsychKGText(); }
+    psychkg:       function() { return generatePsychKGText(); },
+    haftbefehl:    function() { return generateHaftbefehlText(); }
   };
 
   var titles = {
@@ -3445,7 +3691,8 @@ function generateResult() {
     fahrzeug:      'Spuren an den Fahrzeugen',
     schilderungen: 'Schilderungen',
     massnahmen:    'Maßnahmen / Sonstiges',
-    psychkg:       'Maßnahmen nach dem PsychKG'
+    psychkg:       'Maßnahmen nach dem PsychKG',
+    haftbefehl:    'Haftbefehl'
   };
 
   selectedSections.forEach(function(key) {
@@ -3670,6 +3917,7 @@ function resetAll() {
   schildCurrentIdx = null;
   massnahmenData = { unfallmitteilungen: false, bescheinigungen: [], bescheinigungenUhrzeit: '', bescheinigungenNwKennung: '' };
   psychkgData = { personRolle: '', anlass: '', arztGender: 'm', arztName: '', transport: '', begleitung: null };
+  haftbefehlData = { personRolle: 'betroffm', hbForm: 'Strafbefehl', gericht: 'Amtsgerichts Gütersloh', hbDatum: '', hbAz: '', rkSeit: '', tagessaetze: '', tagessatzBetrag: '', ersatzTage: '', useEventTime: true, kontrolleUhrzeit: '', zielort: 'ZPG Gütersloh' };
   addStreifenwagen();
   // Show library screen again
   var startEl = document.getElementById('screen-start');
