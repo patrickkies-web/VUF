@@ -3098,7 +3098,7 @@ function renderMassnahmen() {
   bescDetail.className = 'massnahme-sub';
   var panelOpen = massnahmenData.bescheinigungen.length > 0 || !!(massnahmenData.bescheinigungenUhrzeit || massnahmenData.bescheinigungenNwKennung);
   bescDetail.style.display = panelOpen ? '' : 'none';
-  if (panelOpen) bescBtn.classList.add('open');
+  if (panelOpen) { bescBtn.classList.add('open'); bescBtn.classList.add('active'); }
 
   // ── AZ-Felder ──
   var azRow = document.createElement('div');
@@ -3232,6 +3232,11 @@ function renderMassnahmen() {
     var isOpen = bescDetail.style.display !== 'none';
     bescDetail.style.display = isOpen ? 'none' : '';
     bescBtn.classList.toggle('open', !isOpen);
+    if (!isOpen) {
+      bescBtn.classList.add('active');
+    } else if (massnahmenData.bescheinigungen.length === 0) {
+      bescBtn.classList.remove('active');
+    }
   };
   bescWrap.appendChild(bescBtn);
   bescWrap.appendChild(bescDetail);
