@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>Polizeibericht v3.15</title>
-  <link rel="stylesheet" href="style.css?v=3.20">
+  <link rel="stylesheet" href="style.css?v=3.21">
 </head>
 <body>
 
@@ -680,12 +680,40 @@
       </div>
     </div>
 
-    <!-- PsychKG -->
+    <!-- PsychKG 1: Verhalten -->
     <div class="slide" id="slide-psychkg">
-      <div class="question-number">Ma&szlig;nahmen nach PsychKG</div>
-      <div class="question-text">Zwangsweise<br><strong>Unterbringung</strong></div>
+      <div class="question-number">PsychKG · Schritt 1 von 3</div>
+      <div class="question-text">Verhaltens&shy;<strong>auffälligkeit</strong></div>
       <div id="psychkgContent"></div>
-      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;margin-top:20px">
+      <div style="margin-top:20px">
+        <button class="btn-next" id="btnPsychKGWeiter1">Weiter
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- PsychKG 2: SPD & Arzt -->
+    <div class="slide" id="slide-psychkg-spd">
+      <div class="question-number">PsychKG · Schritt 2 von 3</div>
+      <div class="question-text">SPD &amp;<br><strong>Ärztlicher Dienst</strong></div>
+      <div id="psychkgSpdContent"></div>
+      <div style="margin-top:24px">
+        <button class="btn-next" id="btnPsychKGWeiter2">Weiter
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- PsychKG 3: Transport + Vorschau -->
+    <div class="slide" id="slide-psychkg-transport">
+      <div class="question-number">PsychKG · Schritt 3 von 3</div>
+      <div class="question-text">Transport &amp;<br><strong>Begleitung</strong></div>
+      <div id="psychkgTransportContent"></div>
+      <div style="margin-top:20px">
         <button class="btn-next" id="btnGeneratePsychKG">Bericht erstellen
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -716,7 +744,7 @@
   <div style="width:80px"></div>
 </div>
 
-<script src="script.js?v=3.20"></script>
+<script src="script.js?v=3.21"></script>
 <script>if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js').catch(function(){});}</script>
 
 <!-- Bericht-Generierungs-Overlay -->

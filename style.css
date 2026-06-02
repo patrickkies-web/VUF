@@ -768,6 +768,35 @@ body {
   border-radius: 10px;
 }
 
+.psychkg-ta {
+  width: 100%;
+  min-height: 130px;
+  resize: vertical;
+  font-size: 15px;
+  line-height: 1.6;
+  padding: 12px 14px;
+  box-sizing: border-box;
+}
+
+.psychkg-divider {
+  border: none;
+  border-top: 1.5px solid var(--border);
+  margin: 20px 0;
+}
+
+.psychkg-name-lbl {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+.psychkg-name-inp {
+  width: 100%;
+  font-size: 17px;
+  padding: 14px 16px;
+  box-sizing: border-box;
+}
+
 .besch-az-row {
   display: flex;
   gap: 10px;
