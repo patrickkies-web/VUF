@@ -307,12 +307,12 @@ var STOFFGRUPPEN = [
 ];
 
 var ROLLEN_MAP = {
-  zeuge:  { disp: 'der Zeuge',               btyp: 'zeuge', er: 'Er',  erLow: 'er',  sein: 'sein', seiner: 'seiner' },
-  zeugin: { disp: 'die Zeugin',              btyp: 'zeuge', er: 'Sie', erLow: 'sie', sein: 'ihr',  seiner: 'ihrer'  },
-  ub02m:  { disp: 'der Unfallbeteiligte 02', btyp: 'zeuge', er: 'Er',  erLow: 'er',  sein: 'sein', seiner: 'seiner' },
-  ub02w:  { disp: 'die Unfallbeteiligte 02', btyp: 'zeuge', er: 'Sie', erLow: 'sie', sein: 'ihr',  seiner: 'ihrer'  },
-  beschm: { disp: 'der Beschuldigte',        btyp: 'besch', er: 'Er',  erLow: 'er',  sein: 'sein', seiner: 'seiner' },
-  beschw: { disp: 'die Beschuldigte',        btyp: 'besch', er: 'Sie', erLow: 'sie', sein: 'ihr',  seiner: 'ihrer'  }
+  zeuge:  { disp: 'der Zeuge',               dativ: 'dem Zeugen',               btyp: 'zeuge', er: 'Er',  erLow: 'er',  sein: 'sein', seiner: 'seiner' },
+  zeugin: { disp: 'die Zeugin',              dativ: 'der Zeugin',               btyp: 'zeuge', er: 'Sie', erLow: 'sie', sein: 'ihr',  seiner: 'ihrer'  },
+  ub02m:  { disp: 'der Unfallbeteiligte 02', dativ: 'dem Unfallbeteiligten 02', btyp: 'zeuge', er: 'Er',  erLow: 'er',  sein: 'sein', seiner: 'seiner' },
+  ub02w:  { disp: 'die Unfallbeteiligte 02', dativ: 'der Unfallbeteiligten 02', btyp: 'zeuge', er: 'Sie', erLow: 'sie', sein: 'ihr',  seiner: 'ihrer'  },
+  beschm: { disp: 'der Beschuldigte',        dativ: 'dem Beschuldigten',        btyp: 'besch', er: 'Er',  erLow: 'er',  sein: 'sein', seiner: 'seiner' },
+  beschw: { disp: 'die Beschuldigte',        dativ: 'der Beschuldigten',        btyp: 'besch', er: 'Sie', erLow: 'sie', sein: 'ihr',  seiner: 'ihrer'  }
 };
 
 var schilderungen = [];
@@ -2561,7 +2561,7 @@ function generateSchilderungenText() {
         schluss  = 'den Schluss auf einen vorangegangenen Alkoholkonsum zu';
         abschluss = 'Die Gesamtheit der Beobachtungen stellte sich als alkoholtypisches Erscheinungsbild dar.';
       }
-      parts.push('Die bei ' + rm.disp + ' wahrgenommenen körperlichen und verhaltensbezogenen Auffälligkeiten ließen in ihrer Gesamtheit ' + schluss + '. Festgestellt wurden hierbei insbesondere:\n' +
+      parts.push('Die bei ' + rm.dativ + ' wahrgenommenen körperlichen und verhaltensbezogenen Auffälligkeiten ließen in ihrer Gesamtheit ' + schluss + '. Festgestellt wurden hierbei insbesondere:\n' +
         auffLabels.map(function(l) { return '– ' + l; }).join('\n') + '\n' +
         abschluss);
     }
