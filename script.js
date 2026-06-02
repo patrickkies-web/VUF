@@ -107,7 +107,14 @@ var SECTION_DEFS = {
       if (selectedSections.indexOf('allgemeines') === -1) {
         slides.push('slide-0'); // Besatzung für Beamten-Auswahl erforderlich
       }
-      slides.push('slide-schilderungen', 'slide-schilderungen-umstaende', 'slide-schilderungen-overview');
+      slides.push('slide-schilderungen', 'slide-schilderungen-umstaende');
+      var s = schildCurrentIdx !== null ? schilderungen[schildCurrentIdx] : null;
+      var umst = s ? (s.umstaende || []) : [];
+      var hasAlk = umst.indexOf('alkohol') !== -1 || umst.indexOf('alkohol-btm') !== -1;
+      var hasBtm = umst.indexOf('btm') !== -1 || umst.indexOf('alkohol-btm') !== -1;
+      if (hasAlk) slides.push('slide-schilderungen-alkohol');
+      if (hasBtm) slides.push('slide-schilderungen-btm');
+      slides.push('slide-schilderungen-overview');
       return slides;
     }
   }
@@ -124,6 +131,79 @@ var UMSTAENDE_DEFS = [
   { v: 'btm',             label: 'Stand unter Betäubungsmitteleinfluss' },
   { v: 'alkohol-btm',     label: 'Stand unter Alkohol- und BtM-Einfluss' },
   { v: 'leicht-verletzt', label: 'War leicht verletzt, benötigte keinen RTW' }
+];
+
+var ALKOHOL_AUFFAELLIGKEITEN = [
+  { category: 'Augen', items: [
+    { v: 'alk-augen-geroetet',  label: 'gerötete Bindehäute' },
+    { v: 'alk-augen-glasig',    label: 'glasige Augen' },
+    { v: 'alk-augen-waessrig',  label: 'wässrige Augen' }
+  ]},
+  { category: 'Aussprache', items: [
+    { v: 'alk-spr-verwaschen',  label: 'verwaschene Aussprache' },
+    { v: 'alk-spr-lallend',     label: 'lallende Aussprache' },
+    { v: 'alk-spr-undeutlich',  label: 'undeutliche Aussprache' }
+  ]},
+  { category: 'Gang & Koordination', items: [
+    { v: 'alk-gang-schwankend', label: 'schwankender Gang' },
+    { v: 'alk-gang-taumel',     label: 'Taumelgang' },
+    { v: 'alk-stand-unsicher',  label: 'unsicherer Stand' },
+    { v: 'alk-stand-breit',     label: 'breitbeiniger Stand' }
+  ]},
+  { category: 'Verhalten', items: [
+    { v: 'alk-verh-verlangsamt', label: 'verlangsamte Reaktionsfähigkeit' },
+    { v: 'alk-verh-aggressiv',   label: 'aggressives Auftreten' },
+    { v: 'alk-verh-euphorisch',  label: 'euphorisches / ausgelassenes Verhalten' },
+    { v: 'alk-verh-apathisch',   label: 'apathisches Verhalten' },
+    { v: 'alk-verh-stimmung',    label: 'Stimmungsschwankungen' },
+    { v: 'alk-verh-einsicht',    label: 'fehlende Einsichtsfähigkeit' }
+  ]},
+  { category: 'Geruch', items: [
+    { v: 'alk-geruch',           label: 'Atemalkohol wahrnehmbar' }
+  ]},
+  { category: 'Äußeres Erscheinungsbild', items: [
+    { v: 'alk-gesicht-geroetet', label: 'gerötetes Gesicht' },
+    { v: 'alk-schweiss',         label: 'erhöhte Schweißbildung' },
+    { v: 'alk-zittern',          label: 'zitternde Hände' }
+  ]}
+];
+
+var BTM_AUFFAELLIGKEITEN = [
+  { category: 'Augen', items: [
+    { v: 'btm-augen-erweitert',  label: 'deutlich erweiterte Pupillen' },
+    { v: 'btm-augen-verengt',    label: 'deutlich verengte Pupillen' },
+    { v: 'btm-augen-geroetet',   label: 'gerötete Bindehäute' },
+    { v: 'btm-augen-glasig',     label: 'glasige Augen' },
+    { v: 'btm-augen-nystagmus',  label: 'Nystagmus (Augenzittern)' }
+  ]},
+  { category: 'Verhalten', items: [
+    { v: 'btm-verh-unruhig',     label: 'motorische Unruhe / Hyperaktivität' },
+    { v: 'btm-verh-redselig',    label: 'übermäßige Redseligkeit' },
+    { v: 'btm-verh-euphorisch',  label: 'Euphorie / Antriebssteigerung' },
+    { v: 'btm-verh-apathisch',   label: 'Apathie / Teilnahmslosigkeit' },
+    { v: 'btm-verh-verwirrt',    label: 'Verwirrtheit / Desorientierung' },
+    { v: 'btm-verh-paranoid',    label: 'paranoide Reaktionen' },
+    { v: 'btm-verh-schlaefrig',  label: 'Schläfrigkeit / Benommenheit' }
+  ]},
+  { category: 'Koordination', items: [
+    { v: 'btm-gang-ataxie',      label: 'ataktischer Gang (Gleichgewichtsstörungen)' },
+    { v: 'btm-gang-verlangsamt', label: 'verlangsamte Bewegungen' },
+    { v: 'btm-reakt-verlangsamt',label: 'verlangsamte Reaktionszeit' }
+  ]},
+  { category: 'Aussprache', items: [
+    { v: 'btm-spr-verwaschen',   label: 'verwaschene Aussprache' },
+    { v: 'btm-spr-verlangsamt',  label: 'verlangsamte Sprache' }
+  ]},
+  { category: 'Haut & Äußeres', items: [
+    { v: 'btm-haut-blass',       label: 'blasse, fahle Gesichtsfarbe' },
+    { v: 'btm-haut-schweiss',    label: 'starkes Schwitzen' },
+    { v: 'btm-einstich',         label: 'sichtbare Einstichstellen' }
+  ]},
+  { category: 'Sonstiges', items: [
+    { v: 'btm-speichelfluss',    label: 'übermäßiger Speichelfluss' },
+    { v: 'btm-tremor',           label: 'Tremor / Zittern' },
+    { v: 'btm-geruch',           label: 'auffälliger körpereigener Geruch' }
+  ]}
 ];
 
 var ROLLEN_MAP = {
@@ -206,6 +286,8 @@ document.getElementById('btnUoP2').onclick = nextSlide;
 document.getElementById('btnUoSpuren').onclick = nextSlide;
 document.getElementById('btnGenerateSchilderungen').onclick = nextSlide;
 document.getElementById('btnGenerateUmstaende').onclick = nextSlide;
+document.getElementById('btnGenerateAlkohol').onclick = nextSlide;
+document.getElementById('btnGenerateBtm').onclick = nextSlide;
 document.getElementById('btnAddWeiterePerson').onclick = function() { addSchilderung(); jumpToSlide('slide-schilderungen'); };
 document.getElementById('btnErstelleBericht').onclick = generateResult;
 document.getElementById('btnBack').onclick = prevSlide;
@@ -567,6 +649,8 @@ function render() {
     renderSchilderungen();
   }
   if (slides[current] === 'slide-schilderungen-umstaende') renderSchilderungenUmstaende();
+  if (slides[current] === 'slide-schilderungen-alkohol') renderSchilderungenAlkohol();
+  if (slides[current] === 'slide-schilderungen-btm') renderSchilderungenBtm();
   if (slides[current] === 'slide-schilderungen-overview') renderSchilderungenOverview();
   var activeSlideEl = document.getElementById(slides[current]);
   if (activeSlideEl) injectOrUpdatePreview(activeSlideEl, slides[current]);
@@ -1887,6 +1971,8 @@ function addSchilderung() {
     belehrender: '',
     gegenueber: '',
     umstaende: [],
+    alkAuffaelligkeiten: [],
+    btmAuffaelligkeiten: [],
     modus: '',
     abstelltDatum: document.getElementById('datum').value || '',
     abstelltUhrzeit: '',
@@ -2080,6 +2166,57 @@ function renderSchilderungenOverview() {
   });
 }
 
+function renderAuffaelligkeitenSlide(defs, s, field, containerId) {
+  var cont = document.getElementById(containerId);
+  if (!cont) return;
+  cont.innerHTML = '';
+  if (!s) return;
+
+  defs.forEach(function(cat) {
+    var catLbl = document.createElement('div'); catLbl.className = 'input-label';
+    catLbl.style.marginBottom = '6px'; catLbl.textContent = cat.category;
+    cont.appendChild(catLbl);
+
+    var chips = document.createElement('div'); chips.className = 'suggestions';
+    chips.style.marginBottom = '14px';
+    cat.items.forEach(function(item) {
+      var isOn = s[field] && s[field].indexOf(item.v) !== -1;
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.dataset.v = item.v; btn.textContent = item.label;
+      btn.className = 'btn-suggestion' + (isOn ? ' active' : '');
+      chips.appendChild(btn);
+    });
+    chips.addEventListener('click', function(e) {
+      var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
+      var v = btn.dataset.v;
+      if (!s[field]) s[field] = [];
+      var i = s[field].indexOf(v);
+      if (i !== -1) { s[field].splice(i, 1); btn.classList.remove('active'); }
+      else          { s[field].push(v);       btn.classList.add('active'); }
+    });
+    cont.appendChild(chips);
+  });
+}
+
+function renderSchilderungenAlkohol() {
+  var s = schildCurrentIdx !== null ? schilderungen[schildCurrentIdx] : null;
+  renderAuffaelligkeitenSlide(ALKOHOL_AUFFAELLIGKEITEN, s, 'alkAuffaelligkeiten', 'alkAuffaelligkeitenList');
+}
+
+function renderSchilderungenBtm() {
+  var s = schildCurrentIdx !== null ? schilderungen[schildCurrentIdx] : null;
+  renderAuffaelligkeitenSlide(BTM_AUFFAELLIGKEITEN, s, 'btmAuffaelligkeiten', 'btmAuffaelligkeitenList');
+}
+
+function getAuffaelligkeitenLabels(defs, selected) {
+  var labels = [];
+  defs.forEach(function(cat) {
+    cat.items.forEach(function(item) {
+      if (selected.indexOf(item.v) !== -1) labels.push(item.label);
+    });
+  });
+  return labels;
+}
 
 function formatDateDE(iso) {
   if (!iso) return '';
@@ -2095,6 +2232,19 @@ function generateSchilderungenText() {
     var bel = s.belehrender || '[Beamter/Beamtin]';
     var geg = s.gegenueber || '[Beamter/Beamtin]';
     var belTyp = rm.btyp === 'besch' ? 'Beschuldigtenbelehrung' : 'zeugenschaftlicher Belehrung';
+
+    var parts = [];
+
+    var alkLabels = getAuffaelligkeitenLabels(ALKOHOL_AUFFAELLIGKEITEN, s.alkAuffaelligkeiten || []);
+    if (alkLabels.length) {
+      parts.push('Aufgrund der folgenden Feststellungen kann angenommen werden, dass bei ' + rm.disp + ' vorangegangener Alkoholkonsum stattgefunden hat:\n' + alkLabels.map(function(l) { return '– ' + l; }).join('\n'));
+    }
+
+    var btmLabels = getAuffaelligkeitenLabels(BTM_AUFFAELLIGKEITEN, s.btmAuffaelligkeiten || []);
+    if (btmLabels.length) {
+      parts.push('Aufgrund der folgenden Feststellungen kann angenommen werden, dass ' + rm.disp + ' unter dem Einfluss von Betäubungsmitteln stand:\n' + btmLabels.map(function(l) { return '– ' + l; }).join('\n'));
+    }
+
     var intro = 'Nach erfolgter ' + belTyp + ' durch ' + bel + ' machte ' + rm.disp + ' gegenüber ' + geg + ' sinngemäß folgende Angaben:';
     var body = '';
     if (s.modus === 'vuf') {
@@ -2112,7 +2262,8 @@ function generateSchilderungenText() {
     } else if (s.modus === 'frei') {
       body = s.freitext || '[Keine Angaben]';
     }
-    return intro + '\n\n' + body;
+    parts.push(intro + '\n\n' + body);
+    return parts.join('\n\n');
   }).filter(Boolean).join('\n\n');
 }
 
