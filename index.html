@@ -555,8 +555,27 @@
       <div class="question-number">Schilderungen &middot; Alkohol</div>
       <div class="question-text">Welche <strong>Auff&auml;lligkeiten</strong><br>wurden festgestellt?</div>
       <div id="alkAuffaelligkeitenList"></div>
-      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;margin-top:8px">
+      <div class="custom-inp-row">
+        <input type="text" id="alkCustomInput" class="field-input" placeholder="Weitere Auff&auml;lligkeit&#8230;">
+        <button type="button" class="btn-add-custom" id="btnAlkCustomAdd">+</button>
+      </div>
+      <div id="alkCustomList"></div>
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;margin-top:12px">
         <button class="btn-next" id="btnGenerateAlkohol">Weiter
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Schilderungen: Alkohol-Test -->
+    <div class="slide" id="slide-schilderungen-alkohol-test">
+      <div class="question-number">Schilderungen &middot; Alkohol</div>
+      <div class="question-text"><strong>Atemalkoholtest</strong><br>durchgef&uuml;hrt?</div>
+      <div id="alkTestList"></div>
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;margin-top:12px">
+        <button class="btn-next" id="btnGenerateAlkoholTest">Weiter
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path d="M5 12h14M12 5l7 7-7 7"/>
           </svg>
@@ -569,8 +588,27 @@
       <div class="question-number">Schilderungen &middot; Betäubungsmittel</div>
       <div class="question-text">Welche <strong>Auff&auml;lligkeiten</strong><br>wurden festgestellt?</div>
       <div id="btmAuffaelligkeitenList"></div>
-      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;margin-top:8px">
+      <div class="custom-inp-row">
+        <input type="text" id="btmCustomInput" class="field-input" placeholder="Weitere Auff&auml;lligkeit&#8230;">
+        <button type="button" class="btn-add-custom" id="btnBtmCustomAdd">+</button>
+      </div>
+      <div id="btmCustomList"></div>
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;margin-top:12px">
         <button class="btn-next" id="btnGenerateBtm">Weiter
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Schilderungen: BtM-Test -->
+    <div class="slide" id="slide-schilderungen-btm-test">
+      <div class="question-number">Schilderungen &middot; Betäubungsmittel</div>
+      <div class="question-text"><strong>Drogenvortest</strong><br>durchgef&uuml;hrt?</div>
+      <div id="btmTestList"></div>
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;margin-top:12px">
+        <button class="btn-next" id="btnGenerateBtmTest">Weiter
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path d="M5 12h14M12 5l7 7-7 7"/>
           </svg>

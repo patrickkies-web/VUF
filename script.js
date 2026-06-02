@@ -112,8 +112,8 @@ var SECTION_DEFS = {
       var umst = s ? (s.umstaende || []) : [];
       var hasAlk = umst.indexOf('alkohol') !== -1 || umst.indexOf('alkohol-btm') !== -1;
       var hasBtm = umst.indexOf('btm') !== -1 || umst.indexOf('alkohol-btm') !== -1;
-      if (hasAlk) slides.push('slide-schilderungen-alkohol');
-      if (hasBtm) slides.push('slide-schilderungen-btm');
+      if (hasAlk) slides.push('slide-schilderungen-alkohol', 'slide-schilderungen-alkohol-test');
+      if (hasBtm) slides.push('slide-schilderungen-btm', 'slide-schilderungen-btm-test');
       slides.push('slide-schilderungen-overview');
       return slides;
     }
@@ -206,6 +206,16 @@ var BTM_AUFFAELLIGKEITEN = [
   ]}
 ];
 
+var STOFFGRUPPEN = [
+  { v: 'BZD',  label: 'BZD (Benzodiazepine)' },
+  { v: 'AMP',  label: 'AMP (Amphetamine)' },
+  { v: 'MOR',  label: 'MOR (Morphin / Opiate)' },
+  { v: 'THC',  label: 'THC (Cannabis)' },
+  { v: 'COC',  label: 'COC (Kokain)' },
+  { v: 'MDMA', label: 'MDMA (Ecstasy)' },
+  { v: 'MET',  label: 'MET (Methamphetamin)' }
+];
+
 var ROLLEN_MAP = {
   zeuge:  { disp: 'der Zeuge',               btyp: 'zeuge', er: 'Er',  erLow: 'er',  sein: 'sein', seiner: 'seiner' },
   zeugin: { disp: 'die Zeugin',              btyp: 'zeuge', er: 'Sie', erLow: 'sie', sein: 'ihr',  seiner: 'ihrer'  },
@@ -287,7 +297,33 @@ document.getElementById('btnUoSpuren').onclick = nextSlide;
 document.getElementById('btnGenerateSchilderungen').onclick = nextSlide;
 document.getElementById('btnGenerateUmstaende').onclick = nextSlide;
 document.getElementById('btnGenerateAlkohol').onclick = nextSlide;
+document.getElementById('btnGenerateAlkoholTest').onclick = nextSlide;
 document.getElementById('btnGenerateBtm').onclick = nextSlide;
+document.getElementById('btnGenerateBtmTest').onclick = nextSlide;
+
+document.getElementById('btnAlkCustomAdd').onclick = function() {
+  var inp = document.getElementById('alkCustomInput');
+  var val = inp.value.trim(); if (!val) return;
+  var s = schildCurrentIdx !== null ? schilderungen[schildCurrentIdx] : null; if (!s) return;
+  if (!s.alkCustom) s.alkCustom = [];
+  s.alkCustom.push(val); inp.value = '';
+  renderAlkCustomList(); inp.focus();
+};
+document.getElementById('alkCustomInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btnAlkCustomAdd').click(); }
+});
+
+document.getElementById('btnBtmCustomAdd').onclick = function() {
+  var inp = document.getElementById('btmCustomInput');
+  var val = inp.value.trim(); if (!val) return;
+  var s = schildCurrentIdx !== null ? schilderungen[schildCurrentIdx] : null; if (!s) return;
+  if (!s.btmCustom) s.btmCustom = [];
+  s.btmCustom.push(val); inp.value = '';
+  renderBtmCustomList(); inp.focus();
+};
+document.getElementById('btmCustomInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btnBtmCustomAdd').click(); }
+});
 document.getElementById('btnAddWeiterePerson').onclick = function() { addSchilderung(); jumpToSlide('slide-schilderungen'); };
 document.getElementById('btnErstelleBericht').onclick = generateResult;
 document.getElementById('btnBack').onclick = prevSlide;
@@ -650,7 +686,9 @@ function render() {
   }
   if (slides[current] === 'slide-schilderungen-umstaende') renderSchilderungenUmstaende();
   if (slides[current] === 'slide-schilderungen-alkohol') renderSchilderungenAlkohol();
+  if (slides[current] === 'slide-schilderungen-alkohol-test') renderSchilderungenAlkoholTest();
   if (slides[current] === 'slide-schilderungen-btm') renderSchilderungenBtm();
+  if (slides[current] === 'slide-schilderungen-btm-test') renderSchilderungenBtmTest();
   if (slides[current] === 'slide-schilderungen-overview') renderSchilderungenOverview();
   var activeSlideEl = document.getElementById(slides[current]);
   if (activeSlideEl) injectOrUpdatePreview(activeSlideEl, slides[current]);
@@ -1972,7 +2010,15 @@ function addSchilderung() {
     gegenueber: '',
     umstaende: [],
     alkAuffaelligkeiten: [],
+    alkCustom: [],
+    aatDurchgefuehrt: null,
+    aatWert: '',
+    aatUhrzeit: '',
     btmAuffaelligkeiten: [],
+    btmCustom: [],
+    btmTestDurchgefuehrt: null,
+    btmTestErgebnis: null,
+    btmStoffgruppen: [],
     modus: '',
     abstelltDatum: document.getElementById('datum').value || '',
     abstelltUhrzeit: '',
@@ -2201,11 +2247,165 @@ function renderAuffaelligkeitenSlide(defs, s, field, containerId) {
 function renderSchilderungenAlkohol() {
   var s = schildCurrentIdx !== null ? schilderungen[schildCurrentIdx] : null;
   renderAuffaelligkeitenSlide(ALKOHOL_AUFFAELLIGKEITEN, s, 'alkAuffaelligkeiten', 'alkAuffaelligkeitenList');
+  renderAlkCustomList();
 }
 
 function renderSchilderungenBtm() {
   var s = schildCurrentIdx !== null ? schilderungen[schildCurrentIdx] : null;
   renderAuffaelligkeitenSlide(BTM_AUFFAELLIGKEITEN, s, 'btmAuffaelligkeiten', 'btmAuffaelligkeitenList');
+  renderBtmCustomList();
+}
+
+function renderAlkCustomList() {
+  var cont = document.getElementById('alkCustomList');
+  if (!cont) return;
+  cont.innerHTML = '';
+  var s = schildCurrentIdx !== null ? schilderungen[schildCurrentIdx] : null;
+  if (!s || !s.alkCustom || !s.alkCustom.length) return;
+  var chips = document.createElement('div'); chips.className = 'suggestions'; chips.style.marginTop = '4px';
+  s.alkCustom.forEach(function(val, i) {
+    var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'btn-suggestion active';
+    btn.innerHTML = val + ' <span style="opacity:0.55;margin-left:4px">&times;</span>';
+    btn.onclick = (function(idx) { return function() { s.alkCustom.splice(idx, 1); renderAlkCustomList(); }; })(i);
+    chips.appendChild(btn);
+  });
+  cont.appendChild(chips);
+}
+
+function renderBtmCustomList() {
+  var cont = document.getElementById('btmCustomList');
+  if (!cont) return;
+  cont.innerHTML = '';
+  var s = schildCurrentIdx !== null ? schilderungen[schildCurrentIdx] : null;
+  if (!s || !s.btmCustom || !s.btmCustom.length) return;
+  var chips = document.createElement('div'); chips.className = 'suggestions'; chips.style.marginTop = '4px';
+  s.btmCustom.forEach(function(val, i) {
+    var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'btn-suggestion active';
+    btn.innerHTML = val + ' <span style="opacity:0.55;margin-left:4px">&times;</span>';
+    btn.onclick = (function(idx) { return function() { s.btmCustom.splice(idx, 1); renderBtmCustomList(); }; })(i);
+    chips.appendChild(btn);
+  });
+  cont.appendChild(chips);
+}
+
+function renderSchilderungenAlkoholTest() {
+  var cont = document.getElementById('alkTestList');
+  if (!cont) return;
+  cont.innerHTML = '';
+  var s = schildCurrentIdx !== null ? schilderungen[schildCurrentIdx] : null;
+  if (!s) return;
+
+  var lbl = document.createElement('div'); lbl.className = 'input-label'; lbl.style.marginBottom = '8px';
+  lbl.textContent = 'Wurde ein freiwilliger Atemalkoholtest durchgeführt?';
+  cont.appendChild(lbl);
+
+  var aatChips = document.createElement('div'); aatChips.className = 'suggestions';
+  [{ v: 'ja', label: 'Ja, durchgeführt' }, { v: 'abgelehnt', label: 'Von Person abgelehnt' }].forEach(function(opt) {
+    var btn = document.createElement('button'); btn.type = 'button'; btn.dataset.v = opt.v; btn.textContent = opt.label;
+    btn.className = 'btn-suggestion' + (s.aatDurchgefuehrt === opt.v ? ' active' : '');
+    aatChips.appendChild(btn);
+  });
+  cont.appendChild(aatChips);
+
+  var detailWrap = document.createElement('div');
+  detailWrap.style.marginTop = '16px'; detailWrap.style.display = s.aatDurchgefuehrt === 'ja' ? '' : 'none';
+
+  var wertLbl = document.createElement('div'); wertLbl.className = 'input-label'; wertLbl.textContent = 'Atemalkohol (mg/l)';
+  detailWrap.appendChild(wertLbl);
+  var wertInp = document.createElement('input'); wertInp.type = 'number'; wertInp.step = '0.001'; wertInp.min = '0';
+  wertInp.className = 'field-input'; wertInp.placeholder = 'z.B. 0.25'; wertInp.value = s.aatWert || '';
+  wertInp.oninput = function() { s.aatWert = this.value; };
+  detailWrap.appendChild(wertInp);
+
+  var zeitLbl = document.createElement('div'); zeitLbl.className = 'input-label'; zeitLbl.style.marginTop = '10px';
+  zeitLbl.textContent = 'Uhrzeit des Tests';
+  detailWrap.appendChild(zeitLbl);
+  var zeitInp = document.createElement('input'); zeitInp.type = 'time'; zeitInp.className = 'field-input';
+  zeitInp.value = s.aatUhrzeit || ''; zeitInp.oninput = function() { s.aatUhrzeit = this.value; };
+  detailWrap.appendChild(zeitInp);
+
+  cont.appendChild(detailWrap);
+
+  aatChips.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
+    s.aatDurchgefuehrt = btn.dataset.v;
+    aatChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    detailWrap.style.display = s.aatDurchgefuehrt === 'ja' ? '' : 'none';
+  });
+}
+
+function renderSchilderungenBtmTest() {
+  var cont = document.getElementById('btmTestList');
+  if (!cont) return;
+  cont.innerHTML = '';
+  var s = schildCurrentIdx !== null ? schilderungen[schildCurrentIdx] : null;
+  if (!s) return;
+
+  var lbl = document.createElement('div'); lbl.className = 'input-label'; lbl.style.marginBottom = '8px';
+  lbl.textContent = 'Wurde ein freiwilliger Drogenvortest (Urin) durchgeführt?';
+  cont.appendChild(lbl);
+
+  var testChips = document.createElement('div'); testChips.className = 'suggestions';
+  [{ v: 'ja', label: 'Ja, durchgeführt' }, { v: 'abgelehnt', label: 'Von Person abgelehnt' }].forEach(function(opt) {
+    var btn = document.createElement('button'); btn.type = 'button'; btn.dataset.v = opt.v; btn.textContent = opt.label;
+    btn.className = 'btn-suggestion' + (s.btmTestDurchgefuehrt === opt.v ? ' active' : '');
+    testChips.appendChild(btn);
+  });
+  cont.appendChild(testChips);
+
+  var detailWrap = document.createElement('div');
+  detailWrap.style.marginTop = '16px'; detailWrap.style.display = s.btmTestDurchgefuehrt === 'ja' ? '' : 'none';
+
+  var ergLbl = document.createElement('div'); ergLbl.className = 'input-label'; ergLbl.textContent = 'Ergebnis';
+  detailWrap.appendChild(ergLbl);
+  var ergChips = document.createElement('div'); ergChips.className = 'suggestions';
+  [{ v: 'positiv', label: 'Positiv' }, { v: 'negativ', label: 'Negativ' }].forEach(function(opt) {
+    var btn = document.createElement('button'); btn.type = 'button'; btn.dataset.v = opt.v; btn.textContent = opt.label;
+    btn.className = 'btn-suggestion' + (s.btmTestErgebnis === opt.v ? ' active' : '');
+    ergChips.appendChild(btn);
+  });
+  detailWrap.appendChild(ergChips);
+
+  var sgWrap = document.createElement('div');
+  sgWrap.style.marginTop = '12px'; sgWrap.style.display = s.btmTestErgebnis === 'positiv' ? '' : 'none';
+  var sgLbl = document.createElement('div'); sgLbl.className = 'input-label'; sgLbl.style.marginBottom = '6px';
+  sgLbl.textContent = 'Positive Stoffgruppen';
+  sgWrap.appendChild(sgLbl);
+  var sgChips = document.createElement('div'); sgChips.className = 'suggestions';
+  STOFFGRUPPEN.forEach(function(sg) {
+    var isOn = s.btmStoffgruppen && s.btmStoffgruppen.indexOf(sg.v) !== -1;
+    var btn = document.createElement('button'); btn.type = 'button'; btn.dataset.v = sg.v; btn.textContent = sg.label;
+    btn.className = 'btn-suggestion' + (isOn ? ' active' : '');
+    sgChips.appendChild(btn);
+  });
+  sgChips.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
+    var v = btn.dataset.v;
+    if (!s.btmStoffgruppen) s.btmStoffgruppen = [];
+    var i = s.btmStoffgruppen.indexOf(v);
+    if (i !== -1) { s.btmStoffgruppen.splice(i, 1); btn.classList.remove('active'); }
+    else          { s.btmStoffgruppen.push(v);       btn.classList.add('active'); }
+  });
+  sgWrap.appendChild(sgChips);
+  detailWrap.appendChild(sgWrap);
+  cont.appendChild(detailWrap);
+
+  testChips.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
+    s.btmTestDurchgefuehrt = btn.dataset.v;
+    testChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    detailWrap.style.display = s.btmTestDurchgefuehrt === 'ja' ? '' : 'none';
+  });
+
+  ergChips.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
+    s.btmTestErgebnis = btn.dataset.v;
+    ergChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    sgWrap.style.display = s.btmTestErgebnis === 'positiv' ? '' : 'none';
+  });
 }
 
 function getAuffaelligkeitenLabels(defs, selected) {
@@ -2235,14 +2435,44 @@ function generateSchilderungenText() {
 
     var parts = [];
 
-    var alkLabels = getAuffaelligkeitenLabels(ALKOHOL_AUFFAELLIGKEITEN, s.alkAuffaelligkeiten || []);
-    if (alkLabels.length) {
-      parts.push('Aufgrund der folgenden Feststellungen kann angenommen werden, dass bei ' + rm.disp + ' vorangegangener Alkoholkonsum stattgefunden hat:\n' + alkLabels.map(function(l) { return '– ' + l; }).join('\n'));
+    var dispCap = rm.disp.charAt(0).toUpperCase() + rm.disp.slice(1);
+
+    var alkLabels = getAuffaelligkeitenLabels(ALKOHOL_AUFFAELLIGKEITEN, s.alkAuffaelligkeiten || []).concat(s.alkCustom || []);
+    var btmLabels = getAuffaelligkeitenLabels(BTM_AUFFAELLIGKEITEN, s.btmAuffaelligkeiten || []).concat(s.btmCustom || []);
+    var hasAlk = alkLabels.length > 0;
+    var hasBtm = btmLabels.length > 0;
+
+    if (hasAlk && hasBtm) {
+      parts.push('Die bei ' + rm.disp + ' wahrgenommenen körperlichen und verhaltensbezogenen Auffälligkeiten ließen in ihrer Gesamtheit den Schluss auf einen vorangegangenen Alkohol- und Betäubungsmittelkonsum zu. Festgestellt wurden hierbei insbesondere:\n' +
+        alkLabels.concat(btmLabels).map(function(l) { return '– ' + l; }).join('\n') + '\n' +
+        'Die Gesamtheit der Beobachtungen stellte sich als kombiniertes alkohol- und drogentypisches Erscheinungsbild dar.');
+    } else if (hasAlk) {
+      parts.push('Die bei ' + rm.disp + ' wahrgenommenen körperlichen und verhaltensbezogenen Auffälligkeiten ließen in ihrer Gesamtheit den Schluss auf einen vorangegangenen Alkoholkonsum zu. Festgestellt wurden hierbei insbesondere:\n' +
+        alkLabels.map(function(l) { return '– ' + l; }).join('\n') + '\n' +
+        'Die Gesamtheit der Beobachtungen stellte sich als alkoholtypisches Erscheinungsbild dar.');
+    } else if (hasBtm) {
+      parts.push('Die bei ' + rm.disp + ' wahrgenommenen körperlichen und verhaltensbezogenen Auffälligkeiten ließen in ihrer Gesamtheit den Schluss auf einen vorangegangenen Betäubungsmittelkonsum zu. Festgestellt wurden hierbei insbesondere:\n' +
+        btmLabels.map(function(l) { return '– ' + l; }).join('\n') + '\n' +
+        'Die Gesamtheit der Beobachtungen stellte sich als drogentypisches Erscheinungsbild dar.');
     }
 
-    var btmLabels = getAuffaelligkeitenLabels(BTM_AUFFAELLIGKEITEN, s.btmAuffaelligkeiten || []);
-    if (btmLabels.length) {
-      parts.push('Aufgrund der folgenden Feststellungen kann angenommen werden, dass ' + rm.disp + ' unter dem Einfluss von Betäubungsmitteln stand:\n' + btmLabels.map(function(l) { return '– ' + l; }).join('\n'));
+    if (s.aatDurchgefuehrt === 'ja' && s.aatWert) {
+      var uhrStr = s.aatUhrzeit ? ' um ' + s.aatUhrzeit + ' Uhr' : '';
+      parts.push('Auf Nachfrage führte ' + rm.disp + ' freiwillig einen Atemalkoholtest durch. Der Test ergab' + uhrStr + ' einen Atemalkoholwert von ' + s.aatWert.replace('.', ',') + ' mg/l.');
+    } else if (s.aatDurchgefuehrt === 'abgelehnt') {
+      parts.push(dispCap + ' lehnte die Durchführung eines freiwilligen Atemalkoholtests ab.');
+    }
+
+    if (s.btmTestDurchgefuehrt === 'ja') {
+      if (s.btmTestErgebnis === 'positiv' && s.btmStoffgruppen && s.btmStoffgruppen.length) {
+        parts.push(dispCap + ' führte vor Ort freiwillig einen Drogenvortest mittels Urin durch, welcher positiv auf folgende Stoffgruppen reagierte: ' + s.btmStoffgruppen.join(', ') + '.');
+      } else if (s.btmTestErgebnis === 'positiv') {
+        parts.push(dispCap + ' führte vor Ort freiwillig einen Drogenvortest mittels Urin durch, welcher positiv reagierte.');
+      } else if (s.btmTestErgebnis === 'negativ') {
+        parts.push(dispCap + ' führte vor Ort freiwillig einen Drogenvortest mittels Urin durch, welcher negativ verlief.');
+      }
+    } else if (s.btmTestDurchgefuehrt === 'abgelehnt') {
+      parts.push(dispCap + ' lehnte die Durchführung eines freiwilligen Drogenvortests mittels Urin ab.');
     }
 
     var intro = 'Nach erfolgter ' + belTyp + ' durch ' + bel + ' machte ' + rm.disp + ' gegenüber ' + geg + ' sinngemäß folgende Angaben:';
@@ -2252,7 +2482,6 @@ function generateSchilderungenText() {
       var uzeit = s.abstelltUhrzeit || '[Uhrzeit]';
       var ort   = s.abstelltOrt || '[Ort]';
       var rueck = s.rueckUhrzeit || '[Uhrzeit]';
-      var dispCap = rm.disp.charAt(0).toUpperCase() + rm.disp.slice(1);
       body = rm.er + ' habe ' + rm.sein + ' Fahrzeug am ' + datum + ' gegen ' + uzeit + ' Uhr ' + ort + ' abgestellt. Bei ' + rm.seiner + ' Rückkehr gegen ' + rueck + ' Uhr habe ' + rm.erLow + ' ' + rm.sein + ' Fahrzeug beschädigt vorgefunden.\n' + dispCap + ' geht davon aus, dass es in diesem Zeitraum zu einem Verkehrsunfall gekommen ist, bei welchem ' + rm.sein + ' Fahrzeug beschädigt wurde.';
       if (s.zwischenzeit === 'ja' && s.zwischenzeitText) {
         body += ' In der Zwischenzeit habe ' + rm.erLow + ' folgendes festgestellt: ' + s.zwischenzeitText;
