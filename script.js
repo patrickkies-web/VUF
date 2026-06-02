@@ -2663,7 +2663,7 @@ function generateSchilderungenText() {
       if (s.anweisungsFolge === 'eingeschraenkt') {
         parts.push('Im Rahmen der polizeilichen Ansprache zeigte sich ' + rm.disp + ' nur eingeschränkt aufnahme- und reaktionsfähig. Den an ' + akkus + ' gerichteten Fragen, Hinweisen und dienstlichen Anweisungen konnte ' + rm.erLow + ' augenscheinlich nicht durchgehend folgen.');
       } else if (s.anweisungsFolge === 'konnte-folgen') {
-        parts.push('Trotz der festgestellten körperlichen und verhaltensbezogenen Auffälligkeiten konnte ' + rm.erLow + ' die an ' + akkus + ' gerichteten Fragen, Hinweisen und dienstlichen Anweisungen dem äußeren Eindruck nach folgen.');
+        parts.push('Trotz der festgestellten körperlichen und verhaltensbezogenen Auffälligkeiten konnte ' + rm.erLow + ' den an ' + akkus + ' gerichteten Fragen, Hinweisen und dienstlichen Anweisungen dem äußeren Eindruck nach folgen.');
       }
     }
 
