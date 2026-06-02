@@ -774,6 +774,15 @@ body {
   box-sizing: border-box;
 }
 
+.hb-ort-hint {
+  font-size: 13px;
+  color: var(--muted);
+  padding: 6px 10px;
+  background: var(--surface2);
+  border-radius: 7px;
+  margin-bottom: 2px;
+}
+
 .psychkg-divider {
   border: none;
   border-top: 1.5px solid var(--border);

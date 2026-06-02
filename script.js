@@ -3480,20 +3480,11 @@ function renderPsychKGTransport() {
     return row;
   }
 
-  // Vorschau-Element (oben, update via refreshPreview)
-  var prevBox = document.createElement('div'); prevBox.className = 'schild-preview-box'; prevBox.style.marginBottom = '20px';
-  var prevLbl = document.createElement('div'); prevLbl.className = 'input-label'; prevLbl.style.marginBottom = '6px'; prevLbl.textContent = 'Vorschau';
-  var prevText = document.createElement('div'); prevText.className = 'verletzung-preview';
-  prevBox.appendChild(prevLbl); prevBox.appendChild(prevText);
-  cont.appendChild(prevBox);
-
-  function refreshPreview() { prevText.textContent = generatePsychKGText(); }
-
   cont.appendChild(field('Transportmittel', chipRow(
     [{ v: 'KTW', label: 'KTW' }, { v: 'RTW', label: 'RTW' }],
     function() { return p.transport; },
     function(v) { p.transport = v; },
-    refreshPreview
+    null
   )));
   cont.appendChild(field('Begleitung durch eingesetzte Beamte', chipRow(
     [
@@ -3502,10 +3493,8 @@ function renderPsychKGTransport() {
     ],
     function() { return p.begleitung === true ? 'ja' : p.begleitung === false ? 'nein' : ''; },
     function(v) { p.begleitung = (v === 'ja'); },
-    refreshPreview
+    null
   )));
-
-  refreshPreview();
 }
 
 // ── Haftbefehl ────────────────────────────────────────────────────────────
@@ -3530,17 +3519,9 @@ function generateHaftbefehlText() {
   var efTage  = p.ersatzTage   || '[XX]';
   var ziel    = p.zielort  || 'ZPG Gütersloh';
 
-  var datumStr = '[Datum]';
-  var uhrStr   = '[Uhrzeit]';
-  if (p.useEventTime) {
-    var datEl = document.getElementById('datum');
-    var uhrEl = document.getElementById('uhrzeit');
-    var datVal = datEl ? datEl.value : '';
-    if (datVal) datumStr = formatDateDE(datVal);
-    uhrStr = (uhrEl && uhrEl.value) ? uhrEl.value : '[Uhrzeit]';
-  } else {
-    uhrStr = p.kontrolleUhrzeit || '[Uhrzeit]';
-  }
+  var datEl = document.getElementById('datum');
+  var datumStr = datEl && datEl.value ? formatDateDE(datEl.value) : '[Datum]';
+  var uhrStr   = p.kontrolleUhrzeit || '[Uhrzeit]';
 
   var formGen = form.slice(-1) === 's' ? form : form + 's'; // simple genitive
   var lines = [];
@@ -3612,35 +3593,14 @@ function renderHaftbefehl() {
   )));
 
   // HB-Form
-  var hbFormWrap = document.createElement('div');
-  var hbFormChips = document.createElement('div');
-  hbFormChips.className = 'suggestions'; hbFormChips.style.marginBottom = '8px';
-  [
-    { v: 'Strafbefehl',                 label: 'Strafbefehl' },
-    { v: 'Vollstreckungshaftbefehl',    label: 'Vollstreckungshaftbefehl' },
-    { v: 'Haftbefehl',                  label: 'Haftbefehl' }
-  ].forEach(function(o) {
-    var btn = document.createElement('button');
-    btn.type = 'button'; btn.textContent = o.label;
-    btn.className = 'btn-suggestion' + (p.hbForm === o.v ? ' active' : '');
-    btn.addEventListener('click', function() {
-      p.hbForm = o.v; hbFormInp.value = o.v;
-      hbFormChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
-      btn.classList.add('active');
-      refreshPreview();
-    });
-    hbFormChips.appendChild(btn);
-  });
-  var hbFormInp = document.createElement('input');
-  hbFormInp.type = 'text'; hbFormInp.className = 'field-input';
-  hbFormInp.placeholder = 'z.B. Strafbefehl'; hbFormInp.value = p.hbForm;
-  hbFormInp.addEventListener('input', function() {
-    p.hbForm = this.value;
-    hbFormChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
-    refreshPreview();
-  });
-  hbFormWrap.appendChild(hbFormChips); hbFormWrap.appendChild(hbFormInp);
-  cont.appendChild(field('Art des Haftbefehls', hbFormWrap));
+  cont.appendChild(field('Art des Haftbefehls', chips(
+    [
+      { v: 'Strafbefehl',              label: 'Strafbefehl'              },
+      { v: 'Vollstreckungshaftbefehl', label: 'Vollstreckungshaftbefehl' }
+    ],
+    function() { return p.hbForm; },
+    function(v) { p.hbForm = v; }
+  )));
 
   // Gericht
   cont.appendChild(field('Ausstellendes Gericht (Genitiv)', textInp('z.B. Amtsgerichts Gütersloh', p.gericht, function(v) { p.gericht = v; })));
@@ -3690,31 +3650,30 @@ function renderHaftbefehl() {
   // Kontrollzeit
   var ktWrap = document.createElement('div'); ktWrap.style.marginBottom = '16px';
   var ktLbl = document.createElement('div'); ktLbl.className = 'input-label'; ktLbl.style.marginBottom = '6px';
-  ktLbl.textContent = 'Zeitpunkt der Kontrolle';
-  var ktChips = document.createElement('div'); ktChips.className = 'suggestions'; ktChips.style.marginBottom = '8px';
-  [
-    { v: 'auto',    label: 'Aus Einsatzdaten übernehmen' },
-    { v: 'manuell', label: 'Manuell eingeben'             }
-  ].forEach(function(o) {
-    var btn = document.createElement('button');
-    btn.type = 'button'; btn.textContent = o.label;
-    var isActive = o.v === (p.useEventTime ? 'auto' : 'manuell');
-    btn.className = 'btn-suggestion' + (isActive ? ' active' : '');
-    btn.addEventListener('click', function() {
-      p.useEventTime = (o.v === 'auto');
-      ktChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
-      btn.classList.add('active');
-      ktOverride.style.display = p.useEventTime ? 'none' : '';
-      refreshPreview();
-    });
-    ktChips.appendChild(btn);
-  });
-  var ktOverride = document.createElement('input');
-  ktOverride.type = 'time'; ktOverride.className = 'field-input';
-  ktOverride.value = p.kontrolleUhrzeit;
-  ktOverride.style.display = p.useEventTime ? 'none' : '';
-  ktOverride.addEventListener('input', function() { p.kontrolleUhrzeit = this.value; refreshPreview(); });
-  ktWrap.appendChild(ktLbl); ktWrap.appendChild(ktChips); ktWrap.appendChild(ktOverride);
+  ktLbl.textContent = 'Uhrzeit der Kontrolle';
+  ktWrap.appendChild(ktLbl);
+  // Ort aus Allgemeines anzeigen wenn verfügbar
+  if (selectedSections.indexOf('allgemeines') !== -1) {
+    var strEl = document.getElementById('strasse');
+    var hnEl  = document.getElementById('hausnummer');
+    var plzEl = document.getElementById('plz');
+    var stEl  = document.getElementById('stadt');
+    var ortParts = [];
+    if (strEl && strEl.value) ortParts.push(strEl.value + (hnEl && hnEl.value ? ' ' + hnEl.value : ''));
+    if (plzEl && plzEl.value) ortParts.push(plzEl.value);
+    if (stEl  && stEl.value)  ortParts.push(stEl.value);
+    if (ortParts.length) {
+      var ortHint = document.createElement('div');
+      ortHint.className = 'hb-ort-hint';
+      ortHint.textContent = '📍 ' + ortParts.join(', ');
+      ktWrap.appendChild(ortHint);
+    }
+  }
+  var ktInp = document.createElement('input');
+  ktInp.type = 'time'; ktInp.className = 'field-input'; ktInp.style.marginTop = '6px';
+  ktInp.value = p.kontrolleUhrzeit;
+  ktInp.addEventListener('input', function() { p.kontrolleUhrzeit = this.value; refreshPreview(); });
+  ktWrap.appendChild(ktInp);
   cont.appendChild(ktWrap);
 
   // Zielort
