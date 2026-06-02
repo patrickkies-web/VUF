@@ -112,7 +112,7 @@ var SECTION_DEFS = {
       var umst = s ? (s.umstaende || []) : [];
       var hasAlk = umst.indexOf('alkohol') !== -1 || umst.indexOf('alkohol-btm') !== -1;
       var hasBtm = umst.indexOf('btm') !== -1 || umst.indexOf('alkohol-btm') !== -1;
-      if (hasAlk || hasBtm) slides.push('slide-schilderungen-auffaelligkeiten');
+      if (hasAlk || hasBtm) slides.push('slide-schilderungen-auffaelligkeiten', 'slide-schilderungen-anweisungen');
       if (hasAlk) slides.push('slide-schilderungen-alkohol-test');
       if (hasBtm) slides.push('slide-schilderungen-btm-test');
       slides.push('slide-schilderungen-overview');
@@ -387,6 +387,7 @@ document.getElementById('btnUoSpuren').onclick = nextSlide;
 document.getElementById('btnGenerateSchilderungen').onclick = nextSlide;
 document.getElementById('btnGenerateUmstaende').onclick = nextSlide;
 document.getElementById('btnGenerateAuffaelligkeiten').onclick = nextSlide;
+document.getElementById('btnGenerateAnweisungen').onclick = nextSlide;
 document.getElementById('btnGenerateAlkoholTest').onclick = nextSlide;
 document.getElementById('btnGenerateBtmTest').onclick = nextSlide;
 
@@ -763,6 +764,7 @@ function render() {
   }
   if (slides[current] === 'slide-schilderungen-umstaende') renderSchilderungenUmstaende();
   if (slides[current] === 'slide-schilderungen-auffaelligkeiten') renderSchilderungenAuffaelligkeiten();
+  if (slides[current] === 'slide-schilderungen-anweisungen') renderSchilderungenAnweisungen();
   if (slides[current] === 'slide-schilderungen-alkohol-test') renderSchilderungenAlkoholTest();
   if (slides[current] === 'slide-schilderungen-btm-test') renderSchilderungenBtmTest();
   if (slides[current] === 'slide-schilderungen-overview') renderSchilderungenOverview();
@@ -2087,6 +2089,7 @@ function addSchilderung() {
     umstaende: [],
     auffaelligkeiten: [],
     auffCustom: [],
+    anweisungsFolge: null,
     aatDurchgefuehrt: null,
     aatWert: '',
     aatUhrzeit: '',
@@ -2325,6 +2328,40 @@ function renderSchilderungenAuffaelligkeiten() {
   renderAuffCustomList();
 }
 
+function renderSchilderungenAnweisungen() {
+  var cont = document.getElementById('anweisungenList');
+  if (!cont) return;
+  cont.innerHTML = '';
+  var s = schildCurrentIdx !== null ? schilderungen[schildCurrentIdx] : null;
+  if (!s) return;
+  var rm = ROLLEN_MAP[s.rolle];
+  var dispText = rm ? rm.disp : 'die Person';
+
+  var lbl = document.createElement('div'); lbl.className = 'input-label'; lbl.style.marginBottom = '8px';
+  lbl.textContent = 'Konnte ' + dispText + ' den dienstlichen Anweisungen folgen?';
+  cont.appendChild(lbl);
+
+  var chips = document.createElement('div'); chips.className = 'suggestions';
+  [
+    { v: 'eingeschraenkt', label: 'Nur eingeschränkt' },
+    { v: 'konnte-folgen',  label: 'Konnte folgen' }
+  ].forEach(function(opt) {
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.dataset.v = opt.v; btn.textContent = opt.label;
+    btn.className = 'btn-suggestion' + (s.anweisungsFolge === opt.v ? ' active' : '');
+    chips.appendChild(btn);
+  });
+
+  chips.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
+    s.anweisungsFolge = btn.dataset.v;
+    chips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+  });
+
+  cont.appendChild(chips);
+}
+
 function renderAuffCustomList() {
   var cont = document.getElementById('auffCustomList');
   if (!cont) return;
@@ -2527,6 +2564,15 @@ function generateSchilderungenText() {
       parts.push('Die bei ' + rm.disp + ' wahrgenommenen körperlichen und verhaltensbezogenen Auffälligkeiten ließen in ihrer Gesamtheit ' + schluss + '. Festgestellt wurden hierbei insbesondere:\n' +
         auffLabels.map(function(l) { return '– ' + l; }).join('\n') + '\n' +
         abschluss);
+    }
+
+    if (s.anweisungsFolge) {
+      var akkus = rm.erLow === 'er' ? 'ihn' : 'sie';
+      if (s.anweisungsFolge === 'eingeschraenkt') {
+        parts.push('Im Rahmen der polizeilichen Ansprache zeigte sich ' + rm.disp + ' nur eingeschränkt aufnahme- und reaktionsfähig. Den an ' + akkus + ' gerichteten Fragen, Hinweisen und dienstlichen Anweisungen konnte ' + rm.erLow + ' augenscheinlich nicht durchgehend folgen.');
+      } else if (s.anweisungsFolge === 'konnte-folgen') {
+        parts.push('Trotz der festgestellten körperlichen und verhaltensbezogenen Auffälligkeiten konnte ' + rm.erLow + ' die an ' + akkus + ' gerichteten Fragen, Hinweisen und dienstlichen Anweisungen dem äußeren Eindruck nach folgen.');
+      }
     }
 
     if (s.aatDurchgefuehrt === 'ja' && s.aatWert) {

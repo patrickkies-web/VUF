@@ -569,6 +569,20 @@
       </div>
     </div>
 
+    <!-- Schilderungen: Anweisungen folgen -->
+    <div class="slide" id="slide-schilderungen-anweisungen">
+      <div class="question-number">Schilderungen &middot; Reaktionsfähigkeit</div>
+      <div class="question-text">Anweisungen<br><strong>folgen k&ouml;nnen?</strong></div>
+      <div id="anweisungenList"></div>
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;margin-top:14px">
+        <button class="btn-next" id="btnGenerateAnweisungen">Weiter
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
     <!-- Schilderungen: Alkohol-Test -->
     <div class="slide" id="slide-schilderungen-alkohol-test">
       <div class="question-number">Schilderungen &middot; Alkohol</div>
@@ -639,7 +653,7 @@
   <div style="width:80px"></div>
 </div>
 
-<script src="script.js?v=3.11"></script>
+<script src="script.js?v=3.12"></script>
 <script>if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js').catch(function(){});}</script>
 
 <!-- Bericht-Generierungs-Overlay -->
