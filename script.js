@@ -2285,30 +2285,34 @@ function renderSchilderungenUmstaende() {
   cont.appendChild(chips);
 }
 
-function buildAngabenText(s) {
+function buildAngabenBody(s) {
   var rm = ROLLEN_MAP[s.rolle]; if (!rm) return '';
-  var bel = s.belehrender || '[Beamter/Beamtin]';
-  var geg = s.gegenueber || '[Beamter/Beamtin]';
-  var belTyp = rm.btyp === 'besch' ? 'Beschuldigtenbelehrung' : 'zeugenschaftlicher Belehrung';
   var dispCap = rm.disp.charAt(0).toUpperCase() + rm.disp.slice(1);
-  var intro = 'Nach erfolgter ' + belTyp + ' durch ' + bel + ' machte ' + rm.disp + ' gegenüber ' + geg + ' sinngemäß folgende Angaben:';
-  var body = '';
   if (s.modus === 'vuf') {
     var datum = formatDateDE(s.abstelltDatum) || '[Datum]';
     var uzeit = s.abstelltUhrzeit || '[Uhrzeit]';
     var ort   = s.abstelltOrt || '[Ort]';
     var rueck = s.rueckUhrzeit || '[Uhrzeit]';
-    body = rm.er + ' habe ' + rm.sein + ' Fahrzeug am ' + datum + ' gegen ' + uzeit + ' Uhr ' + ort + ' abgestellt. Bei ' + rm.seiner + ' Rückkehr gegen ' + rueck + ' Uhr habe ' + rm.erLow + ' ' + rm.sein + ' Fahrzeug beschädigt vorgefunden.\n' + dispCap + ' geht davon aus, dass es in diesem Zeitraum zu einem Verkehrsunfall gekommen ist, bei welchem ' + rm.sein + ' Fahrzeug beschädigt wurde.';
+    var body = rm.er + ' habe ' + rm.sein + ' Fahrzeug am ' + datum + ' gegen ' + uzeit + ' Uhr ' + ort + ' abgestellt. Bei ' + rm.seiner + ' Rückkehr gegen ' + rueck + ' Uhr habe ' + rm.erLow + ' ' + rm.sein + ' Fahrzeug beschädigt vorgefunden.\n' + dispCap + ' geht davon aus, dass es in diesem Zeitraum zu einem Verkehrsunfall gekommen ist, bei welchem ' + rm.sein + ' Fahrzeug beschädigt wurde.';
     if (s.zwischenzeit === 'ja' && s.zwischenzeitText) {
       body += ' In der Zwischenzeit habe ' + rm.erLow + ' folgendes festgestellt: ' + s.zwischenzeitText;
     } else {
       body += ' Weitere Feststellungen in der Zwischenzeit habe ' + rm.erLow + ' nicht gemacht.';
     }
-  } else if (s.modus === 'frei') {
-    body = s.freitext || '[Keine Angaben]';
+    return body;
   }
-  if (!body) return intro + '\n\n[Keine Angaben erfasst]';
-  return intro + '\n\n' + body;
+  if (s.modus === 'frei') return s.freitext || '[Keine Angaben]';
+  return '';
+}
+
+function buildAngabenText(s) {
+  var rm = ROLLEN_MAP[s.rolle]; if (!rm) return '';
+  var bel = s.belehrender || '[Beamter/Beamtin]';
+  var geg = s.gegenueber || '[Beamter/Beamtin]';
+  var belTyp = rm.btyp === 'besch' ? 'Beschuldigtenbelehrung' : 'zeugenschaftlicher Belehrung';
+  var intro = 'Nach erfolgter ' + belTyp + ' durch ' + bel + ' machte ' + rm.disp + ' gegenüber ' + geg + ' sinngemäß folgende Angaben:';
+  var body = buildAngabenBody(s);
+  return intro + '\n\n' + (body || '[Keine Angaben erfasst]');
 }
 
 function renderSchilderungenAngaben() {
@@ -2366,8 +2370,11 @@ function renderSchilderungenAngaben() {
   // ── Live-Vorschau ────────────────────────────────────────────
   var prevBox = document.createElement('div'); prevBox.className = 'preview-box';
   prevBox.style.marginTop = '14px';
-  prevBox.textContent = buildAngabenText(s);
-  function refreshPreview() { prevBox.textContent = buildAngabenText(s); }
+  function refreshPreview() {
+    var body = buildAngabenBody(s);
+    prevBox.textContent = '…sinngemäß folgende Angaben:\n\n' + (body || '[Keine Angaben erfasst]');
+  }
+  refreshPreview();
 
   // ── VUF-Formular ─────────────────────────────────────────────
   var vufWrap = document.createElement('div');
