@@ -769,12 +769,8 @@ body {
 }
 
 .psychkg-ta {
-  width: 100%;
   min-height: 130px;
-  resize: vertical;
-  font-size: 15px;
-  line-height: 1.6;
-  padding: 12px 14px;
+  width: 100%;
   box-sizing: border-box;
 }
 
@@ -793,7 +789,6 @@ body {
 .psychkg-name-inp {
   width: 100%;
   font-size: 17px;
-  padding: 14px 16px;
   box-sizing: border-box;
 }
 

@@ -349,7 +349,7 @@ var schilderungen = [];
 var schildCounter = 0;
 var schildCurrentIdx = null;
 var massnahmenData = { unfallmitteilungen: false, bescheinigungen: [], bescheinigungenUhrzeit: '', bescheinigungenNwKennung: '' };
-var psychkgData = { verhaltensText: '', personRolle: '', anlass: '', arztGender: 'm', arztName: '', transport: '', begleitung: null };
+var psychkgData = { verhaltensText: '', personRolle: '', anlass: '', orgTyp: '', mitGender: 'm', mitName: '', arztGender: 'm', arztName: '', transport: '', begleitung: null };
 var haftbefehlData = {
   personRolle: 'betroffm',
   hbForm: 'Strafbefehl',
@@ -3110,7 +3110,7 @@ function renderMassnahmen() {
   azUhrLbl.textContent = 'Uhrzeit für Aktenzeichen';
   var azUhrInp = document.createElement('input');
   azUhrInp.type = 'time';
-  azUhrInp.className = 'text-input';
+  azUhrInp.className = 'field-input';
   azUhrInp.value = massnahmenData.bescheinigungenUhrzeit;
   azUhrInp.addEventListener('input', function() {
     massnahmenData.bescheinigungenUhrzeit = this.value;
@@ -3126,7 +3126,7 @@ function renderMassnahmen() {
   nwLbl.textContent = 'NW-Kennung (6 Zeichen)';
   var nwInp = document.createElement('input');
   nwInp.type = 'text';
-  nwInp.className = 'text-input';
+  nwInp.className = 'field-input';
   nwInp.maxLength = 6;
   nwInp.placeholder = 'z.B. GT0001';
   nwInp.style.textTransform = 'uppercase';
@@ -3247,9 +3247,21 @@ var PSYCHKG_PERSON_MAP = {
   betroffw: { nom: 'Die Betroffene',    gen: 'der Betroffenen',    dat: 'der Betroffenen'    }
 };
 
+var PSYCHKG_ORGS = {
+  ordnungsamt: { nom: 'das Ordnungsamt',                   gen: 'Ordnungsamtes',                  art: 'des' },
+  feuerwehr:   { nom: 'die Feuerwehr',                     gen: 'Feuerwehr',                      art: 'der' },
+  spd:         { nom: 'den Sozialpsychiatrischen Dienst',  gen: 'Sozialpsychiatrischen Dienstes', art: 'des' }
+};
+
 function generatePsychKGText() {
   var p = psychkgData;
-  var pm = PSYCHKG_PERSON_MAP[p.personRolle] || { nom: '[Person]', gen: '[Person (Genitiv)]', dat: '[Person (Dativ)]' };
+  var pm  = PSYCHKG_PERSON_MAP[p.personRolle] || { nom: '[Person]', gen: '[Person (Genitiv)]', dat: '[Person (Dativ)]' };
+  var org = PSYCHKG_ORGS[p.orgTyp];
+  var orgNom   = org ? org.nom : '[Behörde]';
+  var mitAnrede = p.mitGender === 'w' ? 'Frau' : 'Herr';
+  var mitRolle  = p.mitGender === 'w' ? 'Mitarbeiterin' : 'Mitarbeiter';
+  var mitName   = p.mitName  || '[Name]';
+  var mitLabel  = mitAnrede + ' ' + mitName + ' (' + mitRolle + (org ? ' ' + org.art + ' ' + org.gen : '') + ')';
   var anlass    = p.anlass   || '[Gefährdungssituation]';
   var arztAnrede = p.arztGender === 'w' ? 'die Ärztin' : 'den Arzt';
   var arztDurch  = p.arztGender === 'w' ? 'die Ärztin' : 'den Arzt';
@@ -3257,16 +3269,14 @@ function generatePsychKGText() {
   var transport = p.transport || '[KTW/RTW]';
 
   var lines = [];
-  if (p.verhaltensText && p.verhaltensText.trim()) {
-    lines.push(p.verhaltensText.trim());
-  }
+  if (p.verhaltensText && p.verhaltensText.trim()) lines.push(p.verhaltensText.trim());
   lines.push(
-    'Aufgrund der benannten Verhaltensweise ' + pm.gen + ', welche augenscheinlich krankheitsbedingt ist, ist auszugehen, dass ein schadenstiftendes Ereignis unmittelbar bevorsteht bzw. sein Eintritt jederzeit zu erwarten ist (' + anlass + '). Dabei handelt es sich um bedeutende Rechtsgüter.'
+    'Aufgrund der benannten Verhaltensweise ' + pm.gen + ', welche augenscheinlich krankheitsbedingt ist, ist auszugehen, dass ein schadenstiftendes Ereignis unmittelbar bevorsteht bzw. sein Eintritt jederzeit zu erwarten ist (hier: ' + anlass + '). Dabei handelt es sich um bedeutende Rechtsgüter.'
   );
   lines.push(
-    'Aus diesem Grund wurde der Sozialpsychiatrische Dienst hinzugezogen. Dieser bestellte ' + arztAnrede + ' (Sozialpsychiatrischer Dienst) ' + arztName + '. Beide machten sich ein umfangreiches Bild von ' + pm.dat + ', woraufhin durch ' + arztDurch + ' ein entsprechendes ärztliches Zeugnis erstellt wurde.'
+    'Aus diesem Grund wurde ' + orgNom + ' hinzugezogen. ' + mitLabel + ' bestellte ' + arztAnrede + ' (Sozialpsychiatrischer Dienst) ' + arztName + '. Beide machten sich ein umfangreiches Bild von ' + pm.dat + ', woraufhin durch ' + arztDurch + ' ein entsprechendes ärztliches Zeugnis erstellt wurde.'
   );
-  lines.push(arztName + ' stellte einen Antrag auf eine zwangsweise Unterbringung in ein psychiatrisches Fachkrankenhaus.');
+  lines.push(mitAnrede + ' ' + mitName + ' stellte einen Antrag auf eine zwangsweise Unterbringung in ein psychiatrisches Fachkrankenhaus.');
   lines.push(pm.nom + ' wurde daraufhin mit einem ' + transport + ' in die psychiatrische Abteilung des LWL-Klinikums transportiert.');
   if (p.begleitung === true) {
     lines.push('Der Transport wurde von den eingesetzten Beamten begleitet.');
@@ -3289,7 +3299,7 @@ function renderPsychKG() {
   taHint.style.cssText = 'margin-bottom:8px;line-height:1.5;color:var(--muted)';
   taHint.textContent = 'Notiere, durch welches Verhalten die Person aufgefallen ist und was zur Prüfung nach dem PsychKG geführt hat.';
   var ta = document.createElement('textarea');
-  ta.className = 'text-input psychkg-ta';
+  ta.className = 'field-input field-textarea psychkg-ta';
   ta.placeholder = 'z.B. Die Person befand sich auf der Fahrbahn und reagierte nicht auf Ansprache. Sie schien desorientiert und äußerte, Stimmen zu hören …';
   ta.value = p.verhaltensText;
   ta.addEventListener('input', function() { p.verhaltensText = this.value; });
@@ -3330,13 +3340,13 @@ function renderPsychKG() {
   gefLbl.textContent = 'Gefährdungssituation';
   var gefChips = document.createElement('div'); gefChips.className = 'suggestions'; gefChips.style.marginBottom = '8px';
   var gefInp = document.createElement('input');
-  gefInp.type = 'text'; gefInp.className = 'text-input';
+  gefInp.type = 'text'; gefInp.className = 'field-input';
   gefInp.placeholder = 'z.B. einer akuten Selbstgefährdung';
   gefInp.value = p.anlass;
   [
-    { v: 'einer akuten Selbstgefährdung',                  label: 'Selbstgefährdung'       },
-    { v: 'einer akuten Fremdgefährdung',                   label: 'Fremdgefährdung'         },
-    { v: 'einer erheblichen Eigen- und Fremdgefährdung',   label: 'Eigen- & Fremdgefährdung'}
+    { v: 'Verletzung der eigenen Person',                    label: 'Verletzung eigene Person'  },
+    { v: 'Verletzung von Außenstehenden',                    label: 'Verletzung Außenstehender' },
+    { v: 'Verletzung der eigenen Person und von Außenstehenden', label: 'Eigen- & Fremdgefährdung'  }
   ].forEach(function(o) {
     var btn = document.createElement('button');
     btn.type = 'button'; btn.textContent = o.label;
@@ -3357,44 +3367,83 @@ function renderPsychKG() {
   cont.appendChild(gefInp);
 }
 
-// ── Slide 2: SPD & Ärztlicher Dienst ──
+// ── Slide 2: Hinzugezogene Stelle + SPD-Arzt ──
 function renderPsychKGSpd() {
   var cont = document.getElementById('psychkgSpdContent');
   if (!cont) return;
   cont.innerHTML = '';
   var p = psychkgData;
 
-  // Geschlecht
-  var genLbl = document.createElement('div');
-  genLbl.className = 'input-label'; genLbl.style.marginBottom = '8px';
-  genLbl.textContent = 'Ärztliche Fachkraft (SPD)';
-  var genRow = document.createElement('div'); genRow.className = 'suggestions'; genRow.style.marginBottom = '20px';
-  [{ v: 'm', label: 'Arzt (m)' }, { v: 'w', label: 'Ärztin (f)' }].forEach(function(o) {
-    var btn = document.createElement('button');
-    btn.type = 'button'; btn.textContent = o.label;
-    btn.className = 'btn-suggestion' + (p.arztGender === o.v ? ' active' : '');
-    btn.addEventListener('click', function() {
-      p.arztGender = o.v;
-      genRow.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
-      btn.classList.add('active');
-      nameLbl.textContent = 'Name ' + (p.arztGender === 'w' ? 'der Ärztin' : 'des Arztes');
+  function lbl(text, mt) {
+    var el = document.createElement('div');
+    el.className = 'input-label'; el.textContent = text;
+    el.style.cssText = 'margin-bottom:8px' + (mt ? ';margin-top:' + mt : '');
+    return el;
+  }
+  function bigInp(placeholder, val, setter) {
+    var inp = document.createElement('input');
+    inp.type = 'text'; inp.className = 'field-input psychkg-name-inp';
+    inp.placeholder = placeholder; inp.value = val || '';
+    inp.addEventListener('input', function() { setter(this.value); });
+    return inp;
+  }
+  function chipRow(opts, getter, setter, onChange) {
+    var row = document.createElement('div'); row.className = 'suggestions'; row.style.marginBottom = '12px';
+    opts.forEach(function(o) {
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.textContent = o.label;
+      btn.className = 'btn-suggestion' + (getter() === o.v ? ' active' : '');
+      btn.addEventListener('click', function() {
+        setter(o.v);
+        row.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        if (onChange) onChange();
+      });
+      row.appendChild(btn);
     });
-    genRow.appendChild(btn);
-  });
-  cont.appendChild(genLbl);
-  cont.appendChild(genRow);
+    return row;
+  }
 
-  // Name – groß & prominent
-  var nameLbl = document.createElement('div');
-  nameLbl.className = 'input-label psychkg-name-lbl';
-  nameLbl.textContent = 'Name ' + (p.arztGender === 'w' ? 'der Ärztin' : 'des Arztes');
-  var nameInp = document.createElement('input');
-  nameInp.type = 'text'; nameInp.className = 'text-input psychkg-name-inp';
-  nameInp.placeholder = 'z.B. Dr. Mustermann';
-  nameInp.value = p.arztName;
-  nameInp.addEventListener('input', function() { p.arztName = this.value; });
-  cont.appendChild(nameLbl);
-  cont.appendChild(nameInp);
+  // ── Hinzugezogene Behörde ──────────────────────────────
+  cont.appendChild(lbl('Hinzugezogene Stelle'));
+  cont.appendChild(chipRow(
+    [
+      { v: 'ordnungsamt', label: 'Ordnungsamt' },
+      { v: 'feuerwehr',   label: 'Feuerwehr'   },
+      { v: 'spd',         label: 'SPD direkt'  }
+    ],
+    function() { return p.orgTyp; },
+    function(v) { p.orgTyp = v; }
+  ));
+
+  // Mitarbeiter Geschlecht
+  cont.appendChild(lbl('Mitarbeiter/-in', '4px'));
+  cont.appendChild(chipRow(
+    [{ v: 'm', label: 'Herr (m)' }, { v: 'w', label: 'Frau (w)' }],
+    function() { return p.mitGender; },
+    function(v) { p.mitGender = v; }
+  ));
+
+  // Mitarbeiter Name
+  cont.appendChild(lbl('Name Mitarbeiter/-in', '4px'));
+  cont.appendChild(bigInp('z.B. Mustermann', p.mitName, function(v) { p.mitName = v; }));
+
+  // Trennlinie
+  var hr = document.createElement('hr'); hr.className = 'psychkg-divider';
+  cont.appendChild(hr);
+
+  // ── SPD-Arzt/-Ärztin ───────────────────────────────────
+  cont.appendChild(lbl('Ärztliche Fachkraft (SPD)'));
+  var arztRow = chipRow(
+    [{ v: 'm', label: 'Arzt (m)' }, { v: 'w', label: 'Ärztin (f)' }],
+    function() { return p.arztGender; },
+    function(v) { p.arztGender = v; arztNameLbl.textContent = 'Name ' + (v === 'w' ? 'der Ärztin' : 'des Arztes'); }
+  );
+  cont.appendChild(arztRow);
+
+  var arztNameLbl = lbl('Name ' + (p.arztGender === 'w' ? 'der Ärztin' : 'des Arztes'), '4px');
+  cont.appendChild(arztNameLbl);
+  cont.appendChild(bigInp('z.B. Dr. Mustermann', p.arztName, function(v) { p.arztName = v; }));
 }
 
 // ── Slide 3: Transport + Begleitung + Vorschau ──
@@ -3539,7 +3588,7 @@ function renderHaftbefehl() {
 
   function textInp(placeholder, val, setter, type) {
     var inp = document.createElement('input');
-    inp.type = type || 'text'; inp.className = 'text-input';
+    inp.type = type || 'text'; inp.className = 'field-input';
     inp.placeholder = placeholder; inp.value = val || '';
     inp.addEventListener('input', function() { setter(this.value); refreshPreview(); });
     return inp;
@@ -3578,7 +3627,7 @@ function renderHaftbefehl() {
     hbFormChips.appendChild(btn);
   });
   var hbFormInp = document.createElement('input');
-  hbFormInp.type = 'text'; hbFormInp.className = 'text-input';
+  hbFormInp.type = 'text'; hbFormInp.className = 'field-input';
   hbFormInp.placeholder = 'z.B. Strafbefehl'; hbFormInp.value = p.hbForm;
   hbFormInp.addEventListener('input', function() {
     p.hbForm = this.value;
@@ -3596,13 +3645,13 @@ function renderHaftbefehl() {
   row1.className = 'besch-az-row'; row1.style.marginBottom = '16px';
   var datWrap = document.createElement('div'); datWrap.className = 'besch-az-field';
   var datLbl = document.createElement('label'); datLbl.textContent = 'Datum des Haftbefehls';
-  var datInp = document.createElement('input'); datInp.type = 'date'; datInp.className = 'text-input';
+  var datInp = document.createElement('input'); datInp.type = 'date'; datInp.className = 'field-input';
   datInp.value = p.hbDatum;
   datInp.addEventListener('input', function() { p.hbDatum = this.value; refreshPreview(); });
   datWrap.appendChild(datLbl); datWrap.appendChild(datInp);
   var azWrap = document.createElement('div'); azWrap.className = 'besch-az-field';
   var azLbl = document.createElement('label'); azLbl.textContent = 'Aktenzeichen';
-  var azInp = document.createElement('input'); azInp.type = 'text'; azInp.className = 'text-input';
+  var azInp = document.createElement('input'); azInp.type = 'text'; azInp.className = 'field-input';
   azInp.placeholder = 'z.B. 3DS903/25'; azInp.value = p.hbAz;
   azInp.addEventListener('input', function() { p.hbAz = this.value; refreshPreview(); });
   azWrap.appendChild(azLbl); azWrap.appendChild(azInp);
@@ -3617,13 +3666,13 @@ function renderHaftbefehl() {
   row2.className = 'besch-az-row'; row2.style.marginBottom = '16px';
   var tsWrap = document.createElement('div'); tsWrap.className = 'besch-az-field';
   var tsLbl = document.createElement('label'); tsLbl.textContent = 'Tagessätze (Anzahl)';
-  var tsInp = document.createElement('input'); tsInp.type = 'number'; tsInp.className = 'text-input';
+  var tsInp = document.createElement('input'); tsInp.type = 'number'; tsInp.className = 'field-input';
   tsInp.placeholder = '60'; tsInp.min = '1'; tsInp.value = p.tagessaetze;
   tsInp.addEventListener('input', function() { p.tagessaetze = this.value; refreshPreview(); });
   tsWrap.appendChild(tsLbl); tsWrap.appendChild(tsInp);
   var tbWrap = document.createElement('div'); tbWrap.className = 'besch-az-field';
   var tbLbl = document.createElement('label'); tbLbl.textContent = 'je Tagessatz (€)';
-  var tbInp = document.createElement('input'); tbInp.type = 'text'; tbInp.className = 'text-input';
+  var tbInp = document.createElement('input'); tbInp.type = 'text'; tbInp.className = 'field-input';
   tbInp.placeholder = '15,00'; tbInp.value = p.tagessatzBetrag;
   tbInp.addEventListener('input', function() { p.tagessatzBetrag = this.value; refreshPreview(); });
   tbWrap.appendChild(tbLbl); tbWrap.appendChild(tbInp);
@@ -3656,7 +3705,7 @@ function renderHaftbefehl() {
     ktChips.appendChild(btn);
   });
   var ktOverride = document.createElement('input');
-  ktOverride.type = 'time'; ktOverride.className = 'text-input';
+  ktOverride.type = 'time'; ktOverride.className = 'field-input';
   ktOverride.value = p.kontrolleUhrzeit;
   ktOverride.style.display = p.useEventTime ? 'none' : '';
   ktOverride.addEventListener('input', function() { p.kontrolleUhrzeit = this.value; refreshPreview(); });
