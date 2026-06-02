@@ -1910,96 +1910,113 @@ function renderSchilderungen() {
   list.innerHTML = '';
   var officers = getBesatzungLabels();
 
-  function mkChips(opts, cur, onChange) {
-    var wrap = document.createElement('div'); wrap.className = 'suggestions';
-    opts.forEach(function(o) {
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'btn-suggestion' + (cur === o.v ? ' active' : '');
-      btn.textContent = o.label;
-      btn.onclick = (function(v) { return function() { onChange(v); renderSchilderungen(); }; })(o.v);
-      wrap.appendChild(btn);
-    });
-    return wrap;
-  }
-
-  function mkOfficerChips(cur, onChange) {
-    var wrap = document.createElement('div'); wrap.className = 'suggestions';
-    if (!officers.length) {
-      var note = document.createElement('div');
-      note.className = 'schild-note';
-      note.innerHTML = '<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg> Besatzung auf Seite 1 eintragen.';
-      wrap.appendChild(note);
-    } else {
-      officers.forEach(function(name) {
-        var btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'btn-suggestion' + (cur === name ? ' active' : '');
-        btn.textContent = name;
-        btn.onclick = (function(n) { return function() { onChange(n); renderSchilderungen(); }; })(name);
-        wrap.appendChild(btn);
-      });
-    }
-    return wrap;
-  }
-
   schilderungen.forEach(function(s, idx) {
     var card = document.createElement('div');
     card.className = 'schild-card';
 
-    // Header row
-    var hdr = document.createElement('div');
-    hdr.className = 'schild-hdr';
+    // Header
+    var hdr = document.createElement('div'); hdr.className = 'schild-hdr';
     var lbl = document.createElement('div');
     lbl.className = 'input-label schild-person-lbl';
     lbl.textContent = 'Person ' + (idx + 1);
     var rb = document.createElement('button');
     rb.className = 'btn-remove'; rb.type = 'button'; rb.innerHTML = '&times;';
-    (function(sid) { rb.onclick = function() { removeSchilderung(sid); }; })(s.id);
+    rb.onclick = (function(sid) { return function() { removeSchilderung(sid); }; })(s.id);
     hdr.appendChild(lbl); hdr.appendChild(rb);
     card.appendChild(hdr);
 
-    // Name input
+    // Name
     var nameInp = document.createElement('input');
     nameInp.type = 'text'; nameInp.className = 'field-input schild-name-inp';
-    nameInp.placeholder = 'Name der Person';
-    nameInp.value = s.name || '';
+    nameInp.placeholder = 'Name der Person'; nameInp.value = s.name || '';
     nameInp.oninput = function() { s.name = this.value; };
     card.appendChild(nameInp);
 
     // Rolle
-    var rolleRow = document.createElement('div');
-    rolleRow.style.marginTop = '10px';
-    var rolleLabel = document.createElement('div'); rolleLabel.className = 'input-label'; rolleLabel.textContent = 'Rolle';
-    rolleRow.appendChild(rolleLabel);
-    rolleRow.appendChild(mkChips(
-      [{ v: 'zeuge', label: 'Zeuge' }, { v: 'zeugin', label: 'Zeugin' },
-       { v: 'ub02m', label: 'UB 02 (m)' }, { v: 'ub02w', label: 'UB 02 (w)' },
-       { v: 'beschm', label: 'Beschuldigter' }, { v: 'beschw', label: 'Beschuldigte' }],
-      s.rolle, function(v) { s.rolle = v; }
-    ));
-    card.appendChild(rolleRow);
+    var rolleWrap = document.createElement('div'); rolleWrap.style.marginTop = '10px';
+    var rolleLabel = document.createElement('div');
+    rolleLabel.className = 'input-label'; rolleLabel.textContent = 'Rolle';
+    rolleWrap.appendChild(rolleLabel);
+    var rolleChips = document.createElement('div'); rolleChips.className = 'suggestions';
+    [{ v:'zeuge',  label:'Zeuge' },{ v:'zeugin', label:'Zeugin' },
+     { v:'ub02m',  label:'UB 02 (m)' },{ v:'ub02w',  label:'UB 02 (w)' },
+     { v:'beschm', label:'Beschuldigter' },{ v:'beschw', label:'Beschuldigte' }
+    ].forEach(function(opt) {
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.dataset.v = opt.v; btn.textContent = opt.label;
+      btn.className = 'btn-suggestion' + (s.rolle === opt.v ? ' active' : '');
+      rolleChips.appendChild(btn);
+    });
+    rolleWrap.appendChild(rolleChips);
+    card.appendChild(rolleWrap);
 
-    if (s.rolle) {
-      var belRow = document.createElement('div');
-      belRow.style.marginTop = '10px';
-      var belLabel = document.createElement('div'); belLabel.className = 'input-label'; belLabel.textContent = 'Belehrung durch';
-      belRow.appendChild(belLabel);
-      belRow.appendChild(mkOfficerChips(s.belehrender, function(n) {
-        s.belehrender = n;
-        if (!s.gegenueber) s.gegenueber = n;
-      }));
-      card.appendChild(belRow);
-
-      if (s.belehrender) {
-        var gegRow = document.createElement('div');
-        gegRow.style.marginTop = '10px';
-        var gegLabel = document.createElement('div'); gegLabel.className = 'input-label'; gegLabel.textContent = 'Geäußert gegenüber';
-        gegRow.appendChild(gegLabel);
-        gegRow.appendChild(mkOfficerChips(s.gegenueber, function(n) { s.gegenueber = n; }));
-        card.appendChild(gegRow);
-      }
+    // Belehrender (pre-rendered, hidden if no rolle)
+    var belWrap = document.createElement('div');
+    belWrap.style.marginTop = '10px'; belWrap.style.display = s.rolle ? '' : 'none';
+    var belLabel = document.createElement('div');
+    belLabel.className = 'input-label'; belLabel.textContent = 'Belehrung durch';
+    belWrap.appendChild(belLabel);
+    var belChips = document.createElement('div'); belChips.className = 'suggestions';
+    if (!officers.length) {
+      var note = document.createElement('div'); note.className = 'schild-note';
+      note.innerHTML = '<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg> Besatzung auf Seite 1 eintragen.';
+      belChips.appendChild(note);
+    } else {
+      officers.forEach(function(name) {
+        var btn = document.createElement('button');
+        btn.type = 'button'; btn.dataset.v = name; btn.textContent = name;
+        btn.className = 'btn-suggestion' + (s.belehrender === name ? ' active' : '');
+        belChips.appendChild(btn);
+      });
     }
+    belWrap.appendChild(belChips);
+    card.appendChild(belWrap);
+
+    // Gegenüber (pre-rendered, hidden if no belehrender)
+    var gegWrap = document.createElement('div');
+    gegWrap.style.marginTop = '10px'; gegWrap.style.display = s.belehrender ? '' : 'none';
+    var gegLabel = document.createElement('div');
+    gegLabel.className = 'input-label'; gegLabel.textContent = 'Geäußert gegenüber';
+    gegWrap.appendChild(gegLabel);
+    var gegChips = document.createElement('div'); gegChips.className = 'suggestions';
+    officers.forEach(function(name) {
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.dataset.v = name; btn.textContent = name;
+      btn.className = 'btn-suggestion' + (s.gegenueber === name ? ' active' : '');
+      gegChips.appendChild(btn);
+    });
+    gegWrap.appendChild(gegChips);
+    card.appendChild(gegWrap);
+
+    // Wire handlers — only toggle classes, no re-render
+    rolleChips.addEventListener('click', function(e) {
+      var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
+      s.rolle = btn.dataset.v;
+      rolleChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      belWrap.style.display = '';
+    });
+
+    belChips.addEventListener('click', function(e) {
+      var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
+      s.belehrender = btn.dataset.v;
+      belChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      if (!s.gegenueber) {
+        s.gegenueber = btn.dataset.v;
+        gegChips.querySelectorAll('.btn-suggestion').forEach(function(b) {
+          b.classList.toggle('active', b.dataset.v === s.gegenueber);
+        });
+      }
+      gegWrap.style.display = '';
+    });
+
+    gegChips.addEventListener('click', function(e) {
+      var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
+      s.gegenueber = btn.dataset.v;
+      gegChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+    });
 
     list.appendChild(card);
   });
@@ -2012,42 +2029,39 @@ function renderSchilderungenUmstaende() {
 
   if (!schilderungen.length) {
     var note = document.createElement('div');
-    note.className = 'schild-note';
-    note.style.marginBottom = '12px';
+    note.className = 'schild-note'; note.style.marginBottom = '12px';
     note.textContent = 'Keine Personen eingetragen.';
-    cont.appendChild(note);
-    return;
+    cont.appendChild(note); return;
   }
 
   schilderungen.forEach(function(s, idx) {
     if (schilderungen.length > 1) {
-      var lbl = document.createElement('div');
-      lbl.className = 'input-label';
+      var lbl = document.createElement('div'); lbl.className = 'input-label';
       lbl.style.marginBottom = '8px';
       var rm = ROLLEN_MAP[s.rolle];
       lbl.textContent = (s.name ? s.name : 'Person ' + (idx + 1)) + (rm ? ' – ' + rm.disp : '');
       cont.appendChild(lbl);
     }
 
-    var chips = document.createElement('div');
-    chips.className = 'suggestions umst-chips';
+    var chips = document.createElement('div'); chips.className = 'suggestions umst-chips';
     UMSTAENDE_DEFS.forEach(function(def) {
       var isOn = s.umstaende && s.umstaende.indexOf(def.v) !== -1;
       var btn = document.createElement('button');
-      btn.type = 'button';
+      btn.type = 'button'; btn.dataset.v = def.v; btn.textContent = def.label;
       btn.className = 'btn-suggestion' + (isOn ? ' active' : '');
-      btn.textContent = def.label;
-      btn.onclick = (function(sd, v) {
-        return function() {
-          if (!sd.umstaende) sd.umstaende = [];
-          var i = sd.umstaende.indexOf(v);
-          if (i !== -1) sd.umstaende.splice(i, 1);
-          else sd.umstaende.push(v);
-          renderSchilderungenUmstaende();
-        };
-      })(s, def.v);
       chips.appendChild(btn);
     });
+
+    // Multi-select: toggle class directly, no re-render
+    chips.addEventListener('click', function(e) {
+      var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
+      var v = btn.dataset.v;
+      if (!s.umstaende) s.umstaende = [];
+      var i = s.umstaende.indexOf(v);
+      if (i !== -1) { s.umstaende.splice(i, 1); btn.classList.remove('active'); }
+      else          { s.umstaende.push(v);       btn.classList.add('active'); }
+    });
+
     cont.appendChild(chips);
 
     if (idx < schilderungen.length - 1) {
@@ -2057,6 +2071,7 @@ function renderSchilderungenUmstaende() {
     }
   });
 }
+
 
 function formatDateDE(iso) {
   if (!iso) return '';
