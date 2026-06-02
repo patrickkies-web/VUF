@@ -340,7 +340,7 @@ var ROLLEN_MAP = {
 var schilderungen = [];
 var schildCounter = 0;
 var schildCurrentIdx = null;
-var massnahmenData = { unfallmitteilungen: false, bescheinigungen: [] };
+var massnahmenData = { unfallmitteilungen: false, bescheinigungen: [], bescheinigungenUhrzeit: '', bescheinigungenNwKennung: '' };
 
 function getActiveSlides() {
   var slides = [];
@@ -2961,6 +2961,65 @@ function generateSchilderungenText() {
   }).filter(Boolean).join('\n\n');
 }
 
+function buildAktenzeichen() {
+  var datum = document.getElementById('datum').value; // YYYY-MM-DD
+  var uhr = massnahmenData.bescheinigungenUhrzeit || '';
+  var nw = (massnahmenData.bescheinigungenNwKennung || '').toUpperCase();
+  var datePart = '';
+  if (datum) {
+    var dp = datum.split('-');
+    if (dp.length === 3) datePart = dp[0].slice(-2) + dp[1] + dp[2];
+  }
+  var timePart = uhr ? uhr.replace(':', '') : '';
+  return (datePart || 'JJMMTT') + '-' + (timePart || 'HHMM') + '-' + (nw || 'XXXXXX');
+}
+
+function buildBescheinigungsEmail(rolle) {
+  var rm = ROLLEN_MAP[rolle];
+  if (!rm) return '';
+  var personName = '';
+  for (var i = 0; i < schilderungen.length; i++) {
+    if (schilderungen[i].rolle === rolle && schilderungen[i].name) {
+      personName = schilderungen[i].name.trim();
+      break;
+    }
+  }
+  var isFemale = ['zeugin', 'ub01w', 'ub02w', 'beschw'].indexOf(rolle) !== -1;
+  var anrede = isFemale
+    ? 'Sehr geehrte Frau' + (personName ? ' ' + personName : '')
+    : 'Sehr geehrter Herr' + (personName ? ' ' + personName : '');
+  var az = buildAktenzeichen();
+  return anrede + ',\n\n' +
+    'anbei befindet sich das versprochene Dokument. Auf dem Dokument ist das Aktenzeichen verzeichnet, unter welchem die Vorgangsbearbeitung erfolgen wird (' + az + '). ' +
+    'Sollten Sie Fragen haben, besteht die Möglichkeit, auf der Wache Gütersloh anzurufen und dort das Aktenzeichen sowie Ihr Anliegen zu nennen. ' +
+    'Sollten Sie beabsichtigen, Akteneinsicht anzufordern, wenden Sie sich bitte an den zuständigen Sachbearbeiter des Kommissariats. ' +
+    'Meine Rufnummer als Sachbearbeiter können Sie telefonisch in den kommenden zwei Werktagen erfragen.\n\n' +
+    'Mit freundlichen Grüßen';
+}
+
+function copyToClipboard(text, btn) {
+  function onSuccess() {
+    var orig = btn.innerHTML;
+    btn.textContent = '✓ Kopiert';
+    btn.classList.add('copied');
+    setTimeout(function() { btn.innerHTML = orig; btn.classList.remove('copied'); }, 2000);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(onSuccess).catch(function() { copyFallback(text, btn, onSuccess); });
+  } else {
+    copyFallback(text, btn, onSuccess);
+  }
+}
+function copyFallback(text, btn, cb) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try { document.execCommand('copy'); cb(); } catch(e) {}
+  document.body.removeChild(ta);
+}
+
 function generateMassnahmenText() {
   var parts = [];
   if (massnahmenData.unfallmitteilungen) {
@@ -2969,7 +3028,8 @@ function generateMassnahmenText() {
   massnahmenData.bescheinigungen.forEach(function(rolle) {
     var rm = ROLLEN_MAP[rolle]; if (!rm) return;
     var dativCap = rm.dativ.charAt(0).toUpperCase() + rm.dativ.slice(1);
-    parts.push(dativCap + ' wurde eine Bescheinigung über die Erstattung einer Anzeige per E-Mail übersandt.');
+    var az = buildAktenzeichen();
+    parts.push(dativCap + ' wurde eine Bescheinigung über die Erstattung einer Anzeige per E-Mail übersandt (Az.: ' + az + ').');
   });
   return parts.join('\n\n');
 }
@@ -3005,13 +3065,73 @@ function renderMassnahmen() {
 
   var bescDetail = document.createElement('div');
   bescDetail.className = 'massnahme-sub';
-  bescDetail.style.display = massnahmenData.bescheinigungen.length > 0 ? '' : 'none';
+  var panelOpen = massnahmenData.bescheinigungen.length > 0 || !!(massnahmenData.bescheinigungenUhrzeit || massnahmenData.bescheinigungenNwKennung);
+  bescDetail.style.display = panelOpen ? '' : 'none';
+  if (panelOpen) bescBtn.classList.add('open');
 
-  var rolleLabel = document.createElement('div'); rolleLabel.className = 'input-label';
-  rolleLabel.style.marginBottom = '6px'; rolleLabel.textContent = 'Person(en)';
+  // ── AZ-Felder ──
+  var azRow = document.createElement('div');
+  azRow.className = 'besch-az-row';
+
+  var azUhrWrap = document.createElement('div');
+  azUhrWrap.className = 'besch-az-field';
+  var azUhrLbl = document.createElement('label');
+  azUhrLbl.textContent = 'Uhrzeit für Aktenzeichen';
+  var azUhrInp = document.createElement('input');
+  azUhrInp.type = 'time';
+  azUhrInp.className = 'text-input';
+  azUhrInp.value = massnahmenData.bescheinigungenUhrzeit;
+  azUhrInp.addEventListener('input', function() {
+    massnahmenData.bescheinigungenUhrzeit = this.value;
+    refreshEmailPreviews();
+  });
+  azUhrWrap.appendChild(azUhrLbl);
+  azUhrWrap.appendChild(azUhrInp);
+  azRow.appendChild(azUhrWrap);
+
+  var nwWrap = document.createElement('div');
+  nwWrap.className = 'besch-az-field';
+  var nwLbl = document.createElement('label');
+  nwLbl.textContent = 'NW-Kennung (6 Zeichen)';
+  var nwInp = document.createElement('input');
+  nwInp.type = 'text';
+  nwInp.className = 'text-input';
+  nwInp.maxLength = 6;
+  nwInp.placeholder = 'z.B. GT0001';
+  nwInp.style.textTransform = 'uppercase';
+  nwInp.value = massnahmenData.bescheinigungenNwKennung;
+  nwInp.addEventListener('input', function() {
+    massnahmenData.bescheinigungenNwKennung = this.value.toUpperCase();
+    refreshEmailPreviews();
+  });
+  nwWrap.appendChild(nwLbl);
+  nwWrap.appendChild(nwInp);
+  azRow.appendChild(nwWrap);
+
+  bescDetail.appendChild(azRow);
+
+  // ── AZ-Vorschau ──
+  var azPreviewWrap = document.createElement('div');
+  azPreviewWrap.className = 'az-preview-wrap';
+  var azPreviewLabel = document.createElement('span');
+  azPreviewLabel.className = 'az-preview-label';
+  azPreviewLabel.textContent = 'Aktenzeichen: ';
+  var azPreviewVal = document.createElement('span');
+  azPreviewVal.className = 'az-preview-val';
+  azPreviewVal.textContent = buildAktenzeichen();
+  azPreviewWrap.appendChild(azPreviewLabel);
+  azPreviewWrap.appendChild(azPreviewVal);
+  bescDetail.appendChild(azPreviewWrap);
+
+  // ── Person(en) ──
+  var rolleLabel = document.createElement('div');
+  rolleLabel.className = 'input-label';
+  rolleLabel.style.cssText = 'margin-top:14px;margin-bottom:6px';
+  rolleLabel.textContent = 'Person(en)';
   bescDetail.appendChild(rolleLabel);
 
-  var rolleChips = document.createElement('div'); rolleChips.className = 'suggestions';
+  var rolleChips = document.createElement('div');
+  rolleChips.className = 'suggestions';
   [
     { v: 'zeuge',  label: 'Zeuge'         },
     { v: 'zeugin', label: 'Zeugin'        },
@@ -3034,8 +3154,48 @@ function renderMassnahmen() {
     if (i !== -1) { massnahmenData.bescheinigungen.splice(i, 1); btn.classList.remove('active'); }
     else          { massnahmenData.bescheinigungen.push(v);       btn.classList.add('active'); }
     bescBtn.classList.toggle('active', massnahmenData.bescheinigungen.length > 0);
+    refreshEmailPreviews();
   });
   bescDetail.appendChild(rolleChips);
+
+  // ── E-Mail-Vorschauen ──
+  var emailPreviews = document.createElement('div');
+  emailPreviews.className = 'email-previews-wrap';
+  bescDetail.appendChild(emailPreviews);
+
+  function refreshEmailPreviews() {
+    azPreviewVal.textContent = buildAktenzeichen();
+    emailPreviews.innerHTML = '';
+    massnahmenData.bescheinigungen.forEach(function(rolle) {
+      var rm = ROLLEN_MAP[rolle]; if (!rm) return;
+      var emailText = buildBescheinigungsEmail(rolle);
+      var card = document.createElement('div');
+      card.className = 'email-preview-card';
+      var hdr = document.createElement('div');
+      hdr.className = 'email-preview-hdr';
+      var title = document.createElement('span');
+      title.textContent = (rm.disp.charAt(0).toUpperCase() + rm.disp.slice(1));
+      var copyBtn = document.createElement('button');
+      copyBtn.type = 'button';
+      copyBtn.className = 'btn-copy-email';
+      copyBtn.innerHTML =
+        '<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">' +
+        '<rect x="9" y="9" width="13" height="13" rx="2"/>' +
+        '<path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Kopieren';
+      (function(et, cb) {
+        cb.addEventListener('click', function() { copyToClipboard(et, cb); });
+      }(emailText, copyBtn));
+      hdr.appendChild(title);
+      hdr.appendChild(copyBtn);
+      var body = document.createElement('div');
+      body.className = 'email-preview-body';
+      body.textContent = emailText;
+      card.appendChild(hdr);
+      card.appendChild(body);
+      emailPreviews.appendChild(card);
+    });
+  }
+  refreshEmailPreviews();
 
   bescBtn.onclick = function() {
     var isOpen = bescDetail.style.display !== 'none';
@@ -3323,7 +3483,7 @@ function resetAll() {
   schilderungen = [];
   schildCounter = 0;
   schildCurrentIdx = null;
-  massnahmenData = { unfallmitteilungen: false, bescheinigungen: [] };
+  massnahmenData = { unfallmitteilungen: false, bescheinigungen: [], bescheinigungenUhrzeit: '', bescheinigungenNwKennung: '' };
   addStreifenwagen();
   // Show library screen again
   var startEl = document.getElementById('screen-start');
