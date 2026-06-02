@@ -1,11 +1,12 @@
 var DIENSTGRADE = ['PKin', 'PK', 'POKin', 'POK', 'PHKin', 'PHK', 'KAin', 'KA'];
 var current = 0;
-var besatzung = [];
+var streifenwagen = [];
+var swCounter = 0;
 var idCounter = 0;
 var dragSrc = null;
 var branch = null; // 'strasse' | 'parkplatz'
 var selectedSections = [];
-var touchData = { active: false, srcId: null, overItem: null };
+var touchData = { active: false, srcId: null, swId: null, overItem: null };
 var today = new Date().toISOString().split('T')[0];
 var GT_STREETS = null; // { name: { plz, stadt, ortsteil } | null }
 var autoOrtsteil = '';
@@ -376,22 +377,23 @@ document.addEventListener('touchend', function () {
   if (srcItem) srcItem.classList.remove('dragging');
   if (touchData.overItem) {
     touchData.overItem.classList.remove('drag-over');
-    var fi = besatzung.findIndex(function (x) { return x.id === touchData.srcId; });
-    var ti = besatzung.findIndex(function (x) { return x.id === parseInt(touchData.overItem.dataset.bid); });
-    if (fi !== ti && fi !== -1 && ti !== -1) {
-      var moved = besatzung.splice(fi, 1)[0];
-      besatzung.splice(ti, 0, moved);
-      renderBesatzung();
+    var sw = streifenwagen.find(function(s) { return s.id === touchData.swId; });
+    if (sw) {
+      var fi = sw.besatzung.findIndex(function(x) { return x.id === touchData.srcId; });
+      var ti = sw.besatzung.findIndex(function(x) { return x.id === parseInt(touchData.overItem.dataset.bid); });
+      if (fi !== ti && fi !== -1 && ti !== -1) {
+        var moved = sw.besatzung.splice(fi, 1)[0];
+        sw.besatzung.splice(ti, 0, moved);
+        renderStreifenwagen();
+      }
     }
   }
-  touchData.active = false;
-  touchData.srcId = null;
-  touchData.overItem = null;
+  touchData.active = false; touchData.srcId = null; touchData.swId = null; touchData.overItem = null;
 });
 
 // Init
 document.getElementById('datum').value = today;
-document.getElementById('btnAdd').onclick = addBesatzung;
+document.getElementById('btnAddSW').onclick = addStreifenwagen;
 document.getElementById('btnNext0').onclick = nextSlide;
 document.getElementById('btnNext1').onclick = nextSlide;
 document.getElementById('btnNext2').onclick = nextSlide;
@@ -558,7 +560,7 @@ document.getElementById('btnPresetParkplatz').onclick = function() {
   renderLibrary();
 };
 
-addBesatzung();
+addStreifenwagen();
 renderLibrary();
 render();
 ladeGueterslohStrassen();
@@ -575,106 +577,145 @@ document.querySelectorAll('.btn-next').forEach(function (btn) {
 
 // ── Besatzung ──────────────────────────────────────────────
 
-function addBesatzung() {
+function addStreifenwagen() {
+  swCounter++;
+  var swId = swCounter;
+  streifenwagen.push({ id: swId, besatzung: [] });
+  addBesatzungMember(swId);
+}
+
+function addBesatzungMember(swId) {
+  var sw = streifenwagen.find(function(s) { return s.id === swId; });
+  if (!sw) return;
   idCounter++;
-  var id = idCounter;
-  besatzung.push({ id: id, name: '', grad: 'POK' });
-  renderBesatzung();
-  setTimeout(function () {
+  sw.besatzung.push({ id: idCounter, name: '', grad: 'POK' });
+  renderStreifenwagen();
+  setTimeout(function() {
     var inputs = document.querySelectorAll('.b-name');
     if (inputs.length) inputs[inputs.length - 1].focus();
   }, 50);
 }
 
-function removeBesatzung(id) {
-  besatzung = besatzung.filter(function (b) { return b.id !== id; });
-  renderBesatzung();
+function removeBesatzungMember(swId, memberId) {
+  var sw = streifenwagen.find(function(s) { return s.id === swId; });
+  if (!sw) return;
+  sw.besatzung = sw.besatzung.filter(function(b) { return b.id !== memberId; });
+  renderStreifenwagen();
 }
 
-function renderBesatzung() {
-  var list = document.getElementById('besatzungList');
-  list.innerHTML = '';
-  var hint = document.getElementById('dragHint');
-  if (hint) hint.style.display = besatzung.length >= 2 ? 'flex' : 'none';
+function removeStreifenwagen(swId) {
+  streifenwagen = streifenwagen.filter(function(s) { return s.id !== swId; });
+  renderStreifenwagen();
+}
 
-  besatzung.forEach(function (b) {
-    var item = document.createElement('div');
-    item.className = 'besatzung-item';
-    item.draggable = true;
-    item.dataset.bid = b.id;
+function renderStreifenwagen() {
+  var cont = document.getElementById('streifenwagenList');
+  if (!cont) return;
+  cont.innerHTML = '';
 
-    var handle = document.createElement('div');
-    handle.className = 'drag-handle';
-    handle.innerHTML = '<span></span><span></span><span></span>';
-    handle.addEventListener('touchstart', function (e) {
-      touchData.active = true;
-      touchData.srcId = b.id;
-      touchData.overItem = null;
-      item.classList.add('dragging');
-      e.preventDefault();
-    }, { passive: false });
-    item.appendChild(handle);
+  streifenwagen.forEach(function(sw, swIdx) {
+    var card = document.createElement('div');
+    card.className = 'sw-card';
 
-    var fields = document.createElement('div');
-    fields.className = 'besatzung-fields';
+    var hdr = document.createElement('div'); hdr.className = 'sw-header';
+    var title = document.createElement('div'); title.className = 'sw-title';
+    title.textContent = 'Streifenwagen ' + (swIdx + 1);
+    hdr.appendChild(title);
+    if (streifenwagen.length > 1) {
+      var rmSw = document.createElement('button'); rmSw.type = 'button'; rmSw.className = 'btn-remove';
+      rmSw.innerHTML = '&times;';
+      (function(id) { rmSw.onclick = function() { removeStreifenwagen(id); }; })(sw.id);
+      hdr.appendChild(rmSw);
+    }
+    card.appendChild(hdr);
 
-    var ni = document.createElement('input');
-    ni.type = 'text';
-    ni.className = 'field-input b-name';
-    ni.placeholder = 'Nachname, Vorname';
-    ni.value = b.name;
-    ni.dataset.bid = b.id;
-    ni.oninput = function () { b.name = this.value; };
-    fields.appendChild(ni);
+    var body = document.createElement('div'); body.className = 'sw-body';
 
-    var sel = document.createElement('select');
-    sel.className = 'field-select';
-    DIENSTGRADE.forEach(function (g) {
-      var o = document.createElement('option');
-      o.value = g;
-      o.textContent = g;
-      if (g === b.grad) o.selected = true;
-      sel.appendChild(o);
+    var memberList = document.createElement('div'); memberList.className = 'besatzung-list';
+
+    sw.besatzung.forEach(function(b) {
+      var item = document.createElement('div');
+      item.className = 'besatzung-item';
+      item.draggable = true;
+      item.dataset.bid = b.id;
+      item.dataset.swid = sw.id;
+
+      var handle = document.createElement('div'); handle.className = 'drag-handle';
+      handle.innerHTML = '<span></span><span></span><span></span>';
+      handle.addEventListener('touchstart', function(e) {
+        touchData.active = true; touchData.srcId = b.id; touchData.swId = sw.id; touchData.overItem = null;
+        item.classList.add('dragging'); e.preventDefault();
+      }, { passive: false });
+      item.appendChild(handle);
+
+      var fields = document.createElement('div'); fields.className = 'besatzung-fields';
+
+      var sel = document.createElement('select'); sel.className = 'field-select';
+      DIENSTGRADE.forEach(function(g) {
+        var o = document.createElement('option'); o.value = g; o.textContent = g;
+        if (g === b.grad) o.selected = true; sel.appendChild(o);
+      });
+      sel.onchange = function() { b.grad = this.value; };
+      fields.appendChild(sel);
+
+      var ni = document.createElement('input'); ni.type = 'text'; ni.className = 'field-input b-name';
+      ni.placeholder = 'Nachname'; ni.value = b.name; ni.dataset.bid = b.id;
+      ni.oninput = function() { b.name = this.value; };
+      fields.appendChild(ni);
+
+      item.appendChild(fields);
+
+      var rb = document.createElement('button'); rb.className = 'btn-remove'; rb.innerHTML = '&times;'; rb.title = 'Entfernen';
+      (function(sid, bid) { rb.onclick = function() { removeBesatzungMember(sid, bid); }; })(sw.id, b.id);
+      item.appendChild(rb);
+
+      item.addEventListener('dragstart', function(e) {
+        dragSrc = item; item.dataset.dragswid = sw.id;
+        setTimeout(function() { item.classList.add('dragging'); }, 0);
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      item.addEventListener('dragend', function() {
+        item.classList.remove('dragging');
+        memberList.querySelectorAll('.besatzung-item').forEach(function(el) { el.classList.remove('drag-over'); });
+      });
+      item.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        if (item !== dragSrc && item.dataset.swid === dragSrc.dataset.swid) {
+          memberList.querySelectorAll('.besatzung-item').forEach(function(el) { el.classList.remove('drag-over'); });
+          item.classList.add('drag-over');
+        }
+      });
+      item.addEventListener('drop', function(e) {
+        e.preventDefault();
+        if (dragSrc && dragSrc !== item && item.dataset.swid === dragSrc.dataset.swid) {
+          var fi = sw.besatzung.findIndex(function(x) { return x.id === parseInt(dragSrc.dataset.bid); });
+          var ti = sw.besatzung.findIndex(function(x) { return x.id === b.id; });
+          if (fi !== -1 && ti !== -1 && fi !== ti) {
+            var moved = sw.besatzung.splice(fi, 1)[0];
+            sw.besatzung.splice(ti, 0, moved);
+            renderStreifenwagen();
+          }
+        }
+      });
+
+      memberList.appendChild(item);
     });
-    sel.onchange = function () { b.grad = this.value; };
-    fields.appendChild(sel);
-    item.appendChild(fields);
 
-    var rb = document.createElement('button');
-    rb.className = 'btn-remove';
-    rb.innerHTML = '&times;';
-    rb.title = 'Entfernen';
-    (function (bid) { rb.onclick = function () { removeBesatzung(bid); }; })(b.id);
-    item.appendChild(rb);
+    body.appendChild(memberList);
 
-    item.addEventListener('dragstart', function (e) {
-      dragSrc = item;
-      setTimeout(function () { item.classList.add('dragging'); }, 0);
-      e.dataTransfer.effectAllowed = 'move';
-    });
-    item.addEventListener('dragend', function () {
-      item.classList.remove('dragging');
-      list.querySelectorAll('.besatzung-item').forEach(function (el) { el.classList.remove('drag-over'); });
-    });
-    item.addEventListener('dragover', function (e) {
-      e.preventDefault();
-      if (item !== dragSrc) {
-        list.querySelectorAll('.besatzung-item').forEach(function (el) { el.classList.remove('drag-over'); });
-        item.classList.add('drag-over');
-      }
-    });
-    item.addEventListener('drop', function (e) {
-      e.preventDefault();
-      if (dragSrc && dragSrc !== item) {
-        var fi = besatzung.findIndex(function (x) { return x.id === parseInt(dragSrc.dataset.bid); });
-        var ti = besatzung.findIndex(function (x) { return x.id === parseInt(item.dataset.bid); });
-        var moved = besatzung.splice(fi, 1)[0];
-        besatzung.splice(ti, 0, moved);
-        renderBesatzung();
-      }
-    });
+    if (sw.besatzung.length >= 2) {
+      var hint = document.createElement('div'); hint.className = 'drag-hint';
+      hint.innerHTML = '<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 6h.01M8 12h.01M8 18h.01M16 6h.01M16 12h.01M16 18h.01"/></svg> Reihenfolge per Ziehen ändern';
+      body.appendChild(hint);
+    }
 
-    list.appendChild(item);
+    var addBtn = document.createElement('button'); addBtn.type = 'button'; addBtn.className = 'btn-add';
+    addBtn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Besatzungsmitglied hinzufügen';
+    (function(id) { addBtn.onclick = function() { addBesatzungMember(id); }; })(sw.id);
+    body.appendChild(addBtn);
+
+    card.appendChild(body);
+    cont.appendChild(card);
   });
 }
 
@@ -812,11 +853,27 @@ function buildErsterSatz(anlass) {
     datumStr = d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
   var uhrStr = nachtr ? '[nachzutragen]' : (uhrzeit || '[Uhrzeit]');
-  var besStr = besatzung.length
-    ? besatzung.map(function (b) { return (b.name || '[Name]') + ', ' + b.grad; }).join(' / ')
-    : '[Besatzung]';
-  return 'Am ' + datumStr + ', um ' + uhrStr + ' Uhr, erhielt die Streifenwagenbesatzung ' +
-    besStr + ' folgenden Einsatz: ' + (anlass || '…') + '.';
+  var besStr, verb;
+  if (streifenwagen.length === 0) {
+    besStr = '[Besatzung]'; verb = 'erhielt';
+  } else if (streifenwagen.length === 1) {
+    var crew = streifenwagen[0].besatzung
+      .filter(function(b) { return b.name && b.name.trim(); })
+      .map(function(b) { return (b.grad ? b.grad + ' ' : '') + b.name.trim(); });
+    besStr = crew.length ? crew.join(' / ') : '[Besatzung]';
+    verb = 'erhielt';
+  } else {
+    var swTexts = streifenwagen.map(function(sw, i) {
+      var crew = sw.besatzung
+        .filter(function(b) { return b.name && b.name.trim(); })
+        .map(function(b) { return (b.grad ? b.grad + ' ' : '') + b.name.trim(); });
+      return crew.length ? crew.join(' / ') : '[Besatzung ' + (i+1) + ']';
+    });
+    besStr = swTexts.join(' sowie ');
+    verb = 'erhielten';
+  }
+  return 'Am ' + datumStr + ', um ' + uhrStr + ' Uhr, ' + verb + ' die Streifenwagenbesatzung' +
+    (streifenwagen.length > 1 ? 'en' : '') + ' ' + besStr + ' folgenden Einsatz: ' + (anlass || '…') + '.';
 }
 
 function updateUoAdresseChips() {
@@ -1929,7 +1986,7 @@ function collectFragments() {
     var t = b.textContent.trim();
     if (t.length > 1 && t !== '—') frags.push(t);
   });
-  besatzung.forEach(function (b) { if (b.name) frags.push(b.name); });
+  streifenwagen.forEach(function(sw) { sw.besatzung.forEach(function(b) { if (b.name) frags.push(b.name); }); });
   if (frags.length < 4) frags = frags.concat(['BPOL', 'GTH', '33330', 'VUF', 'BERICHT', 'PROTOKOLL']);
   return frags;
 }
@@ -2098,9 +2155,13 @@ function runGenerateAnimation(frags, done) {
 // ── Schilderungen ────────────────────────────────────────────
 
 function getBesatzungLabels() {
-  return besatzung.filter(function (b) { return b.name && b.name.trim(); }).map(function (b) {
-    return (b.grad ? b.grad + ' ' : '') + b.name.trim();
+  var all = [];
+  streifenwagen.forEach(function(sw) {
+    sw.besatzung.forEach(function(b) {
+      if (b.name && b.name.trim()) all.push((b.grad ? b.grad + ' ' : '') + b.name.trim());
+    });
   });
+  return all;
 }
 
 function getUnfallOrtVorfill() {
@@ -3225,7 +3286,8 @@ function copyText() {
 // ── Reset ───────────────────────────────────────────────────
 
 function resetAll() {
-  besatzung = [];
+  streifenwagen = [];
+  swCounter = 0;
   current = 0;
   branch = null;
   selectedSections = [];
@@ -3262,7 +3324,7 @@ function resetAll() {
   schildCounter = 0;
   schildCurrentIdx = null;
   massnahmenData = { unfallmitteilungen: false, bescheinigungen: [] };
-  addBesatzung();
+  addStreifenwagen();
   // Show library screen again
   var startEl = document.getElementById('screen-start');
   startEl.style.display = '';
