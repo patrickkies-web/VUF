@@ -117,7 +117,7 @@ var SECTION_DEFS = {
       if (hasAlk || hasBtm) slides.push('slide-schilderungen-auffaelligkeiten', 'slide-schilderungen-anweisungen');
       if (hasAlk) slides.push('slide-schilderungen-alkohol-test');
       if (hasBtm) slides.push('slide-schilderungen-btm-test');
-      slides.push('slide-schilderungen-overview');
+      slides.push('slide-schilderungen-angaben', 'slide-schilderungen-overview');
       return slides;
     }
   }
@@ -395,6 +395,7 @@ document.getElementById('btnGenerateAuffaelligkeiten').onclick = nextSlide;
 document.getElementById('btnGenerateAnweisungen').onclick = nextSlide;
 document.getElementById('btnGenerateAlkoholTest').onclick = nextSlide;
 document.getElementById('btnGenerateBtmTest').onclick = nextSlide;
+document.getElementById('btnGenerateAngaben').onclick = nextSlide;
 
 document.getElementById('btnAuffCustomAdd').onclick = function() {
   var inp = document.getElementById('auffCustomInput');
@@ -773,6 +774,7 @@ function render() {
   if (slides[current] === 'slide-schilderungen-anweisungen') renderSchilderungenAnweisungen();
   if (slides[current] === 'slide-schilderungen-alkohol-test') renderSchilderungenAlkoholTest();
   if (slides[current] === 'slide-schilderungen-btm-test') renderSchilderungenBtmTest();
+  if (slides[current] === 'slide-schilderungen-angaben') renderSchilderungenAngaben();
   if (slides[current] === 'slide-schilderungen-overview') renderSchilderungenOverview();
   var activeSlideEl = document.getElementById(slides[current]);
   if (activeSlideEl) injectOrUpdatePreview(activeSlideEl, slides[current]);
@@ -2270,6 +2272,147 @@ function renderSchilderungenUmstaende() {
   cont.appendChild(chips);
 }
 
+function buildAngabenText(s) {
+  var rm = ROLLEN_MAP[s.rolle]; if (!rm) return '';
+  var bel = s.belehrender || '[Beamter/Beamtin]';
+  var geg = s.gegenueber || '[Beamter/Beamtin]';
+  var belTyp = rm.btyp === 'besch' ? 'Beschuldigtenbelehrung' : 'zeugenschaftlicher Belehrung';
+  var dispCap = rm.disp.charAt(0).toUpperCase() + rm.disp.slice(1);
+  var intro = 'Nach erfolgter ' + belTyp + ' durch ' + bel + ' machte ' + rm.disp + ' gegenüber ' + geg + ' sinngemäß folgende Angaben:';
+  var body = '';
+  if (s.modus === 'vuf') {
+    var datum = formatDateDE(s.abstelltDatum) || '[Datum]';
+    var uzeit = s.abstelltUhrzeit || '[Uhrzeit]';
+    var ort   = s.abstelltOrt || '[Ort]';
+    var rueck = s.rueckUhrzeit || '[Uhrzeit]';
+    body = rm.er + ' habe ' + rm.sein + ' Fahrzeug am ' + datum + ' gegen ' + uzeit + ' Uhr ' + ort + ' abgestellt. Bei ' + rm.seiner + ' Rückkehr gegen ' + rueck + ' Uhr habe ' + rm.erLow + ' ' + rm.sein + ' Fahrzeug beschädigt vorgefunden.\n' + dispCap + ' geht davon aus, dass es in diesem Zeitraum zu einem Verkehrsunfall gekommen ist, bei welchem ' + rm.sein + ' Fahrzeug beschädigt wurde.';
+    if (s.zwischenzeit === 'ja' && s.zwischenzeitText) {
+      body += ' In der Zwischenzeit habe ' + rm.erLow + ' folgendes festgestellt: ' + s.zwischenzeitText;
+    } else {
+      body += ' Weitere Feststellungen in der Zwischenzeit habe ' + rm.erLow + ' nicht gemacht.';
+    }
+  } else if (s.modus === 'frei') {
+    body = s.freitext || '[Keine Angaben]';
+  }
+  if (!body) return intro + '\n\n[Keine Angaben erfasst]';
+  return intro + '\n\n' + body;
+}
+
+function renderSchilderungenAngaben() {
+  var cont = document.getElementById('angabenList');
+  if (!cont) return;
+  cont.innerHTML = '';
+
+  var s = schildCurrentIdx !== null ? schilderungen[schildCurrentIdx] : null;
+  if (!s) return;
+
+  var rm = ROLLEN_MAP[s.rolle];
+  var personLbl = document.createElement('div'); personLbl.className = 'input-label';
+  personLbl.style.marginBottom = '10px';
+  personLbl.textContent = (s.name || ('Person ' + (schildCurrentIdx + 1))) + (rm ? ' – ' + rm.disp : '');
+  cont.appendChild(personLbl);
+
+  // Modus chips
+  var modusLabel = document.createElement('div'); modusLabel.className = 'input-label';
+  modusLabel.style.marginBottom = '6px'; modusLabel.textContent = 'Art der Angaben';
+  cont.appendChild(modusLabel);
+
+  var prevBox = document.createElement('div');
+  prevBox.style.cssText = 'margin-top:14px;font-size:13px;color:var(--c-text);background:var(--c-surface,#f5f5f7);border-radius:10px;padding:12px 14px;white-space:pre-wrap;line-height:1.5;';
+  prevBox.textContent = buildAngabenText(s);
+
+  function refreshPreview() { prevBox.textContent = buildAngabenText(s); }
+
+  var modusChips = document.createElement('div'); modusChips.className = 'suggestions';
+  [{ v: 'vuf', label: 'VUF-Vorlage' }, { v: 'frei', label: 'Freitext' }].forEach(function(opt) {
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.dataset.v = opt.v; btn.textContent = opt.label;
+    btn.className = 'btn-suggestion' + (s.modus === opt.v ? ' active' : '');
+    modusChips.appendChild(btn);
+  });
+  cont.appendChild(modusChips);
+
+  // VUF form
+  var vufWrap = document.createElement('div');
+  vufWrap.style.display = s.modus === 'vuf' ? '' : 'none';
+  vufWrap.style.marginTop = '14px';
+
+  function addField(label, placeholder, value, onInput, type) {
+    var wrap = document.createElement('div'); wrap.style.marginBottom = '10px';
+    var lbl = document.createElement('div'); lbl.className = 'input-label';
+    lbl.style.marginBottom = '4px'; lbl.textContent = label;
+    wrap.appendChild(lbl);
+    var inp = document.createElement('input');
+    inp.type = type || 'text'; inp.className = 'field-input';
+    inp.placeholder = placeholder; inp.value = value || '';
+    inp.oninput = function() { onInput(this.value); refreshPreview(); };
+    wrap.appendChild(inp);
+    return wrap;
+  }
+
+  vufWrap.appendChild(addField('Datum abgestellt', 'TT.MM.JJJJ', s.abstelltDatum, function(v) { s.abstelltDatum = v; }, 'date'));
+  vufWrap.appendChild(addField('Uhrzeit abgestellt', 'z. B. 20:30', s.abstelltUhrzeit, function(v) { s.abstelltUhrzeit = v; }));
+  vufWrap.appendChild(addField('Ort abgestellt', 'z. B. in der Hauptstraße', s.abstelltOrt, function(v) { s.abstelltOrt = v; }));
+  vufWrap.appendChild(addField('Rückkehr-Uhrzeit', 'z. B. 22:00', s.rueckUhrzeit, function(v) { s.rueckUhrzeit = v; }));
+
+  var zwLbl = document.createElement('div'); zwLbl.className = 'input-label';
+  zwLbl.style.marginBottom = '6px'; zwLbl.textContent = 'Feststellungen in der Zwischenzeit?';
+  vufWrap.appendChild(zwLbl);
+
+  var zwChips = document.createElement('div'); zwChips.className = 'suggestions';
+  var zwTextWrap = document.createElement('div');
+  zwTextWrap.style.display = s.zwischenzeit === 'ja' ? '' : 'none';
+  zwTextWrap.style.marginTop = '8px';
+  var zwInp = document.createElement('input');
+  zwInp.type = 'text'; zwInp.className = 'field-input';
+  zwInp.placeholder = 'Was wurde festgestellt…';
+  zwInp.value = s.zwischenzeitText || '';
+  zwInp.oninput = function() { s.zwischenzeitText = this.value; refreshPreview(); };
+  zwTextWrap.appendChild(zwInp);
+
+  [{ v: 'nein', label: 'Nein' }, { v: 'ja', label: 'Ja' }].forEach(function(opt) {
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.dataset.v = opt.v; btn.textContent = opt.label;
+    btn.className = 'btn-suggestion' + (s.zwischenzeit === opt.v ? ' active' : '');
+    zwChips.appendChild(btn);
+  });
+  zwChips.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
+    s.zwischenzeit = btn.dataset.v;
+    zwChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.toggle('active', b.dataset.v === s.zwischenzeit); });
+    zwTextWrap.style.display = s.zwischenzeit === 'ja' ? '' : 'none';
+    refreshPreview();
+  });
+  vufWrap.appendChild(zwChips);
+  vufWrap.appendChild(zwTextWrap);
+  cont.appendChild(vufWrap);
+
+  // Freitext
+  var freiWrap = document.createElement('div');
+  freiWrap.style.display = s.modus === 'frei' ? '' : 'none';
+  freiWrap.style.marginTop = '14px';
+  var freiArea = document.createElement('textarea');
+  freiArea.className = 'field-input'; freiArea.rows = 5;
+  freiArea.style.width = '100%'; freiArea.style.resize = 'vertical';
+  freiArea.placeholder = 'Angaben der Person in eigenen Worten…';
+  freiArea.value = s.freitext || '';
+  freiArea.oninput = function() { s.freitext = this.value; refreshPreview(); };
+  freiWrap.appendChild(freiArea);
+  cont.appendChild(freiWrap);
+
+  // Modus chip wiring
+  modusChips.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
+    s.modus = btn.dataset.v;
+    modusChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.toggle('active', b.dataset.v === s.modus); });
+    vufWrap.style.display = s.modus === 'vuf' ? '' : 'none';
+    freiWrap.style.display = s.modus === 'frei' ? '' : 'none';
+    refreshPreview();
+  });
+
+  cont.appendChild(prevBox);
+}
+
 function buildVerletzungText(s) {
   var rm = ROLLEN_MAP[s.rolle]; if (!rm) return '';
   var dispCap = rm.disp.charAt(0).toUpperCase() + rm.disp.slice(1);
@@ -2691,23 +2834,7 @@ function generateSchilderungenText() {
       parts.push(dispCap + ' lehnte die Durchführung eines freiwilligen Drogenvortests ab.');
     }
 
-    var intro = 'Nach erfolgter ' + belTyp + ' durch ' + bel + ' machte ' + rm.disp + ' gegenüber ' + geg + ' sinngemäß folgende Angaben:';
-    var body = '';
-    if (s.modus === 'vuf') {
-      var datum = formatDateDE(s.abstelltDatum) || '[Datum]';
-      var uzeit = s.abstelltUhrzeit || '[Uhrzeit]';
-      var ort   = s.abstelltOrt || '[Ort]';
-      var rueck = s.rueckUhrzeit || '[Uhrzeit]';
-      body = rm.er + ' habe ' + rm.sein + ' Fahrzeug am ' + datum + ' gegen ' + uzeit + ' Uhr ' + ort + ' abgestellt. Bei ' + rm.seiner + ' Rückkehr gegen ' + rueck + ' Uhr habe ' + rm.erLow + ' ' + rm.sein + ' Fahrzeug beschädigt vorgefunden.\n' + dispCap + ' geht davon aus, dass es in diesem Zeitraum zu einem Verkehrsunfall gekommen ist, bei welchem ' + rm.sein + ' Fahrzeug beschädigt wurde.';
-      if (s.zwischenzeit === 'ja' && s.zwischenzeitText) {
-        body += ' In der Zwischenzeit habe ' + rm.erLow + ' folgendes festgestellt: ' + s.zwischenzeitText;
-      } else {
-        body += ' Weitere Feststellungen in der Zwischenzeit habe ' + rm.erLow + ' nicht gemacht.';
-      }
-    } else if (s.modus === 'frei') {
-      body = s.freitext || '[Keine Angaben]';
-    }
-    parts.push(intro + '\n\n' + body);
+    parts.push(buildAngabenText(s));
     return parts.join('\n\n');
   }).filter(Boolean).join('\n\n');
 }
