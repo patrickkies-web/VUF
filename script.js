@@ -108,10 +108,12 @@ var LEITFAEDEN = {
 };
 
 var ROLLEN_MAP = {
-  zeuge:  { disp: 'der Zeuge',               er: 'Er',  erLow: 'er',  sein: 'sein', seiner: 'seiner' },
-  zeugin: { disp: 'die Zeugin',              er: 'Sie', erLow: 'sie', sein: 'ihr',  seiner: 'ihrer'  },
-  ub02m:  { disp: 'der Unfallbeteiligte 02', er: 'Er',  erLow: 'er',  sein: 'sein', seiner: 'seiner' },
-  ub02w:  { disp: 'die Unfallbeteiligte 02', er: 'Sie', erLow: 'sie', sein: 'ihr',  seiner: 'ihrer'  }
+  zeuge:  { disp: 'der Zeuge',               btyp: 'zeuge', er: 'Er',  erLow: 'er',  sein: 'sein', seiner: 'seiner' },
+  zeugin: { disp: 'die Zeugin',              btyp: 'zeuge', er: 'Sie', erLow: 'sie', sein: 'ihr',  seiner: 'ihrer'  },
+  ub02m:  { disp: 'der Unfallbeteiligte 02', btyp: 'zeuge', er: 'Er',  erLow: 'er',  sein: 'sein', seiner: 'seiner' },
+  ub02w:  { disp: 'die Unfallbeteiligte 02', btyp: 'zeuge', er: 'Sie', erLow: 'sie', sein: 'ihr',  seiner: 'ihrer'  },
+  beschm: { disp: 'der Beschuldigte',        btyp: 'besch', er: 'Er',  erLow: 'er',  sein: 'sein', seiner: 'seiner' },
+  beschw: { disp: 'die Beschuldigte',        btyp: 'besch', er: 'Sie', erLow: 'sie', sein: 'ihr',  seiner: 'ihrer'  }
 };
 
 var schilderungen = [];
@@ -1842,6 +1844,7 @@ function addSchilderung() {
   schildCounter++;
   schilderungen.push({
     id: schildCounter,
+    name: '',
     rolle: '',
     belehrender: '',
     gegenueber: '',
@@ -1855,6 +1858,11 @@ function addSchilderung() {
     freitext: ''
   });
   renderSchilderungen();
+  // Focus the name input of the newly added card
+  requestAnimationFrame(function() {
+    var inputs = document.querySelectorAll('#schilderungList .schild-name-inp');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  });
 }
 
 function removeSchilderung(id) {
@@ -1868,156 +1876,98 @@ function renderSchilderungen() {
   list.innerHTML = '';
   var officers = getBesatzungLabels();
 
-  schilderungen.forEach(function (s, idx) {
-    var card = document.createElement('div');
-    card.style.cssText = 'border-left:3px solid var(--accent);padding:0 0 0 18px;display:flex;flex-direction:column;gap:20px;';
+  function mkChips(opts, cur, onChange) {
+    var wrap = document.createElement('div'); wrap.className = 'suggestions';
+    opts.forEach(function(o) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn-suggestion' + (cur === o.v ? ' active' : '');
+      btn.textContent = o.label;
+      btn.onclick = (function(v) { return function() { onChange(v); renderSchilderungen(); }; })(o.v);
+      wrap.appendChild(btn);
+    });
+    return wrap;
+  }
 
-    function mkGroup(lbl, content) {
-      var g = document.createElement('div');
-      g.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
-      if (lbl) { var l = document.createElement('div'); l.className = 'input-label'; l.textContent = lbl; g.appendChild(l); }
-      if (content) g.appendChild(content);
-      return g;
-    }
-
-    function mkChips(opts, cur, onChange) {
-      var wrap = document.createElement('div'); wrap.className = 'suggestions';
-      opts.forEach(function (o) {
+  function mkOfficerChips(cur, onChange) {
+    var wrap = document.createElement('div'); wrap.className = 'suggestions';
+    if (!officers.length) {
+      var note = document.createElement('div');
+      note.className = 'schild-note';
+      note.innerHTML = '<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg> Besatzung auf Seite 1 eintragen.';
+      wrap.appendChild(note);
+    } else {
+      officers.forEach(function(name) {
         var btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'btn-suggestion' + (cur === o.v ? ' active' : '');
-        btn.textContent = o.label;
-        btn.onclick = (function (v) { return function () { onChange(v); renderSchilderungen(); }; })(o.v);
+        btn.className = 'btn-suggestion' + (cur === name ? ' active' : '');
+        btn.textContent = name;
+        btn.onclick = (function(n) { return function() { onChange(n); renderSchilderungen(); }; })(name);
         wrap.appendChild(btn);
       });
-      return wrap;
     }
+    return wrap;
+  }
 
-    function mkOfficerChips(cur, onChange) {
-      var wrap = document.createElement('div'); wrap.className = 'suggestions';
-      if (!officers.length) {
-        var note = document.createElement('div');
-        note.style.cssText = 'font-size:13px;color:var(--accent);background:rgba(29,78,216,.08);border:1px solid rgba(29,78,216,.25);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:8px;';
-        note.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg> Bitte zuerst die Besatzung auf <strong>Folie 1</strong> eintragen.';
-        wrap.appendChild(note);
-      } else {
-        officers.forEach(function (name) {
-          var btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'btn-suggestion' + (cur === name ? ' active' : '');
-          btn.textContent = name;
-          btn.onclick = (function (n) { return function () { onChange(n); renderSchilderungen(); }; })(name);
-          wrap.appendChild(btn);
-        });
-      }
-      return wrap;
-    }
+  schilderungen.forEach(function(s, idx) {
+    var card = document.createElement('div');
+    card.className = 'schild-card';
 
-    // Header
+    // Header row
     var hdr = document.createElement('div');
-    hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;';
-    var ttl = document.createElement('div');
-    ttl.className = 'input-label'; ttl.style.cssText = 'font-weight:700;font-size:15px;margin:0;';
-    ttl.textContent = 'Person ' + (idx + 1);
+    hdr.className = 'schild-hdr';
+    var lbl = document.createElement('div');
+    lbl.className = 'input-label schild-person-lbl';
+    lbl.textContent = 'Person ' + (idx + 1);
     var rb = document.createElement('button');
     rb.className = 'btn-remove'; rb.type = 'button'; rb.innerHTML = '&times;';
-    (function (sid) { rb.onclick = function () { removeSchilderung(sid); }; })(s.id);
-    hdr.appendChild(ttl); hdr.appendChild(rb);
+    (function(sid) { rb.onclick = function() { removeSchilderung(sid); }; })(s.id);
+    hdr.appendChild(lbl); hdr.appendChild(rb);
     card.appendChild(hdr);
 
+    // Name input
+    var nameInp = document.createElement('input');
+    nameInp.type = 'text'; nameInp.className = 'field-input schild-name-inp';
+    nameInp.placeholder = 'Name der Person';
+    nameInp.value = s.name || '';
+    nameInp.oninput = function() { s.name = this.value; };
+    card.appendChild(nameInp);
+
     // Rolle
-    card.appendChild(mkGroup('Rolle', mkChips(
+    var rolleRow = document.createElement('div');
+    rolleRow.style.marginTop = '10px';
+    var rolleLabel = document.createElement('div'); rolleLabel.className = 'input-label'; rolleLabel.textContent = 'Rolle';
+    rolleRow.appendChild(rolleLabel);
+    rolleRow.appendChild(mkChips(
       [{ v: 'zeuge', label: 'Zeuge' }, { v: 'zeugin', label: 'Zeugin' },
-       { v: 'ub02m', label: 'Unfallbeteiligter 02' }, { v: 'ub02w', label: 'Unfallbeteiligte 02' }],
-      s.rolle, function (v) { s.rolle = v; }
-    )));
+       { v: 'ub02m', label: 'UB 02 (m)' }, { v: 'ub02w', label: 'UB 02 (w)' },
+       { v: 'beschm', label: 'Beschuldigter' }, { v: 'beschw', label: 'Beschuldigte' }],
+      s.rolle, function(v) { s.rolle = v; }
+    ));
+    card.appendChild(rolleRow);
 
     if (s.rolle) {
-      // Belehrender
-      card.appendChild(mkGroup('Belehrung durchgeführt durch', mkOfficerChips(
-        s.belehrender,
-        function (n) { s.belehrender = n; if (!s.gegenueber) s.gegenueber = n; }
-      )));
+      var belRow = document.createElement('div');
+      belRow.style.marginTop = '10px';
+      var belLabel = document.createElement('div'); belLabel.className = 'input-label'; belLabel.textContent = 'Belehrung durch';
+      belRow.appendChild(belLabel);
+      belRow.appendChild(mkOfficerChips(s.belehrender, function(n) {
+        s.belehrender = n;
+        if (!s.gegenueber) s.gegenueber = n;
+      }));
+      card.appendChild(belRow);
 
       if (s.belehrender) {
-        // Gegenüber
-        card.appendChild(mkGroup('Äußerung gemacht gegenüber', mkOfficerChips(
-          s.gegenueber, function (n) { s.gegenueber = n; }
-        )));
-
-        if (s.gegenueber) {
-          // Modus
-          card.appendChild(mkGroup('Art der Schilderung', mkChips(
-            [{ v: 'vuf', label: 'Fahrzeug abgestellt & Schäden festgestellt (VUF-Standard)' },
-             { v: 'frei', label: 'Freie Schilderung' }],
-            s.modus, function (v) { s.modus = v; }
-          )));
-
-          if (s.modus === 'vuf') {
-            // Date + Abstelluhrzeit row
-            var dateRow = document.createElement('div');
-            dateRow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;';
-            function mkInpGroup(lbl, type, val, onChange) {
-              var g = document.createElement('div');
-              g.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
-              var l = document.createElement('div'); l.className = 'input-label'; l.textContent = lbl;
-              var inp = document.createElement('input');
-              inp.type = type; inp.className = 'field-input'; inp.value = val;
-              inp.oninput = function () { onChange(this.value); };
-              g.appendChild(l); g.appendChild(inp);
-              return g;
-            }
-            dateRow.appendChild(mkInpGroup('Datum Abstellung', 'date', s.abstelltDatum, function (v) { s.abstelltDatum = v; }));
-            dateRow.appendChild(mkInpGroup('Uhrzeit Abstellung', 'time', s.abstelltUhrzeit, function (v) { s.abstelltUhrzeit = v; }));
-            card.appendChild(dateRow);
-
-            var ortInp = document.createElement('input');
-            ortInp.type = 'text'; ortInp.className = 'field-input';
-            ortInp.placeholder = 'z.B. in der Berliner Straße 12';
-            ortInp.value = s.abstelltOrt;
-            ortInp.oninput = function () { s.abstelltOrt = this.value; };
-            card.appendChild(mkGroup('Wo abgestellt', ortInp));
-
-            var rueckInp = document.createElement('input');
-            rueckInp.type = 'time'; rueckInp.className = 'field-input';
-            rueckInp.style.maxWidth = '160px'; rueckInp.value = s.rueckUhrzeit;
-            rueckInp.oninput = function () { s.rueckUhrzeit = this.value; };
-            card.appendChild(mkGroup('Uhrzeit der Rückkehr', rueckInp));
-
-            card.appendChild(mkGroup('Beobachtungen in der Zwischenzeit?', mkChips(
-              [{ v: 'nein', label: 'Nein' }, { v: 'ja', label: 'Ja' }],
-              s.zwischenzeit, function (v) { s.zwischenzeit = v; }
-            )));
-
-            if (s.zwischenzeit === 'ja') {
-              var zwTa = document.createElement('textarea');
-              zwTa.className = 'field-input field-textarea';
-              zwTa.placeholder = 'Was hat die Person in der Zwischenzeit beobachtet?';
-              zwTa.value = s.zwischenzeitText;
-              zwTa.oninput = function () { s.zwischenzeitText = this.value; };
-              card.appendChild(mkGroup('Beschreibung der Beobachtungen', zwTa));
-            }
-
-          } else if (s.modus === 'frei') {
-            var freiTa = document.createElement('textarea');
-            freiTa.className = 'field-input field-textarea';
-            freiTa.style.minHeight = '120px';
-            freiTa.placeholder = 'Schilderung sinngemäß eingeben …';
-            freiTa.value = s.freitext;
-            freiTa.oninput = function () { s.freitext = this.value; };
-            card.appendChild(mkGroup('Schilderung / Äußerung', freiTa));
-          }
-        }
+        var gegRow = document.createElement('div');
+        gegRow.style.marginTop = '10px';
+        var gegLabel = document.createElement('div'); gegLabel.className = 'input-label'; gegLabel.textContent = 'Geäußert gegenüber';
+        gegRow.appendChild(gegLabel);
+        gegRow.appendChild(mkOfficerChips(s.gegenueber, function(n) { s.gegenueber = n; }));
+        card.appendChild(gegRow);
       }
     }
 
     list.appendChild(card);
-  });
-
-  // Scroll new content into view
-  requestAnimationFrame(function () {
-    var slide = document.getElementById('slide-schilderungen');
-    if (slide) slide.scrollTop = slide.scrollHeight;
   });
 }
 
@@ -2034,7 +1984,8 @@ function generateSchilderungenText() {
     if (!rm) return '';
     var bel = s.belehrender || '[Beamter/Beamtin]';
     var geg = s.gegenueber || '[Beamter/Beamtin]';
-    var intro = 'Nach erfolgter zeugenschaftlicher Belehrung durch ' + bel + ' machte ' + rm.disp + ' gegenüber ' + geg + ' sinngemäß folgende Angaben:';
+    var belTyp = rm.btyp === 'besch' ? 'Beschuldigtenbelehrung' : 'zeugenschaftlicher Belehrung';
+    var intro = 'Nach erfolgter ' + belTyp + ' durch ' + bel + ' machte ' + rm.disp + ' gegenüber ' + geg + ' sinngemäß folgende Angaben:';
     var body = '';
     if (s.modus === 'vuf') {
       var datum = formatDateDE(s.abstelltDatum) || '[Datum]';

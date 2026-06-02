@@ -1262,6 +1262,47 @@ body {
   color: #fff;
 }
 
+/* ── Schilderungen ────────────────────────────────────────── */
+
+.schild-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.schild-hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.schild-person-lbl {
+  font-weight: 700;
+  font-size: 14px;
+  margin: 0;
+}
+
+.schild-name-inp {
+  font-size: 15px;
+}
+
+.schild-note {
+  font-size: 12px;
+  color: var(--accent);
+  background: rgba(29,78,216,.07);
+  border: 1px solid rgba(29,78,216,.2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /* ── Vorschau-Streifen ────────────────────────────────────── */
 .preview-strip {
   border-top: 1px solid var(--border);
