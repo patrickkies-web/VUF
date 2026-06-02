@@ -6,8 +6,8 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Polizeibericht v3.6</title>
-  <link rel="stylesheet" href="style.css?v=3.6">
+  <title>Polizeibericht v3.15</title>
+  <link rel="stylesheet" href="style.css?v=3.15">
 </head>
 <body>
 
@@ -550,6 +550,20 @@
       </div>
     </div>
 
+    <!-- Schilderungen: Verletzungen -->
+    <div class="slide" id="slide-schilderungen-verletzung">
+      <div class="question-number">Schilderungen &middot; Verletzungen</div>
+      <div class="question-text">Welche <strong>Verletzungen</strong><br>lagen vor?</div>
+      <div id="verletzungList"></div>
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;margin-top:12px">
+        <button class="btn-next" id="btnGenerateVerletzung">Weiter
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
     <!-- Schilderungen: Körperliche Auffälligkeiten (vereint Alkohol & BtM) -->
     <div class="slide" id="slide-schilderungen-auffaelligkeiten">
       <div class="question-number">Schilderungen &middot; Auffälligkeiten</div>
@@ -653,7 +667,7 @@
   <div style="width:80px"></div>
 </div>
 
-<script src="script.js?v=3.14"></script>
+<script src="script.js?v=3.15"></script>
 <script>if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js').catch(function(){});}</script>
 
 <!-- Bericht-Generierungs-Overlay -->

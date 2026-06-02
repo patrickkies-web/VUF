@@ -112,6 +112,8 @@ var SECTION_DEFS = {
       var umst = s ? (s.umstaende || []) : [];
       var hasAlk = umst.indexOf('alkohol') !== -1 || umst.indexOf('alkohol-btm') !== -1;
       var hasBtm = umst.indexOf('btm') !== -1 || umst.indexOf('alkohol-btm') !== -1;
+      var hasVerletzt = umst.indexOf('leicht-verletzt') !== -1;
+      if (hasVerletzt) slides.push('slide-schilderungen-verletzung');
       if (hasAlk || hasBtm) slides.push('slide-schilderungen-auffaelligkeiten', 'slide-schilderungen-anweisungen');
       if (hasAlk) slides.push('slide-schilderungen-alkohol-test');
       if (hasBtm) slides.push('slide-schilderungen-btm-test');
@@ -388,6 +390,7 @@ document.getElementById('btnUoP2').onclick = nextSlide;
 document.getElementById('btnUoSpuren').onclick = nextSlide;
 document.getElementById('btnGenerateSchilderungen').onclick = nextSlide;
 document.getElementById('btnGenerateUmstaende').onclick = nextSlide;
+document.getElementById('btnGenerateVerletzung').onclick = nextSlide;
 document.getElementById('btnGenerateAuffaelligkeiten').onclick = nextSlide;
 document.getElementById('btnGenerateAnweisungen').onclick = nextSlide;
 document.getElementById('btnGenerateAlkoholTest').onclick = nextSlide;
@@ -765,6 +768,7 @@ function render() {
     renderSchilderungen();
   }
   if (slides[current] === 'slide-schilderungen-umstaende') renderSchilderungenUmstaende();
+  if (slides[current] === 'slide-schilderungen-verletzung') renderSchilderungenVerletzung();
   if (slides[current] === 'slide-schilderungen-auffaelligkeiten') renderSchilderungenAuffaelligkeiten();
   if (slides[current] === 'slide-schilderungen-anweisungen') renderSchilderungenAnweisungen();
   if (slides[current] === 'slide-schilderungen-alkohol-test') renderSchilderungenAlkoholTest();
@@ -2099,6 +2103,8 @@ function addSchilderung() {
     btmTestMethode: null,
     btmTestErgebnis: null,
     btmStoffgruppen: [],
+    verletzungText: '',
+    verletzungRtw: null,
     modus: '',
     abstelltDatum: document.getElementById('datum').value || '',
     abstelltUhrzeit: '',
@@ -2262,6 +2268,84 @@ function renderSchilderungenUmstaende() {
   });
 
   cont.appendChild(chips);
+}
+
+function buildVerletzungText(s) {
+  var rm = ROLLEN_MAP[s.rolle]; if (!rm) return '';
+  var dispCap = rm.disp.charAt(0).toUpperCase() + rm.disp.slice(1);
+  var text = s.verletzungText || '[Verletzungsbeschreibung]';
+  var akkus = rm.erLow === 'er' ? 'ihn' : 'sie';
+  if (s.verletzungRtw === 'kein-rtw') {
+    return dispCap + ' wies vor Ort ' + text + ' auf. ' + rm.er + ' gab an, keinen Rettungswagen zu benötigen und sich bei Bedarf selbstständig in ärztliche Behandlung begeben zu wollen. ' + rm.er + ' wurde darauf hingewiesen, dass die Möglichkeit besteht, sich ein ärztliches Zeugnis von den Verletzungen erstellen zu lassen.';
+  }
+  if (s.verletzungRtw === 'rtw') {
+    return dispCap + ' wies vor Ort ' + text + ' auf. Für ' + akkus + ' wurde ein Rettungswagen angefordert und ' + rm.erLow + ' der medizinischen Versorgung übergeben.';
+  }
+  return dispCap + ' wies vor Ort ' + text + ' auf.';
+}
+
+function renderSchilderungenVerletzung() {
+  var cont = document.getElementById('verletzungList');
+  if (!cont) return;
+  cont.innerHTML = '';
+
+  var s = schildCurrentIdx !== null ? schilderungen[schildCurrentIdx] : null;
+  if (!s) return;
+
+  var rm = ROLLEN_MAP[s.rolle];
+  var personLbl = document.createElement('div'); personLbl.className = 'input-label';
+  personLbl.style.marginBottom = '8px';
+  personLbl.textContent = (s.name || ('Person ' + (schildCurrentIdx + 1))) + (rm ? ' – ' + rm.disp : '');
+  cont.appendChild(personLbl);
+
+  // RTW chips
+  var rtwLabel = document.createElement('div'); rtwLabel.className = 'input-label';
+  rtwLabel.style.marginBottom = '6px'; rtwLabel.textContent = 'Rettungswagen';
+  cont.appendChild(rtwLabel);
+
+  var rtwChips = document.createElement('div'); rtwChips.className = 'suggestions';
+  [{ v: 'kein-rtw', label: 'Kein RTW benötigt' }, { v: 'rtw', label: 'RTW angefordert' }].forEach(function(opt) {
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.dataset.v = opt.v; btn.textContent = opt.label;
+    btn.className = 'btn-suggestion' + (s.verletzungRtw === opt.v ? ' active' : '');
+    rtwChips.appendChild(btn);
+  });
+
+  var prevBox = document.createElement('div');
+  prevBox.className = 'verletzung-preview schild-preview-box';
+  prevBox.textContent = buildVerletzungText(s);
+
+  rtwChips.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
+    s.verletzungRtw = btn.dataset.v;
+    rtwChips.querySelectorAll('.btn-suggestion').forEach(function(b) {
+      b.classList.toggle('active', b.dataset.v === s.verletzungRtw);
+    });
+    prevBox.textContent = buildVerletzungText(s);
+  });
+  cont.appendChild(rtwChips);
+
+  // Injury text input
+  var injLabel = document.createElement('div'); injLabel.className = 'input-label';
+  injLabel.style.marginTop = '14px'; injLabel.style.marginBottom = '4px';
+  injLabel.textContent = 'Verletzungen';
+  cont.appendChild(injLabel);
+
+  var injHint = document.createElement('div');
+  injHint.style.cssText = 'font-size:12px;color:var(--c-muted);margin-bottom:6px;';
+  injHint.textContent = 'z. B. eine Rissquetschwunde an der Stirn';
+  cont.appendChild(injHint);
+
+  var injInp = document.createElement('input');
+  injInp.type = 'text'; injInp.className = 'field-input';
+  injInp.placeholder = 'Verletzungsbeschreibung…';
+  injInp.value = s.verletzungText || '';
+  injInp.oninput = function() { s.verletzungText = this.value; prevBox.textContent = buildVerletzungText(s); };
+  cont.appendChild(injInp);
+
+  // Live preview
+  prevBox.style.cssText = 'margin-top:14px;font-size:13px;color:var(--c-text);background:var(--c-surface,#f5f5f7);border-radius:10px;padding:12px 14px;white-space:pre-wrap;line-height:1.5;';
+  cont.appendChild(prevBox);
 }
 
 function renderSchilderungenOverview() {
@@ -2547,8 +2631,13 @@ function generateSchilderungenText() {
 
     var dispCap = rm.disp.charAt(0).toUpperCase() + rm.disp.slice(1);
 
-    var auffLabels = getAuffaelligkeitenLabels(AUFFAELLIGKEITEN, s.auffaelligkeiten || []).concat(s.auffCustom || []);
     var umst2 = s.umstaende || [];
+    if (umst2.indexOf('leicht-verletzt') !== -1) {
+      var verlText = buildVerletzungText(s);
+      if (verlText) parts.push(verlText);
+    }
+
+    var auffLabels = getAuffaelligkeitenLabels(AUFFAELLIGKEITEN, s.auffaelligkeiten || []).concat(s.auffCustom || []);
     var istAlk = umst2.indexOf('alkohol') !== -1 || umst2.indexOf('alkohol-btm') !== -1;
     var istBtm = umst2.indexOf('btm') !== -1 || umst2.indexOf('alkohol-btm') !== -1;
 
