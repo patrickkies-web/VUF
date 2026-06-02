@@ -309,6 +309,8 @@ var STOFFGRUPPEN = [
 var ROLLEN_MAP = {
   zeuge:  { disp: 'der Zeuge',               dativ: 'dem Zeugen',               btyp: 'zeuge', er: 'Er',  erLow: 'er',  sein: 'sein', seiner: 'seiner' },
   zeugin: { disp: 'die Zeugin',              dativ: 'der Zeugin',               btyp: 'zeuge', er: 'Sie', erLow: 'sie', sein: 'ihr',  seiner: 'ihrer'  },
+  ub01m:  { disp: 'der Unfallbeteiligte 01', dativ: 'dem Unfallbeteiligten 01', btyp: 'zeuge', er: 'Er',  erLow: 'er',  sein: 'sein', seiner: 'seiner' },
+  ub01w:  { disp: 'die Unfallbeteiligte 01', dativ: 'der Unfallbeteiligten 01', btyp: 'zeuge', er: 'Sie', erLow: 'sie', sein: 'ihr',  seiner: 'ihrer'  },
   ub02m:  { disp: 'der Unfallbeteiligte 02', dativ: 'dem Unfallbeteiligten 02', btyp: 'zeuge', er: 'Er',  erLow: 'er',  sein: 'sein', seiner: 'seiner' },
   ub02w:  { disp: 'die Unfallbeteiligte 02', dativ: 'der Unfallbeteiligten 02', btyp: 'zeuge', er: 'Sie', erLow: 'sie', sein: 'ihr',  seiner: 'ihrer'  },
   beschm: { disp: 'der Beschuldigte',        dativ: 'dem Beschuldigten',        btyp: 'besch', er: 'Er',  erLow: 'er',  sein: 'sein', seiner: 'seiner' },
@@ -2134,6 +2136,7 @@ function renderSchilderungen() {
   rolleWrap.appendChild(rolleLabel);
   var rolleChips = document.createElement('div'); rolleChips.className = 'suggestions';
   [{ v:'zeuge',  label:'Zeuge' },{ v:'zeugin', label:'Zeugin' },
+   { v:'ub01m',  label:'UB 01 (m)' },{ v:'ub01w',  label:'UB 01 (w)' },
    { v:'ub02m',  label:'UB 02 (m)' },{ v:'ub02w',  label:'UB 02 (w)' },
    { v:'beschm', label:'Beschuldigter' },{ v:'beschw', label:'Beschuldigte' }
   ].forEach(function(opt) {
