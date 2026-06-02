@@ -3684,17 +3684,7 @@ function renderHaftbefehl() {
   // Zielort
   cont.appendChild(field('Zielort nach Festnahme', textInp('z.B. ZPG Gütersloh', p.zielort, function(v) { p.zielort = v; })));
 
-  // Live-Vorschau
-  var prevBox = document.createElement('div');
-  prevBox.className = 'schild-preview-box'; prevBox.style.marginTop = '20px';
-  var prevLbl = document.createElement('div');
-  prevLbl.className = 'input-label'; prevLbl.style.marginBottom = '6px'; prevLbl.textContent = 'Vorschau';
-  var prevText = document.createElement('div'); prevText.className = 'verletzung-preview';
-  prevBox.appendChild(prevLbl); prevBox.appendChild(prevText);
-  cont.appendChild(prevBox);
-
-  function refreshPreview() { prevText.textContent = generateHaftbefehlText(); }
-  refreshPreview();
+  function refreshPreview() {}
 }
 
 function generateResult() {
