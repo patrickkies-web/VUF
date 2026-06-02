@@ -127,7 +127,7 @@ var SECTION_DEFS = {
     getSlides: function() { return ['slide-massnahmen']; }
   },
   psychkg: {
-    label: 'Maßnahmen nach PsychKG', desc: 'SPD, ärztliches Zeugnis & zwangsweise Unterbringung', icon: '🏥',
+    label: 'Maßnahmen nach PsychKG', desc: 'Sozialpsychiatrischer Dienst, ärztliches Zeugnis & zwangsweise Unterbringung', icon: '🏥',
     getSlides: function() { return ['slide-psychkg', 'slide-psychkg-spd', 'slide-psychkg-transport']; }
   },
   haftbefehl: {
@@ -3263,9 +3263,16 @@ function generatePsychKGText() {
   var mitName   = p.mitName  || '[Name]';
   var mitLabel  = mitAnrede + ' ' + mitName + ' (' + mitRolle + (org ? ' ' + org.art + ' ' + org.gen : '') + ')';
   var anlass    = p.anlass   || '[Gefährdungssituation]';
-  var arztAnrede = p.arztGender === 'w' ? 'die Ärztin' : 'den Arzt';
-  var arztDurch  = p.arztGender === 'w' ? 'die Ärztin' : 'den Arzt';
-  var arztName  = p.arztName  || '[Name SPD-Fachkraft]';
+  var ARZT_FORMS = {
+    m:  { anrede: 'den Arzt',                durch: 'den Arzt',                nameLbl: 'des Arztes'                },
+    w:  { anrede: 'die Ärztin',              durch: 'die Ärztin',              nameLbl: 'der Ärztin'                },
+    bm: { anrede: 'den Bereitschaftsarzt',   durch: 'den Bereitschaftsarzt',   nameLbl: 'des Bereitschaftsarztes'   },
+    bw: { anrede: 'die Bereitschaftsärztin', durch: 'die Bereitschaftsärztin', nameLbl: 'der Bereitschaftsärztin'   }
+  };
+  var af = ARZT_FORMS[p.arztGender] || ARZT_FORMS.m;
+  var arztAnrede = af.anrede;
+  var arztDurch  = af.durch;
+  var arztName  = p.arztName  || '[Name Sozialpsychiatrischer Dienst]';
   var transport = p.transport || '[KTW/RTW]';
 
   var lines = [];
@@ -3338,33 +3345,24 @@ function renderPsychKG() {
   var gefLbl = document.createElement('div');
   gefLbl.className = 'input-label'; gefLbl.style.margin = '14px 0 6px';
   gefLbl.textContent = 'Gefährdungssituation';
-  var gefChips = document.createElement('div'); gefChips.className = 'suggestions'; gefChips.style.marginBottom = '8px';
-  var gefInp = document.createElement('input');
-  gefInp.type = 'text'; gefInp.className = 'field-input';
-  gefInp.placeholder = 'z.B. einer akuten Selbstgefährdung';
-  gefInp.value = p.anlass;
+  var gefChips = document.createElement('div'); gefChips.className = 'suggestions';
   [
-    { v: 'Verletzung der eigenen Person',                    label: 'Verletzung eigene Person'  },
-    { v: 'Verletzung von Außenstehenden',                    label: 'Verletzung Außenstehender' },
+    { v: 'Verletzung der eigenen Person',                        label: 'Verletzung eigene Person'  },
+    { v: 'Verletzung von Außenstehenden',                        label: 'Verletzung Außenstehender' },
     { v: 'Verletzung der eigenen Person und von Außenstehenden', label: 'Eigen- & Fremdgefährdung'  }
   ].forEach(function(o) {
     var btn = document.createElement('button');
     btn.type = 'button'; btn.textContent = o.label;
     btn.className = 'btn-suggestion' + (p.anlass === o.v ? ' active' : '');
     btn.addEventListener('click', function() {
-      p.anlass = o.v; gefInp.value = o.v;
+      p.anlass = o.v;
       gefChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
       btn.classList.add('active');
     });
     gefChips.appendChild(btn);
   });
-  gefInp.addEventListener('input', function() {
-    p.anlass = this.value;
-    gefChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
-  });
   cont.appendChild(gefLbl);
   cont.appendChild(gefChips);
-  cont.appendChild(gefInp);
 }
 
 // ── Slide 2: Hinzugezogene Stelle + SPD-Arzt ──
@@ -3409,8 +3407,7 @@ function renderPsychKGSpd() {
   cont.appendChild(chipRow(
     [
       { v: 'ordnungsamt', label: 'Ordnungsamt' },
-      { v: 'feuerwehr',   label: 'Feuerwehr'   },
-      { v: 'spd',         label: 'SPD direkt'  }
+      { v: 'feuerwehr',   label: 'Feuerwehr'   }
     ],
     function() { return p.orgTyp; },
     function(v) { p.orgTyp = v; }
@@ -3432,16 +3429,24 @@ function renderPsychKGSpd() {
   var hr = document.createElement('hr'); hr.className = 'psychkg-divider';
   cont.appendChild(hr);
 
-  // ── SPD-Arzt/-Ärztin ───────────────────────────────────
-  cont.appendChild(lbl('Ärztliche Fachkraft (SPD)'));
+  // ── Ärztliche Fachkraft (Sozialpsychiatrischer Dienst) ────
+  cont.appendChild(lbl('Ärztliche Fachkraft (Sozialpsychiatrischer Dienst)'));
+  var ARZT_FORMS_UI = {
+    m:  'des Arztes', w: 'der Ärztin', bm: 'des Bereitschaftsarztes', bw: 'der Bereitschaftsärztin'
+  };
   var arztRow = chipRow(
-    [{ v: 'm', label: 'Arzt (m)' }, { v: 'w', label: 'Ärztin (f)' }],
+    [
+      { v: 'm',  label: 'Arzt (m)'               },
+      { v: 'w',  label: 'Ärztin (f)'              },
+      { v: 'bm', label: 'Bereitschaftsarzt (m)'   },
+      { v: 'bw', label: 'Bereitschaftsärztin (f)' }
+    ],
     function() { return p.arztGender; },
-    function(v) { p.arztGender = v; arztNameLbl.textContent = 'Name ' + (v === 'w' ? 'der Ärztin' : 'des Arztes'); }
+    function(v) { p.arztGender = v; arztNameLbl.textContent = 'Name ' + (ARZT_FORMS_UI[v] || 'des Arztes'); }
   );
   cont.appendChild(arztRow);
 
-  var arztNameLbl = lbl('Name ' + (p.arztGender === 'w' ? 'der Ärztin' : 'des Arztes'), '4px');
+  var arztNameLbl = lbl('Name ' + (ARZT_FORMS_UI[p.arztGender] || 'des Arztes'), '4px');
   cont.appendChild(arztNameLbl);
   cont.appendChild(bigInp('z.B. Dr. Mustermann', p.arztName, function(v) { p.arztName = v; }));
 }
