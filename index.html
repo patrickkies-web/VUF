@@ -526,12 +526,7 @@
       <div class="question-number">Schilderungen</div>
       <div class="question-text">Wer hat sich<br><strong>ge&auml;u&szlig;ert?</strong></div>
       <div id="schilderungList" style="display:flex;flex-direction:column;gap:12px"></div>
-      <button class="btn-add" id="btnAddSchilderung">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M12 5v14M5 12h14"/>
-        </svg>
-        Person hinzuf&uuml;gen
-      </button>
+      <div class="schild-hint">Weitere Personen k&ouml;nnen nach Abschluss erg&auml;nzt werden.</div>
       <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
         <button class="btn-next" id="btnGenerateSchilderungen">Weiter
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -547,7 +542,27 @@
       <div class="question-text">Besondere<br><strong>Umst&auml;nde?</strong></div>
       <div id="umstaendeList"></div>
       <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;margin-top:8px">
-        <button class="btn-next" id="btnGenerateUmstaende">Bericht erstellen
+        <button class="btn-next" id="btnGenerateUmstaende">Weiter
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Schilderungen: Übersicht -->
+    <div class="slide" id="slide-schilderungen-overview">
+      <div class="question-number">Schilderungen</div>
+      <div class="question-text">Erfasste<br><strong>Personen</strong></div>
+      <div id="schilderungenOverviewList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px"></div>
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
+        <button class="btn-add" id="btnAddWeiterePerson">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          Weitere Person hinzuf&uuml;gen
+        </button>
+        <button class="btn-next" id="btnErstelleBericht">Bericht erstellen
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path d="M5 12h14M12 5l7 7-7 7"/>
           </svg>

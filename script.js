@@ -107,7 +107,7 @@ var SECTION_DEFS = {
       if (selectedSections.indexOf('allgemeines') === -1) {
         slides.push('slide-0'); // Besatzung für Beamten-Auswahl erforderlich
       }
-      slides.push('slide-schilderungen', 'slide-schilderungen-umstaende');
+      slides.push('slide-schilderungen', 'slide-schilderungen-umstaende', 'slide-schilderungen-overview');
       return slides;
     }
   }
@@ -119,11 +119,11 @@ var LEITFAEDEN = {
 };
 
 var UMSTAENDE_DEFS = [
-  { v: 'kein-deutsch',    label: 'Nur gebrochen Deutsch' },
-  { v: 'alkohol',         label: 'Alkohol' },
-  { v: 'btm',             label: 'Betäubungsmittel' },
-  { v: 'alkohol-btm',    label: 'Alkohol / BtM' },
-  { v: 'leicht-verletzt', label: 'Leicht verletzt, kein RTW' }
+  { v: 'kein-deutsch',    label: 'Sprach nur gebrochen Deutsch' },
+  { v: 'alkohol',         label: 'Stand unter Alkoholeinfluss' },
+  { v: 'btm',             label: 'Stand unter Betäubungsmitteleinfluss' },
+  { v: 'alkohol-btm',     label: 'Stand unter Alkohol- und BtM-Einfluss' },
+  { v: 'leicht-verletzt', label: 'War leicht verletzt, benötigte keinen RTW' }
 ];
 
 var ROLLEN_MAP = {
@@ -137,6 +137,7 @@ var ROLLEN_MAP = {
 
 var schilderungen = [];
 var schildCounter = 0;
+var schildCurrentIdx = null;
 
 function getActiveSlides() {
   var slides = [];
@@ -203,9 +204,10 @@ document.getElementById('btnUoS5').onclick = nextSlide;
 document.getElementById('btnUoP1').onclick = nextSlide;
 document.getElementById('btnUoP2').onclick = nextSlide;
 document.getElementById('btnUoSpuren').onclick = nextSlide;
-document.getElementById('btnAddSchilderung').onclick = addSchilderung;
 document.getElementById('btnGenerateSchilderungen').onclick = nextSlide;
 document.getElementById('btnGenerateUmstaende').onclick = nextSlide;
+document.getElementById('btnAddWeiterePerson').onclick = function() { addSchilderung(); jumpToSlide('slide-schilderungen'); };
+document.getElementById('btnErstelleBericht').onclick = generateResult;
 document.getElementById('btnBack').onclick = prevSlide;
 document.getElementById('btnCopy').onclick = copyText;
 document.getElementById('btnReset').onclick = resetAll;
@@ -336,7 +338,6 @@ document.getElementById('btnPresetParkplatz').onclick = function() {
 };
 
 addBesatzung();
-addSchilderung();
 renderLibrary();
 render();
 ladeGueterslohStrassen();
@@ -561,8 +562,12 @@ function render() {
     renderFzDetail(parseInt(slides[current].replace('slide-fz-detail-', ''), 10));
   }
   if (slides[current] === 'slide-fz-abschluss') renderFzAbschluss();
-  if (slides[current] === 'slide-schilderungen') renderSchilderungen();
+  if (slides[current] === 'slide-schilderungen') {
+    if (schilderungen.length === 0) addSchilderung();
+    renderSchilderungen();
+  }
   if (slides[current] === 'slide-schilderungen-umstaende') renderSchilderungenUmstaende();
+  if (slides[current] === 'slide-schilderungen-overview') renderSchilderungenOverview();
   var activeSlideEl = document.getElementById(slides[current]);
   if (activeSlideEl) injectOrUpdatePreview(activeSlideEl, slides[current]);
 }
@@ -1891,134 +1896,118 @@ function addSchilderung() {
     zwischenzeitText: '',
     freitext: ''
   });
-  renderSchilderungen();
-  // Focus the name input of the newly added card
-  requestAnimationFrame(function() {
-    var inputs = document.querySelectorAll('#schilderungList .schild-name-inp');
-    if (inputs.length) inputs[inputs.length - 1].focus();
-  });
-}
-
-function removeSchilderung(id) {
-  schilderungen = schilderungen.filter(function (s) { return s.id !== id; });
-  renderSchilderungen();
+  schildCurrentIdx = schilderungen.length - 1;
 }
 
 function renderSchilderungen() {
   var list = document.getElementById('schilderungList');
   if (!list) return;
   list.innerHTML = '';
+  if (schildCurrentIdx === null || !schilderungen[schildCurrentIdx]) return;
+  var s = schilderungen[schildCurrentIdx];
   var officers = getBesatzungLabels();
 
-  schilderungen.forEach(function(s, idx) {
-    var card = document.createElement('div');
-    card.className = 'schild-card';
+  var card = document.createElement('div');
+  card.className = 'schild-card';
 
-    // Header
-    var hdr = document.createElement('div'); hdr.className = 'schild-hdr';
-    var lbl = document.createElement('div');
-    lbl.className = 'input-label schild-person-lbl';
-    lbl.textContent = 'Person ' + (idx + 1);
-    var rb = document.createElement('button');
-    rb.className = 'btn-remove'; rb.type = 'button'; rb.innerHTML = '&times;';
-    rb.onclick = (function(sid) { return function() { removeSchilderung(sid); }; })(s.id);
-    hdr.appendChild(lbl); hdr.appendChild(rb);
-    card.appendChild(hdr);
+  // Name
+  var nameInp = document.createElement('input');
+  nameInp.type = 'text'; nameInp.className = 'field-input schild-name-inp';
+  nameInp.placeholder = 'Name der Person (optional)'; nameInp.value = s.name || '';
+  nameInp.oninput = function() { s.name = this.value; };
+  card.appendChild(nameInp);
 
-    // Name
-    var nameInp = document.createElement('input');
-    nameInp.type = 'text'; nameInp.className = 'field-input schild-name-inp';
-    nameInp.placeholder = 'Name der Person'; nameInp.value = s.name || '';
-    nameInp.oninput = function() { s.name = this.value; };
-    card.appendChild(nameInp);
+  // Rolle
+  var rolleWrap = document.createElement('div'); rolleWrap.style.marginTop = '10px';
+  var rolleLabel = document.createElement('div');
+  rolleLabel.className = 'input-label'; rolleLabel.textContent = 'Rolle';
+  rolleWrap.appendChild(rolleLabel);
+  var rolleChips = document.createElement('div'); rolleChips.className = 'suggestions';
+  [{ v:'zeuge',  label:'Zeuge' },{ v:'zeugin', label:'Zeugin' },
+   { v:'ub02m',  label:'UB 02 (m)' },{ v:'ub02w',  label:'UB 02 (w)' },
+   { v:'beschm', label:'Beschuldigter' },{ v:'beschw', label:'Beschuldigte' }
+  ].forEach(function(opt) {
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.dataset.v = opt.v; btn.textContent = opt.label;
+    btn.className = 'btn-suggestion' + (s.rolle === opt.v ? ' active' : '');
+    rolleChips.appendChild(btn);
+  });
+  rolleWrap.appendChild(rolleChips);
+  card.appendChild(rolleWrap);
 
-    // Rolle
-    var rolleWrap = document.createElement('div'); rolleWrap.style.marginTop = '10px';
-    var rolleLabel = document.createElement('div');
-    rolleLabel.className = 'input-label'; rolleLabel.textContent = 'Rolle';
-    rolleWrap.appendChild(rolleLabel);
-    var rolleChips = document.createElement('div'); rolleChips.className = 'suggestions';
-    [{ v:'zeuge',  label:'Zeuge' },{ v:'zeugin', label:'Zeugin' },
-     { v:'ub02m',  label:'UB 02 (m)' },{ v:'ub02w',  label:'UB 02 (w)' },
-     { v:'beschm', label:'Beschuldigter' },{ v:'beschw', label:'Beschuldigte' }
-    ].forEach(function(opt) {
-      var btn = document.createElement('button');
-      btn.type = 'button'; btn.dataset.v = opt.v; btn.textContent = opt.label;
-      btn.className = 'btn-suggestion' + (s.rolle === opt.v ? ' active' : '');
-      rolleChips.appendChild(btn);
-    });
-    rolleWrap.appendChild(rolleChips);
-    card.appendChild(rolleWrap);
-
-    // Belehrender (pre-rendered, hidden if no rolle)
-    var belWrap = document.createElement('div');
-    belWrap.style.marginTop = '10px'; belWrap.style.display = s.rolle ? '' : 'none';
-    var belLabel = document.createElement('div');
-    belLabel.className = 'input-label'; belLabel.textContent = 'Belehrung durch';
-    belWrap.appendChild(belLabel);
-    var belChips = document.createElement('div'); belChips.className = 'suggestions';
-    if (!officers.length) {
-      var note = document.createElement('div'); note.className = 'schild-note';
-      note.innerHTML = '<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg> Besatzung auf Seite 1 eintragen.';
-      belChips.appendChild(note);
-    } else {
-      officers.forEach(function(name) {
-        var btn = document.createElement('button');
-        btn.type = 'button'; btn.dataset.v = name; btn.textContent = name;
-        btn.className = 'btn-suggestion' + (s.belehrender === name ? ' active' : '');
-        belChips.appendChild(btn);
-      });
-    }
-    belWrap.appendChild(belChips);
-    card.appendChild(belWrap);
-
-    // Gegenüber (pre-rendered, hidden if no belehrender)
-    var gegWrap = document.createElement('div');
-    gegWrap.style.marginTop = '10px'; gegWrap.style.display = s.belehrender ? '' : 'none';
-    var gegLabel = document.createElement('div');
-    gegLabel.className = 'input-label'; gegLabel.textContent = 'Geäußert gegenüber';
-    gegWrap.appendChild(gegLabel);
-    var gegChips = document.createElement('div'); gegChips.className = 'suggestions';
+  // Belehrender (pre-rendered, hidden if no rolle)
+  var belWrap = document.createElement('div');
+  belWrap.style.marginTop = '10px'; belWrap.style.display = s.rolle ? '' : 'none';
+  var belLabel = document.createElement('div');
+  belLabel.className = 'input-label'; belLabel.textContent = 'Belehrung durch';
+  belWrap.appendChild(belLabel);
+  var belChips = document.createElement('div'); belChips.className = 'suggestions';
+  if (!officers.length) {
+    var note = document.createElement('div'); note.className = 'schild-note';
+    note.innerHTML = '<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg> Besatzung auf Seite 1 eintragen.';
+    belChips.appendChild(note);
+  } else {
     officers.forEach(function(name) {
       var btn = document.createElement('button');
       btn.type = 'button'; btn.dataset.v = name; btn.textContent = name;
-      btn.className = 'btn-suggestion' + (s.gegenueber === name ? ' active' : '');
-      gegChips.appendChild(btn);
+      btn.className = 'btn-suggestion' + (s.belehrender === name ? ' active' : '');
+      belChips.appendChild(btn);
     });
-    gegWrap.appendChild(gegChips);
-    card.appendChild(gegWrap);
+  }
+  belWrap.appendChild(belChips);
+  card.appendChild(belWrap);
 
-    // Wire handlers — only toggle classes, no re-render
-    rolleChips.addEventListener('click', function(e) {
-      var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
-      s.rolle = btn.dataset.v;
-      rolleChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
-      btn.classList.add('active');
-      belWrap.style.display = '';
-    });
+  // Gegenüber (pre-rendered, hidden if no belehrender)
+  var gegWrap = document.createElement('div');
+  gegWrap.style.marginTop = '10px'; gegWrap.style.display = s.belehrender ? '' : 'none';
+  var gegLabel = document.createElement('div');
+  gegLabel.className = 'input-label'; gegLabel.textContent = 'Geäußert gegenüber';
+  gegWrap.appendChild(gegLabel);
+  var gegChips = document.createElement('div'); gegChips.className = 'suggestions';
+  officers.forEach(function(name) {
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.dataset.v = name; btn.textContent = name;
+    btn.className = 'btn-suggestion' + (s.gegenueber === name ? ' active' : '');
+    gegChips.appendChild(btn);
+  });
+  gegWrap.appendChild(gegChips);
+  card.appendChild(gegWrap);
 
-    belChips.addEventListener('click', function(e) {
-      var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
-      s.belehrender = btn.dataset.v;
-      belChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
-      btn.classList.add('active');
-      if (!s.gegenueber) {
-        s.gegenueber = btn.dataset.v;
-        gegChips.querySelectorAll('.btn-suggestion').forEach(function(b) {
-          b.classList.toggle('active', b.dataset.v === s.gegenueber);
-        });
-      }
-      gegWrap.style.display = '';
-    });
+  // Wire handlers — only toggle classes, no re-render
+  rolleChips.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
+    s.rolle = btn.dataset.v;
+    rolleChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    belWrap.style.display = '';
+  });
 
-    gegChips.addEventListener('click', function(e) {
-      var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
+  belChips.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
+    s.belehrender = btn.dataset.v;
+    belChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    if (!s.gegenueber) {
       s.gegenueber = btn.dataset.v;
-      gegChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
-      btn.classList.add('active');
-    });
+      gegChips.querySelectorAll('.btn-suggestion').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.v === s.gegenueber);
+      });
+    }
+    gegWrap.style.display = '';
+  });
 
-    list.appendChild(card);
+  gegChips.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
+    s.gegenueber = btn.dataset.v;
+    gegChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+  });
+
+  list.appendChild(card);
+
+  requestAnimationFrame(function() {
+    var inp = list.querySelector('.schild-name-inp');
+    if (inp && !inp.value) inp.focus();
   });
 }
 
@@ -2027,48 +2016,67 @@ function renderSchilderungenUmstaende() {
   if (!cont) return;
   cont.innerHTML = '';
 
-  if (!schilderungen.length) {
+  if (schildCurrentIdx === null || !schilderungen[schildCurrentIdx]) {
     var note = document.createElement('div');
     note.className = 'schild-note'; note.style.marginBottom = '12px';
-    note.textContent = 'Keine Personen eingetragen.';
+    note.textContent = 'Keine Person eingetragen.';
     cont.appendChild(note); return;
   }
 
+  var s = schilderungen[schildCurrentIdx];
+  var rm = ROLLEN_MAP[s.rolle];
+  var personLbl = document.createElement('div'); personLbl.className = 'input-label';
+  personLbl.style.marginBottom = '8px';
+  personLbl.textContent = (s.name || ('Person ' + (schildCurrentIdx + 1))) + (rm ? ' – ' + rm.disp : '');
+  cont.appendChild(personLbl);
+
+  var chips = document.createElement('div'); chips.className = 'suggestions umst-chips';
+  UMSTAENDE_DEFS.forEach(function(def) {
+    var isOn = s.umstaende && s.umstaende.indexOf(def.v) !== -1;
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.dataset.v = def.v; btn.textContent = def.label;
+    btn.className = 'btn-suggestion' + (isOn ? ' active' : '');
+    chips.appendChild(btn);
+  });
+
+  chips.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
+    var v = btn.dataset.v;
+    if (!s.umstaende) s.umstaende = [];
+    var i = s.umstaende.indexOf(v);
+    if (i !== -1) { s.umstaende.splice(i, 1); btn.classList.remove('active'); }
+    else          { s.umstaende.push(v);       btn.classList.add('active'); }
+  });
+
+  cont.appendChild(chips);
+}
+
+function renderSchilderungenOverview() {
+  var cont = document.getElementById('schilderungenOverviewList');
+  if (!cont) return;
+  cont.innerHTML = '';
+
   schilderungen.forEach(function(s, idx) {
-    if (schilderungen.length > 1) {
-      var lbl = document.createElement('div'); lbl.className = 'input-label';
-      lbl.style.marginBottom = '8px';
-      var rm = ROLLEN_MAP[s.rolle];
-      lbl.textContent = (s.name ? s.name : 'Person ' + (idx + 1)) + (rm ? ' – ' + rm.disp : '');
-      cont.appendChild(lbl);
+    var rm = ROLLEN_MAP[s.rolle];
+    var isComplete = !!(s.rolle && s.belehrender);
+    var card = document.createElement('div');
+    card.className = 'schild-overview-card' + (isComplete ? ' complete' : '');
+
+    var nameEl = document.createElement('div'); nameEl.className = 'schild-ov-name';
+    nameEl.textContent = s.name || ('Person ' + (idx + 1));
+    card.appendChild(nameEl);
+
+    var rolleEl = document.createElement('div'); rolleEl.className = 'schild-ov-rolle';
+    rolleEl.textContent = rm ? rm.disp.replace(/^(der|die) /, '') : 'Keine Rolle gewählt';
+    card.appendChild(rolleEl);
+
+    if (isComplete) {
+      var badge = document.createElement('div'); badge.className = 'schild-ov-badge';
+      badge.textContent = '✓ Erfasst';
+      card.appendChild(badge);
     }
 
-    var chips = document.createElement('div'); chips.className = 'suggestions umst-chips';
-    UMSTAENDE_DEFS.forEach(function(def) {
-      var isOn = s.umstaende && s.umstaende.indexOf(def.v) !== -1;
-      var btn = document.createElement('button');
-      btn.type = 'button'; btn.dataset.v = def.v; btn.textContent = def.label;
-      btn.className = 'btn-suggestion' + (isOn ? ' active' : '');
-      chips.appendChild(btn);
-    });
-
-    // Multi-select: toggle class directly, no re-render
-    chips.addEventListener('click', function(e) {
-      var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
-      var v = btn.dataset.v;
-      if (!s.umstaende) s.umstaende = [];
-      var i = s.umstaende.indexOf(v);
-      if (i !== -1) { s.umstaende.splice(i, 1); btn.classList.remove('active'); }
-      else          { s.umstaende.push(v);       btn.classList.add('active'); }
-    });
-
-    cont.appendChild(chips);
-
-    if (idx < schilderungen.length - 1) {
-      var div = document.createElement('div');
-      div.style.cssText = 'border-top:1px solid var(--border);margin:16px 0 12px;';
-      cont.appendChild(div);
-    }
+    cont.appendChild(card);
   });
 }
 
@@ -2380,8 +2388,8 @@ function resetAll() {
   fzSelectedNum = null;
   schilderungen = [];
   schildCounter = 0;
+  schildCurrentIdx = null;
   addBesatzung();
-  addSchilderung();
   // Show library screen again
   var startEl = document.getElementById('screen-start');
   startEl.style.display = '';

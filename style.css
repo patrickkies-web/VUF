@@ -1311,6 +1311,50 @@ body {
   gap: 6px;
 }
 
+.schild-hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 10px 0 14px;
+  line-height: 1.5;
+}
+
+.schild-overview-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.schild-overview-card.complete {
+  border-color: #16a34a;
+  background: #f0fdf4;
+}
+
+.schild-ov-name {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text);
+  flex: 1;
+}
+
+.schild-ov-rolle {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.schild-ov-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #16a34a;
+  background: #dcfce7;
+  border-radius: 20px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
 /* ── Vorschau-Streifen ────────────────────────────────────── */
 .preview-strip {
   border-top: 1px solid var(--border);
