@@ -139,7 +139,7 @@ var SECTION_DEFS = {
     getSlides: function() {
       var slides = [];
       if (selectedSections.indexOf('allgemeines') === -1) slides.push('slide-0');
-      slides.push('slide-anzeige-intro', 'slide-anzeige-schild', 'slide-anzeige-angaben', 'slide-anzeige-overview');
+      slides.push('slide-anzeige-intro', 'slide-anzeige-was', 'slide-anzeige-schild', 'slide-anzeige-angaben', 'slide-anzeige-overview');
       return slides;
     }
   }
@@ -376,7 +376,7 @@ var haftbefehlData = {
   kontrolleUhrzeit: '',
   zielort: 'ZPG Gütersloh'
 };
-var anzeigeIntro = { datum: '', uhrzeit: '', wer: '', was: '' };
+var anzeigeIntro = { datum: '', uhrzeit: '', name: '', rolle: '', was: '' };
 var anzeigePersonen = [];
 var anzeigeCounter = 0;
 var anzeigeCurrentIdx = null;
@@ -475,6 +475,7 @@ document.getElementById('auffCustomInput').addEventListener('keydown', function(
 document.getElementById('btnAddWeiterePerson').onclick = function() { addSchilderung(); jumpToSlide('slide-schilderungen'); };
 document.getElementById('btnErstelleBericht').onclick = nextSlide;
 document.getElementById('btnAnzeigeIntroWeiter').onclick = nextSlide;
+document.getElementById('btnAnzeigeWasWeiter').onclick = nextSlide;
 document.getElementById('btnAnzeigeSchlWeiter').onclick = nextSlide;
 document.getElementById('btnAnzeigeAngabenWeiter').onclick = nextSlide;
 document.getElementById('btnAnzeigeWeiterePerson').onclick = function() { addAnzeigePerson(); jumpToSlide('slide-anzeige-schild'); };
@@ -893,6 +894,7 @@ function render() {
   if (slides[current] === 'slide-psychkg-transport') renderPsychKGTransport();
   if (slides[current] === 'slide-haftbefehl') renderHaftbefehl();
   if (slides[current] === 'slide-anzeige-intro') renderAnzeigeIntro();
+  if (slides[current] === 'slide-anzeige-was') renderAnzeigeWas();
   if (slides[current] === 'slide-anzeige-schild') {
     if (anzeigePersonen.length === 0) addAnzeigePerson();
     renderAnzeigeSchild();
@@ -3722,8 +3724,17 @@ function renderHaftbefehl() {
 
 function addAnzeigePerson() {
   anzeigeCounter++;
-  anzeigePersonen.push({ id: anzeigeCounter, name: '', rolle: '', belehrender: '', gegenueber: '', freitext: '' });
+  anzeigePersonen.push({ id: anzeigeCounter, name: '', rolle: '', zvr: false, belehrender: '', gegenueber: '', freitext: '' });
   anzeigeCurrentIdx = anzeigePersonen.length - 1;
+}
+
+function buildAnzeigeEinleitungSatz(was) {
+  var d = anzeigeIntro;
+  var datum = d.datum ? formatDateDE(d.datum) : '[Datum]';
+  var uhr   = d.uhrzeit || '[Uhrzeit]';
+  var rm    = ROLLEN_MAP[d.rolle];
+  var werStr = rm ? (rm.disp + (d.name ? ' ' + d.name : '')) : (d.name || '[erschienene Person]');
+  return 'Am ' + datum + ', um ' + uhr + ' Uhr, erschien ' + werStr + ' auf der Polizeiwache Gütersloh und zeigte folgenden Sachverhalt an: ' + (was || '[Sachverhalt]') + '.';
 }
 
 function renderAnzeigeIntro() {
@@ -3732,8 +3743,8 @@ function renderAnzeigeIntro() {
   cont.innerHTML = '';
   var d = anzeigeIntro;
 
-  function row(label, el, mb) {
-    var wrap = document.createElement('div'); wrap.style.marginBottom = mb || '14px';
+  function row(label, el) {
+    var wrap = document.createElement('div'); wrap.style.marginBottom = '14px';
     var lbl = document.createElement('div'); lbl.className = 'input-label'; lbl.textContent = label;
     wrap.appendChild(lbl); wrap.appendChild(el); cont.appendChild(wrap);
   }
@@ -3748,17 +3759,56 @@ function renderAnzeigeIntro() {
   uhrInp.oninput = function() { d.uhrzeit = this.value; };
   row('Uhrzeit', uhrInp);
 
-  var werInp = document.createElement('input');
-  werInp.type = 'text'; werInp.className = 'field-input'; werInp.value = d.wer || '';
-  werInp.placeholder = 'z.B. der Geschädigte Max Mustermann';
-  werInp.oninput = function() { d.wer = this.value; };
-  row('Erschienene Person', werInp);
+  var nameInp = document.createElement('input');
+  nameInp.type = 'text'; nameInp.className = 'field-input'; nameInp.value = d.name || '';
+  nameInp.placeholder = 'Name der erschienenen Person';
+  nameInp.oninput = function() { d.name = this.value; };
+  row('Name', nameInp);
 
-  var wasInp = document.createElement('textarea');
-  wasInp.className = 'field-input field-textarea psychkg-ta'; wasInp.value = d.was || '';
-  wasInp.placeholder = 'Sachverhalt in Kurzform ...';
-  wasInp.oninput = function() { d.was = this.value; };
-  row('Anzeigeinhalt', wasInp);
+  var rolleLbl = document.createElement('div'); rolleLbl.className = 'input-label'; rolleLbl.textContent = 'Rolle';
+  cont.appendChild(rolleLbl);
+  var rolleChips = document.createElement('div'); rolleChips.className = 'suggestions'; rolleChips.style.marginTop = '4px';
+  [{ v:'geschm', label:'Geschädigter' }, { v:'geschw', label:'Geschädigte' },
+   { v:'zeuge',  label:'Zeuge' },        { v:'zeugin', label:'Zeugin' }
+  ].forEach(function(opt) {
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.dataset.v = opt.v; btn.textContent = opt.label;
+    btn.className = 'btn-suggestion' + (d.rolle === opt.v ? ' active' : '');
+    rolleChips.appendChild(btn);
+  });
+  rolleChips.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
+    d.rolle = btn.dataset.v;
+    rolleChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+  });
+  cont.appendChild(rolleChips);
+}
+
+function renderAnzeigeWas() {
+  var cont = document.getElementById('anzeigeWasList');
+  if (!cont) return;
+  cont.innerHTML = '';
+  var d = anzeigeIntro;
+
+  var previewBox = document.createElement('div');
+  previewBox.className = 'anzeige-satz-preview';
+  previewBox.textContent = buildAnzeigeEinleitungSatz(d.was);
+  cont.appendChild(previewBox);
+
+  var lbl = document.createElement('div'); lbl.className = 'input-label'; lbl.style.marginTop = '16px'; lbl.textContent = 'Anzeigeinhalt';
+  cont.appendChild(lbl);
+
+  var ta = document.createElement('textarea');
+  ta.className = 'field-input field-textarea psychkg-ta'; ta.style.marginTop = '6px';
+  ta.placeholder = 'Sachverhalt in Kurzform ...';
+  ta.value = d.was || '';
+  ta.oninput = function() {
+    d.was = this.value;
+    previewBox.textContent = buildAnzeigeEinleitungSatz(d.was);
+  };
+  cont.appendChild(ta);
+  requestAnimationFrame(function() { ta.focus(); });
 }
 
 function renderAnzeigeSchild() {
@@ -3790,6 +3840,26 @@ function renderAnzeigeSchild() {
   });
   rolleWrap.appendChild(rolleChips);
   card.appendChild(rolleWrap);
+
+  var zvrWrap = document.createElement('div');
+  zvrWrap.style.marginTop = '10px'; zvrWrap.style.display = s.rolle ? '' : 'none';
+  var zvrLabel = document.createElement('div'); zvrLabel.className = 'input-label'; zvrLabel.textContent = 'Besonderer Hinweis';
+  zvrWrap.appendChild(zvrLabel);
+  var zvrChips = document.createElement('div'); zvrChips.className = 'suggestions'; zvrChips.style.marginTop = '4px';
+  [{ v: true, label: 'mit Zeugnisverweigerungsrecht' }, { v: false, label: 'ohne' }].forEach(function(opt) {
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.textContent = opt.label;
+    btn.className = 'btn-suggestion' + (s.zvr === opt.v ? ' active' : '');
+    btn.addEventListener('click', function() {
+      s.zvr = opt.v;
+      zvrChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      belWrap.style.display = '';
+    });
+    zvrChips.appendChild(btn);
+  });
+  zvrWrap.appendChild(zvrChips);
+  card.appendChild(zvrWrap);
 
   var belWrap = document.createElement('div');
   belWrap.style.marginTop = '10px'; belWrap.style.display = s.rolle ? '' : 'none';
@@ -3830,6 +3900,7 @@ function renderAnzeigeSchild() {
     s.rolle = btn.dataset.v;
     rolleChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
     btn.classList.add('active');
+    zvrWrap.style.display = '';
     belWrap.style.display = '';
   });
   belChips.addEventListener('click', function(e) {
@@ -3864,6 +3935,7 @@ function renderAnzeigeAngaben() {
   var bel = s.belehrender || '[Beamter/Beamtin]';
   var geg = s.gegenueber  || '[Beamter/Beamtin]';
   var belTyp = rm && rm.btyp === 'besch' ? 'Beschuldigtenbelehrung' : 'zeugenschaftlicher Belehrung';
+  var zvrZusatz = s.zvr ? ', mit besonderem Hinweis auf das Zeugnisverweigerungsrecht,' : '';
 
   var personLbl = document.createElement('div'); personLbl.className = 'input-label';
   personLbl.style.marginBottom = '8px';
@@ -3871,7 +3943,7 @@ function renderAnzeigeAngaben() {
   cont.appendChild(personLbl);
 
   var intro = document.createElement('div'); intro.className = 'schild-note'; intro.style.marginBottom = '10px';
-  intro.textContent = 'Nach erfolgter ' + belTyp + ' durch ' + bel + ' machte ' + (rm ? rm.disp : '[Person]') + ' gegenüber ' + geg + ' sinngemäß folgende Angaben:';
+  intro.textContent = 'Nach erfolgter ' + belTyp + zvrZusatz + ' durch ' + bel + ' machte ' + (rm ? rm.disp : '[Person]') + ' gegenüber ' + geg + ' sinngemäß folgende Angaben:';
   cont.appendChild(intro);
 
   var ta = document.createElement('textarea');
@@ -3908,20 +3980,16 @@ function renderAnzeigeOverview() {
 }
 
 function generateAnzeigeText() {
-  var d = anzeigeIntro;
-  var datum = d.datum ? formatDateDE(d.datum) : '[Datum]';
-  var uhr   = d.uhrzeit || '[Uhrzeit]';
-  var wer   = d.wer  || '[erschienene Person]';
-  var was   = d.was  || '[Sachverhalt]';
   var parts = [];
-  parts.push('Am ' + datum + ', um ' + uhr + ' Uhr, erschien ' + wer + ' auf der Polizeiwache Gütersloh und zeigte folgenden Sachverhalt an: ' + was + '.');
+  parts.push(buildAnzeigeEinleitungSatz(anzeigeIntro.was || '[Sachverhalt]'));
   anzeigePersonen.forEach(function(s) {
     var rm = ROLLEN_MAP[s.rolle];
     if (!rm) return;
     var bel = s.belehrender || '[Beamter/Beamtin]';
     var geg = s.gegenueber  || '[Beamter/Beamtin]';
     var belTyp = rm.btyp === 'besch' ? 'Beschuldigtenbelehrung' : 'zeugenschaftlicher Belehrung';
-    var intro = 'Nach erfolgter ' + belTyp + ' durch ' + bel + ' machte ' + rm.disp + ' gegenüber ' + geg + ' sinngemäß folgende Angaben:';
+    var zvrZusatz = s.zvr ? ', mit besonderem Hinweis auf das Zeugnisverweigerungsrecht,' : '';
+    var intro = 'Nach erfolgter ' + belTyp + zvrZusatz + ' durch ' + bel + ' machte ' + rm.disp + ' gegenüber ' + geg + ' sinngemäß folgende Angaben:';
     parts.push(intro + '\n\n' + (s.freitext || '[Keine Angaben erfasst]'));
   });
   return parts.join('\n\n');

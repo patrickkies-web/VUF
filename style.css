@@ -774,6 +774,17 @@ body {
   box-sizing: border-box;
 }
 
+.anzeige-satz-preview {
+  background: var(--card-bg, #1e2230);
+  border: 1px solid var(--border, #2e3347);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
 .hb-ort-hint {
   font-size: 13px;
   color: var(--muted);

@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>Polizeibericht v3.15</title>
-  <link rel="stylesheet" href="style.css?v=3.24">
+  <link rel="stylesheet" href="style.css?v=3.29">
 </head>
 <body>
 
@@ -722,13 +722,27 @@
       </div>
     </div>
 
-    <!-- Anzeigenaufnahme 1: Intro -->
+    <!-- Anzeigenaufnahme 1: Datum / Uhrzeit / Name / Rolle -->
     <div class="slide" id="slide-anzeige-intro">
       <div class="question-number">Anzeigenaufnahme</div>
-      <div class="question-text">Wer hat <strong>was</strong><br>angezeigt?</div>
+      <div class="question-text">Wann &amp; wer<br><strong>erschien?</strong></div>
       <div id="anzeigeIntroList"></div>
       <div style="margin-top:20px">
         <button class="btn-next" id="btnAnzeigeIntroWeiter">Weiter
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Anzeigenaufnahme 1b: Anzeigeinhalt + Satzvorschau -->
+    <div class="slide" id="slide-anzeige-was">
+      <div class="question-number">Anzeigenaufnahme</div>
+      <div class="question-text">Was wurde<br><strong>angezeigt?</strong></div>
+      <div id="anzeigeWasList"></div>
+      <div style="margin-top:20px">
+        <button class="btn-next" id="btnAnzeigeWasWeiter">Weiter
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path d="M5 12h14M12 5l7 7-7 7"/>
           </svg>
@@ -806,7 +820,7 @@
   <div style="width:80px"></div>
 </div>
 
-<script src="script.js?v=3.28"></script>
+<script src="script.js?v=3.29"></script>
 <script>if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js').catch(function(){});}</script>
 
 <!-- Bericht-Generierungs-Overlay -->
