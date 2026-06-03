@@ -148,7 +148,7 @@ var SECTION_DEFS = {
 var LEITFAEDEN = {
   strasse:   { label: 'VUF Straße',            sections: ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','massnahmen'] },
   parkplatz: { label: 'VUF Parkplatz',          sections: ['allgemeines','oertlichkeit','spuren','fahrzeug','schilderungen','massnahmen'] },
-  anzeige:   { label: 'Anzeige auf der Wache',  sections: ['allgemeines','anzeige'] }
+  anzeige:   { label: 'Anzeige auf der Wache',  sections: ['allgemeines','anzeige','massnahmen'] }
 };
 
 var UMSTAENDE_DEFS = [
@@ -360,7 +360,14 @@ var ROLLEN_MAP = {
 var schilderungen = [];
 var schildCounter = 0;
 var schildCurrentIdx = null;
-var massnahmenData = { unfallmitteilungen: false, bescheinigungen: [], bescheinigungenUhrzeit: '', bescheinigungenNwKennung: '' };
+var massnahmenData = {
+  unfallmitteilungen: false,
+  bescheinigungen: [], bescheinigungenUhrzeit: '', bescheinigungenNwKennung: '',
+  kunoSperrung: false,
+  sachfahndung: false,
+  lichtbilder: false,
+  dokumente: false, dokumenteRollen: [], dokumenteBeamterGender: 'm'
+};
 var psychkgData = { verhaltensText: '', personRolle: '', anlass: '', orgTyp: '', mitGender: 'm', mitName: '', arztGender: 'm', arztName: '', transport: '', begleitung: null };
 var haftbefehlData = {
   personRolle: 'betroffm',
@@ -3095,6 +3102,23 @@ function generateMassnahmenText() {
     var az = buildAktenzeichen();
     parts.push(dativCap + ' wurde eine Bescheinigung über die Erstattung einer Anzeige per E-Mail übersandt (Az.: ' + az + ').');
   });
+  if (massnahmenData.kunoSperrung) {
+    parts.push('Es wurde eine KUNO-Sperrung eingeleitet. Die Person wurde über das Vorgehen sowie die zeitlich befristete Sperrung hingewiesen.');
+  }
+  if (massnahmenData.sachfahndung) {
+    parts.push('Eine entsprechende Sachfahndung wurde eingeleitet.');
+  }
+  if (massnahmenData.lichtbilder) {
+    parts.push('Sachdienliche Lichtbilder wurden gefertigt und liegen dem Vorgang digital bei.');
+  }
+  massnahmenData.dokumenteRollen.forEach(function(rolleKey) {
+    var rm = ROLLEN_MAP[rolleKey]; if (!rm) return;
+    var nomCap = rm.disp.charAt(0).toUpperCase() + rm.disp.slice(1);
+    var beamter = massnahmenData.dokumenteBeamterGender === 'w'
+      ? 'der aufnehmenden Beamtin'
+      : 'dem aufnehmenden Beamten';
+    parts.push(nomCap + ' händigte ' + beamter + ' sachdienliche Dokumente aus, welche eingescannt und digital beigefügt wurden.');
+  });
   return parts.join('\n\n');
 }
 
@@ -3274,6 +3298,111 @@ function renderMassnahmen() {
   bescWrap.appendChild(bescBtn);
   bescWrap.appendChild(bescDetail);
   cont.appendChild(bescWrap);
+
+  // ── KUNO-Sperrung ────────────────────────────────────────────
+  var kunoBtn = document.createElement('button');
+  kunoBtn.type = 'button';
+  kunoBtn.className = 'massnahme-btn' + (massnahmenData.kunoSperrung ? ' active' : '');
+  kunoBtn.innerHTML =
+    '<span class="mb-check"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>' +
+    '<span class="mb-label">KUNO-Sperrung eingeleitet</span>';
+  kunoBtn.onclick = function() {
+    massnahmenData.kunoSperrung = !massnahmenData.kunoSperrung;
+    kunoBtn.classList.toggle('active', massnahmenData.kunoSperrung);
+  };
+  cont.appendChild(kunoBtn);
+
+  // ── Sachfahndung ─────────────────────────────────────────────
+  var sachBtn = document.createElement('button');
+  sachBtn.type = 'button';
+  sachBtn.className = 'massnahme-btn' + (massnahmenData.sachfahndung ? ' active' : '');
+  sachBtn.innerHTML =
+    '<span class="mb-check"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>' +
+    '<span class="mb-label">Sachfahndung eingeleitet</span>';
+  sachBtn.onclick = function() {
+    massnahmenData.sachfahndung = !massnahmenData.sachfahndung;
+    sachBtn.classList.toggle('active', massnahmenData.sachfahndung);
+  };
+  cont.appendChild(sachBtn);
+
+  // ── Lichtbilder ──────────────────────────────────────────────
+  var lichtBtn = document.createElement('button');
+  lichtBtn.type = 'button';
+  lichtBtn.className = 'massnahme-btn' + (massnahmenData.lichtbilder ? ' active' : '');
+  lichtBtn.innerHTML =
+    '<span class="mb-check"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>' +
+    '<span class="mb-label">Lichtbilder gefertigt</span>';
+  lichtBtn.onclick = function() {
+    massnahmenData.lichtbilder = !massnahmenData.lichtbilder;
+    lichtBtn.classList.toggle('active', massnahmenData.lichtbilder);
+  };
+  cont.appendChild(lichtBtn);
+
+  // ── Dokumente ausgehändigt ───────────────────────────────────
+  var dokWrap = document.createElement('div');
+  var dokBtn = document.createElement('button');
+  dokBtn.type = 'button';
+  dokBtn.className = 'massnahme-btn' + (massnahmenData.dokumenteRollen.length > 0 ? ' active open' : '');
+  dokBtn.innerHTML =
+    '<span class="mb-check"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>' +
+    '<span class="mb-label">Sachdienliche Dokumente ausgehändigt</span>' +
+    '<span class="mb-chevron"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span>';
+
+  var dokDetail = document.createElement('div');
+  dokDetail.className = 'massnahme-sub';
+  dokDetail.style.display = massnahmenData.dokumenteRollen.length > 0 ? '' : 'none';
+
+  // Rolle
+  var dokRolleLbl = document.createElement('div'); dokRolleLbl.className = 'input-label'; dokRolleLbl.style.marginBottom = '6px';
+  dokRolleLbl.textContent = 'Wer hat Dokumente ausgehändigt?';
+  dokDetail.appendChild(dokRolleLbl);
+
+  var dokRolleChips = document.createElement('div'); dokRolleChips.className = 'suggestions'; dokRolleChips.style.marginBottom = '10px';
+  [{ v:'geschm', label:'Geschädigter' }, { v:'geschw', label:'Geschädigte' },
+   { v:'zeuge',  label:'Zeuge' },        { v:'zeugin', label:'Zeugin' },
+   { v:'beschm', label:'Beschuldigter'}, { v:'beschw', label:'Beschuldigte'}
+  ].forEach(function(opt) {
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.dataset.v = opt.v; btn.textContent = opt.label;
+    btn.className = 'btn-suggestion' + (massnahmenData.dokumenteRollen.indexOf(opt.v) !== -1 ? ' active' : '');
+    btn.addEventListener('click', function() {
+      var idx = massnahmenData.dokumenteRollen.indexOf(opt.v);
+      if (idx !== -1) { massnahmenData.dokumenteRollen.splice(idx, 1); btn.classList.remove('active'); }
+      else            { massnahmenData.dokumenteRollen.push(opt.v);    btn.classList.add('active'); }
+      dokBtn.classList.toggle('active', massnahmenData.dokumenteRollen.length > 0);
+    });
+    dokRolleChips.appendChild(btn);
+  });
+  dokDetail.appendChild(dokRolleChips);
+
+  // Aufnehmende/r Beamter/Beamtin
+  var dokBeamterLbl = document.createElement('div'); dokBeamterLbl.className = 'input-label'; dokBeamterLbl.style.marginBottom = '6px';
+  dokBeamterLbl.textContent = 'Aufnehmende/r Beamter/Beamtin';
+  dokDetail.appendChild(dokBeamterLbl);
+  var dokBeamterChips = document.createElement('div'); dokBeamterChips.className = 'suggestions';
+  [{ v:'m', label:'Beamter (m)' }, { v:'w', label:'Beamtin (w)' }].forEach(function(opt) {
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.textContent = opt.label;
+    btn.className = 'btn-suggestion' + (massnahmenData.dokumenteBeamterGender === opt.v ? ' active' : '');
+    btn.addEventListener('click', function() {
+      massnahmenData.dokumenteBeamterGender = opt.v;
+      dokBeamterChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+    });
+    dokBeamterChips.appendChild(btn);
+  });
+  dokDetail.appendChild(dokBeamterChips);
+
+  dokBtn.onclick = function() {
+    var isOpen = dokDetail.style.display !== 'none';
+    dokDetail.style.display = isOpen ? 'none' : '';
+    dokBtn.classList.toggle('open', !isOpen);
+    if (!isOpen) dokBtn.classList.add('active');
+    else if (massnahmenData.dokumenteRollen.length === 0) dokBtn.classList.remove('active');
+  };
+  dokWrap.appendChild(dokBtn);
+  dokWrap.appendChild(dokDetail);
+  cont.appendChild(dokWrap);
 }
 
 // ── PsychKG ────────────────────────────────────────────────────────────────
@@ -3724,7 +3853,7 @@ function renderHaftbefehl() {
 
 function addAnzeigePerson() {
   anzeigeCounter++;
-  anzeigePersonen.push({ id: anzeigeCounter, name: '', rolle: '', zvr: false, belehrender: '', gegenueber: '', freitext: '' });
+  anzeigePersonen.push({ id: anzeigeCounter, name: '', rolle: '', zvr: false, belehrender: '', gegenueber: '', freitext: '', strafantrag: null });
   anzeigeCurrentIdx = anzeigePersonen.length - 1;
 }
 
@@ -3952,6 +4081,26 @@ function renderAnzeigeAngaben() {
   ta.value = s.freitext || '';
   ta.oninput = function() { s.freitext = this.value; };
   cont.appendChild(ta);
+
+  // Strafantrag
+  var saWrap = document.createElement('div'); saWrap.style.marginTop = '14px';
+  var saLbl = document.createElement('div'); saLbl.className = 'input-label'; saLbl.textContent = 'Strafantrag';
+  saWrap.appendChild(saLbl);
+  var saChips = document.createElement('div'); saChips.className = 'suggestions'; saChips.style.marginTop = '6px';
+  [{ v: true, label: 'Strafantrag gestellt' }, { v: false, label: 'Kein Strafantrag' }].forEach(function(opt) {
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.textContent = opt.label;
+    btn.className = 'btn-suggestion' + (s.strafantrag === opt.v ? ' active' : '');
+    btn.addEventListener('click', function() {
+      s.strafantrag = opt.v;
+      saChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+    });
+    saChips.appendChild(btn);
+  });
+  saWrap.appendChild(saChips);
+  cont.appendChild(saWrap);
+
   requestAnimationFrame(function() { ta.focus(); });
 }
 
@@ -3990,7 +4139,14 @@ function generateAnzeigeText() {
     var belTyp = rm.btyp === 'besch' ? 'Beschuldigtenbelehrung' : 'zeugenschaftlicher Belehrung';
     var zvrZusatz = s.zvr ? ', mit besonderem Hinweis auf das Zeugnisverweigerungsrecht,' : '';
     var intro = 'Nach erfolgter ' + belTyp + zvrZusatz + ' durch ' + bel + ' machte ' + rm.disp + ' gegenüber ' + geg + ' sinngemäß folgende Angaben:';
-    parts.push(intro + '\n\n' + (s.freitext || '[Keine Angaben erfasst]'));
+    var nomCap = rm.disp.charAt(0).toUpperCase() + rm.disp.slice(1);
+    var angaben = s.freitext || '[Keine Angaben erfasst]';
+    if (s.strafantrag === true) {
+      angaben += '\n\n' + nomCap + ' stellt für alle in Frage kommenden Straftaten Strafantrag.';
+    } else if (s.strafantrag === false) {
+      angaben += '\n\n' + nomCap + ' stellt keinen Strafantrag.';
+    }
+    parts.push(intro + '\n\n' + angaben);
   });
   return parts.join('\n\n');
 }
