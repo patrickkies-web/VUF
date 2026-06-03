@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>Polizeibericht v3.34</title>
-  <link rel="stylesheet" href="style.css?v=3.30">
+  <link rel="stylesheet" href="style.css?v=3.35">
 </head>
 <body>
 
@@ -46,6 +46,47 @@
         <span>Text am Ende per <em>Kopieren</em> &uuml;bernehmen und in Notizen- oder E-Mail-App einf&uuml;gen.</span>
       </div>
     </div>
+
+    <details class="expert-details">
+      <summary class="expert-summary">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Expertenmodus &mdash; was passiert wirklich mit deinen Daten?
+        <svg class="expert-chevron" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <div class="expert-body">
+
+        <div class="expert-section">
+          <div class="expert-section-title">Eingegebene Daten (Namen, Kennzeichen, Aussagen&nbsp;&hellip;)</div>
+          <div class="expert-section-text">Bleiben ausschlie&szlig;lich im Arbeitsspeicher des Browsers &ndash; als JavaScript-Variablen. Es findet <strong>keine &Uuml;bertragung</strong> an irgendeinen Server statt. Beim Schlie&szlig;en oder Neuladen der Seite sind alle Daten weg.</div>
+        </div>
+
+        <div class="expert-section">
+          <div class="expert-section-title">GPS-Standortermittlung (nur wenn du auf &bdquo;Standort ermitteln&ldquo; tippst)</div>
+          <div class="expert-section-text">Der Browser fragt dein Ger&auml;t nach den GPS-Koordinaten (Berechtigungsdialog des Betriebssystems). Die Koordinaten werden einmalig an <strong>nominatim.openstreetmap.org</strong> geschickt, um daraus eine Adresse zu machen. OpenStreetMap kann dabei die IP-Adresse und die Koordinaten im Server-Log haben &ndash; wie bei jeder normalen Web-Anfrage. Die App selbst speichert die Koordinaten <em>nicht</em>.</div>
+        </div>
+
+        <div class="expert-section">
+          <div class="expert-section-title">Stra&szlig;ennamen-Vorschl&auml;ge (Autovervollst&auml;ndigung)</div>
+          <div class="expert-section-text">Die Vorschl&auml;ge werden von <strong>overpass-api.de</strong> und <strong>nominatim.openstreetmap.org</strong> geladen (beide betrieben von OpenStreetMap). Das Ergebnis wird im <strong>localStorage des Browsers</strong> unter dem Schl&uuml;ssel <code>gt_streets_v2</code> gespeichert, damit nicht bei jedem Start neu geladen werden muss. Dieser Cache liegt nur lokal auf deinem Ger&auml;t und enth&auml;lt nur Stra&szlig;ennamen aus G&uuml;tersloh &ndash; keine pers&ouml;nlichen Daten.</div>
+        </div>
+
+        <div class="expert-section">
+          <div class="expert-section-title">Die App selbst &ndash; woher kommt der Code?</div>
+          <div class="expert-section-text">HTML, CSS und JavaScript werden von <strong>GitHub Pages</strong> (patrickkies-web/VUF) ausgeliefert. GitHub speichert dabei IP-Adresse, Zeitpunkt und aufgerufene Datei im Standard-Server-Log. Kein Tracking, kein Analytics, keine Werbung, keine Cookies.</div>
+        </div>
+
+        <div class="expert-section">
+          <div class="expert-section-title">Offline-F&auml;higkeit (Service Worker)</div>
+          <div class="expert-section-text">Ein Service Worker l&auml;dt die App-Dateien einmalig in den Browser-Cache, damit die App auch ohne Netz startet. Er &uuml;bertr&auml;gt dabei keine Nutzerdaten &ndash; er liefert nur gecachte App-Dateien aus.</div>
+        </div>
+
+        <div class="expert-section">
+          <div class="expert-section-title">Was verlässt das Gerät?</div>
+          <div class="expert-section-text"><strong>Nur du selbst</strong> &ndash; wenn du den fertig kopierten Text weitersendet (E-Mail, Notizen-App&nbsp;&hellip;). Die App sendet niemals selbst&#8209;st&auml;ndig Bericht&shy;inhalte irgendwohin.</div>
+        </div>
+
+      </div>
+    </details>
   </div>
 </div>
 
@@ -820,7 +861,7 @@
   <div style="width:80px"></div>
 </div>
 
-<script src="script.js?v=3.34"></script>
+<script src="script.js?v=3.35"></script>
 <script>if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js').catch(function(){});}</script>
 
 <!-- Bericht-Generierungs-Overlay -->

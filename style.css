@@ -1423,6 +1423,85 @@ body {
   color: var(--text);
 }
 
+/* ── Expertenmodus ───────────────────────────────────────── */
+
+.expert-details {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.expert-summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 13px 16px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.expert-summary::-webkit-details-marker { display: none; }
+
+.expert-chevron {
+  margin-left: auto;
+  transition: transform .2s;
+  flex-shrink: 0;
+}
+.expert-details[open] .expert-chevron {
+  transform: rotate(180deg);
+}
+
+.expert-summary svg:first-child {
+  flex-shrink: 0;
+  opacity: .6;
+}
+
+.expert-body {
+  border-top: 1px solid var(--border);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.expert-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  opacity: .7;
+}
+
+.expert-section-text {
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.expert-section-text strong {
+  color: var(--text);
+}
+
+.expert-section-text em {
+  font-style: italic;
+}
+
+.expert-section-text code {
+  font-family: monospace;
+  font-size: 10.5px;
+  background: var(--border);
+  padding: 1px 4px;
+  border-radius: 3px;
+  color: var(--text);
+}
+
 /* ── Bibliothek: Leitfäden & Bausteine ──────────────────── */
 
 .lib-group-label {
