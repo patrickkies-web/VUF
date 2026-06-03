@@ -3853,7 +3853,7 @@ function renderHaftbefehl() {
 
 function addAnzeigePerson() {
   anzeigeCounter++;
-  anzeigePersonen.push({ id: anzeigeCounter, name: '', rolle: '', zvr: false, belehrender: '', gegenueber: '', freitext: '', strafantrag: null });
+  anzeigePersonen.push({ id: anzeigeCounter, name: '', rolle: '', zvr: false, belehrender: '', gegenueber: '', ausweisdokument: null, freitext: '', strafantrag: null });
   anzeigeCurrentIdx = anzeigePersonen.length - 1;
 }
 
@@ -3930,7 +3930,7 @@ function renderAnzeigeWas() {
 
   var ta = document.createElement('textarea');
   ta.className = 'field-input field-textarea psychkg-ta'; ta.style.marginTop = '6px';
-  ta.placeholder = 'Sachverhalt in Kurzform ...';
+  ta.placeholder = 'Bitte vervollständigen …';
   ta.value = d.was || '';
   ta.oninput = function() {
     d.was = this.value;
@@ -4082,6 +4082,28 @@ function renderAnzeigeAngaben() {
   ta.oninput = function() { s.freitext = this.value; };
   cont.appendChild(ta);
 
+  // Ausweis
+  var awWrap = document.createElement('div'); awWrap.style.marginTop = '14px';
+  var awLbl = document.createElement('div'); awLbl.className = 'input-label';
+  awLbl.textContent = (rm ? (rm.disp.charAt(0).toUpperCase() + rm.disp.slice(1)) + (s.name ? ' ' + s.name : '') : 'Person') + ' wies sich aus mit';
+  awWrap.appendChild(awLbl);
+  var awChips = document.createElement('div'); awChips.className = 'suggestions'; awChips.style.marginTop = '6px';
+  [{ v: 'bpa',    label: 'Bundespersonalausweis' },
+   { v: 'ausweis', label: 'gültigem Ausweisdokument' }
+  ].forEach(function(opt) {
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.textContent = opt.label;
+    btn.className = 'btn-suggestion' + (s.ausweisdokument === opt.v ? ' active' : '');
+    btn.addEventListener('click', function() {
+      s.ausweisdokument = opt.v;
+      awChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+    });
+    awChips.appendChild(btn);
+  });
+  awWrap.appendChild(awChips);
+  cont.appendChild(awWrap);
+
   // Strafantrag
   var saWrap = document.createElement('div'); saWrap.style.marginTop = '14px';
   var saLbl = document.createElement('div'); saLbl.className = 'input-label'; saLbl.textContent = 'Strafantrag';
@@ -4137,16 +4159,23 @@ function generateAnzeigeText() {
     var bel = s.belehrender || '[Beamter/Beamtin]';
     var geg = s.gegenueber  || '[Beamter/Beamtin]';
     var belTyp = rm.btyp === 'besch' ? 'Beschuldigtenbelehrung' : 'zeugenschaftlicher Belehrung';
-    var zvrZusatz = s.zvr ? ', mit besonderem Hinweis auf das Zeugnisverweigerungsrecht,' : '';
-    var intro = 'Nach erfolgter ' + belTyp + zvrZusatz + ' durch ' + bel + ' machte ' + rm.disp + ' gegenüber ' + geg + ' sinngemäß folgende Angaben:';
     var nomCap = rm.disp.charAt(0).toUpperCase() + rm.disp.slice(1);
+    var nameStr = s.name ? ' ' + s.name : '';
+    var personBlock = [];
+    if (s.ausweisdokument) {
+      var dokStr = s.ausweisdokument === 'bpa' ? 'einem Bundespersonalausweis' : 'einem gültigen Ausweisdokument';
+      personBlock.push(nomCap + nameStr + ' wies sich mit ' + dokStr + ' aus.');
+    }
+    var zvrZusatz = s.zvr ? ', mit besonderem Hinweis auf das Zeugnisverweigerungsrecht,' : '';
+    var introSatz = 'Nach erfolgter ' + belTyp + zvrZusatz + ' durch ' + bel + ' machte ' + rm.disp + ' gegenüber ' + geg + ' sinngemäß folgende Angaben:';
     var angaben = s.freitext || '[Keine Angaben erfasst]';
     if (s.strafantrag === true) {
       angaben += '\n\n' + nomCap + ' stellt für alle in Frage kommenden Straftaten Strafantrag.';
     } else if (s.strafantrag === false) {
       angaben += '\n\n' + nomCap + ' stellt keinen Strafantrag.';
     }
-    parts.push(intro + '\n\n' + angaben);
+    personBlock.push(introSatz + '\n\n' + angaben);
+    parts.push(personBlock.join('\n\n'));
   });
   return parts.join('\n\n');
 }
