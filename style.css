@@ -775,8 +775,8 @@ body {
 }
 
 .anzeige-satz-preview {
-  background: var(--card-bg, #1e2230);
-  border: 1px solid var(--border, #2e3347);
+  background: var(--surface2);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 12px 14px;
   font-size: 14px;
