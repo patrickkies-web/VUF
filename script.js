@@ -4217,10 +4217,11 @@ function copyText() {
   function esc(s) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
+  var P = 'font-family:Calibri,sans-serif;font-size:11pt;line-height:1.28;text-align:left;margin:0;padding:0;';
+
   function paraHtml(text) {
     return text.split('\n\n').map(function(p) {
-      return '<p style="margin:0 0 8pt 0;line-height:1.5;text-align:left;">' +
-        esc(p).replace(/\n/g,'<br>') + '</p>';
+      return '<p style="' + P + '">' + esc(p).replace(/\n/g,'<br>') + '</p>';
     }).join('');
   }
 
@@ -4231,14 +4232,14 @@ function copyText() {
     var body = bodies[i] ? bodies[i].textContent : '';
     plainParts.push(head + '\n' + body);
     htmlSections.push(
-      '<p style="font-weight:bold;margin:0 0 4pt 0;line-height:1.5;text-align:left;">' + esc(head) + '</p>' +
+      '<p style="' + P + 'font-weight:bold;">' + esc(head) + '</p>' +
       paraHtml(body)
     );
   });
 
   var plain = plainParts.join('\n\n');
-  var html  = '<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;font-size:11pt;">' +
-    htmlSections.join('<p style="margin:0 0 12pt 0;">&nbsp;</p>') +
+  var html  = '<!DOCTYPE html><html><body style="font-family:Calibri,sans-serif;font-size:11pt;">' +
+    htmlSections.join('<p style="' + P + '">&nbsp;</p>') +
     '</body></html>';
 
   function showCopied() {
