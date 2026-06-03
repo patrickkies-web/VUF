@@ -4211,30 +4211,65 @@ function generateAbschnitt2() {
 // ── Kopieren ────────────────────────────────────────────────
 
 function copyText() {
-  var parts = [];
   var headings = document.querySelectorAll('#reportDoc .report-heading');
-  var bodies = document.querySelectorAll('#reportDoc .report-body');
-  headings.forEach(function (h, i) {
-    parts.push(h.textContent + '\n' + (bodies[i] ? bodies[i].textContent : ''));
+  var bodies   = document.querySelectorAll('#reportDoc .report-body');
+
+  function esc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function paraHtml(text) {
+    return text.split('\n\n').map(function(p) {
+      return '<p style="margin:0 0 8pt 0;line-height:1.5;text-align:left;">' +
+        esc(p).replace(/\n/g,'<br>') + '</p>';
+    }).join('');
+  }
+
+  var plainParts = [];
+  var htmlSections = [];
+  headings.forEach(function(h, i) {
+    var head = h.textContent;
+    var body = bodies[i] ? bodies[i].textContent : '';
+    plainParts.push(head + '\n' + body);
+    htmlSections.push(
+      '<p style="font-weight:bold;margin:0 0 4pt 0;line-height:1.5;text-align:left;">' + esc(head) + '</p>' +
+      paraHtml(body)
+    );
   });
-  var text = parts.join('\n\n');
-  navigator.clipboard.writeText(text).catch(function () {
-    var el = document.getElementById('reportDoc');
-    var range = document.createRange();
-    range.selectNodeContents(el);
-    var sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
-    try { document.execCommand('copy'); } catch (e) { }
-    sel.removeAllRanges();
-  });
-  var btn = document.getElementById('btnCopy');
-  btn.classList.add('copied');
-  btn.textContent = 'Kopiert!';
-  setTimeout(function () {
-    btn.classList.remove('copied');
-    btn.textContent = 'Text kopieren';
-  }, 2000);
+
+  var plain = plainParts.join('\n\n');
+  var html  = '<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;font-size:11pt;">' +
+    htmlSections.join('<p style="margin:0 0 12pt 0;">&nbsp;</p>') +
+    '</body></html>';
+
+  function showCopied() {
+    var btn = document.getElementById('btnCopy');
+    btn.classList.add('copied'); btn.textContent = 'Kopiert!';
+    setTimeout(function() { btn.classList.remove('copied'); btn.textContent = 'Text kopieren'; }, 2000);
+  }
+
+  // Modern Clipboard API — Word picks up the HTML variant
+  if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+    navigator.clipboard.write([new ClipboardItem({
+      'text/html':  new Blob([html],  { type: 'text/html'  }),
+      'text/plain': new Blob([plain], { type: 'text/plain' })
+    })]).then(showCopied).catch(function() {
+      navigator.clipboard.writeText(plain).then(showCopied);
+    });
+    return;
+  }
+
+  // Fallback: contenteditable + execCommand (also puts HTML on clipboard)
+  var div = document.createElement('div');
+  div.contentEditable = 'true';
+  div.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;';
+  div.innerHTML = html;
+  document.body.appendChild(div);
+  var range = document.createRange(); range.selectNodeContents(div);
+  var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+  try { document.execCommand('copy'); } catch(e) {}
+  sel.removeAllRanges();
+  document.body.removeChild(div);
+  showCopied();
 }
 
 // ── Reset ───────────────────────────────────────────────────
