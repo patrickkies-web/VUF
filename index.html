@@ -722,6 +722,68 @@
       </div>
     </div>
 
+    <!-- Anzeigenaufnahme 1: Intro -->
+    <div class="slide" id="slide-anzeige-intro">
+      <div class="question-number">Anzeigenaufnahme</div>
+      <div class="question-text">Wer hat <strong>was</strong><br>angezeigt?</div>
+      <div id="anzeigeIntroList"></div>
+      <div style="margin-top:20px">
+        <button class="btn-next" id="btnAnzeigeIntroWeiter">Weiter
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Anzeigenaufnahme 2: Person / Belehrung -->
+    <div class="slide" id="slide-anzeige-schild">
+      <div class="question-number">Anzeigenaufnahme &middot; Person</div>
+      <div class="question-text">Rolle &amp;<br><strong>Belehrung</strong></div>
+      <div id="anzeigeSchlList"></div>
+      <div style="margin-top:16px">
+        <button class="btn-next" id="btnAnzeigeSchlWeiter">Weiter
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Anzeigenaufnahme 3: Angaben -->
+    <div class="slide" id="slide-anzeige-angaben">
+      <div class="question-number">Anzeigenaufnahme &middot; Angaben</div>
+      <div class="question-text"><strong>Angaben</strong><br>der Person</div>
+      <div id="anzeigeAngabenList"></div>
+      <div style="margin-top:16px">
+        <button class="btn-next" id="btnAnzeigeAngabenWeiter">Weiter
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Anzeigenaufnahme 4: Übersicht -->
+    <div class="slide" id="slide-anzeige-overview">
+      <div class="question-number">Anzeigenaufnahme</div>
+      <div class="question-text">Erfasste<br><strong>Personen</strong></div>
+      <div id="anzeigeOverviewList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px"></div>
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
+        <button class="btn-add" id="btnAnzeigeWeiterePerson">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          Weitere Person hinzuf&uuml;gen
+        </button>
+        <button class="btn-next" id="btnAnzeigeErstelleBericht">Bericht erstellen
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
     <!-- Ergebnis -->
     <div class="slide" id="slide-result">
       <div class="question-number">Fertig</div>
@@ -744,7 +806,7 @@
   <div style="width:80px"></div>
 </div>
 
-<script src="script.js?v=3.27"></script>
+<script src="script.js?v=3.28"></script>
 <script>if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js').catch(function(){});}</script>
 
 <!-- Bericht-Generierungs-Overlay -->

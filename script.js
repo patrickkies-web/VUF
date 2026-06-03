@@ -133,12 +133,22 @@ var SECTION_DEFS = {
   haftbefehl: {
     label: 'Haftbefehl', desc: 'Vollstreckung eines Strafbefehls / Haftbefehls', icon: '⚖️',
     getSlides: function() { return ['slide-haftbefehl']; }
+  },
+  anzeige: {
+    label: 'Anzeigenaufnahme auf der Wache', desc: 'Strafanzeige – Sachverhalt & Schilderungen der erschienenen Personen', icon: '📝',
+    getSlides: function() {
+      var slides = [];
+      if (selectedSections.indexOf('allgemeines') === -1) slides.push('slide-0');
+      slides.push('slide-anzeige-intro', 'slide-anzeige-schild', 'slide-anzeige-angaben', 'slide-anzeige-overview');
+      return slides;
+    }
   }
 };
 
 var LEITFAEDEN = {
-  strasse:   { label: 'VUF Straße',   sections: ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','massnahmen'] },
-  parkplatz: { label: 'VUF Parkplatz', sections: ['allgemeines','oertlichkeit','spuren','fahrzeug','schilderungen','massnahmen'] }
+  strasse:   { label: 'VUF Straße',            sections: ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','massnahmen'] },
+  parkplatz: { label: 'VUF Parkplatz',          sections: ['allgemeines','oertlichkeit','spuren','fahrzeug','schilderungen','massnahmen'] },
+  anzeige:   { label: 'Anzeige auf der Wache',  sections: ['allgemeines','anzeige'] }
 };
 
 var UMSTAENDE_DEFS = [
@@ -342,7 +352,9 @@ var ROLLEN_MAP = {
   ub02m:  { disp: 'der Unfallbeteiligte 02', dativ: 'dem Unfallbeteiligten 02', btyp: 'zeuge', er: 'Er',  erLow: 'er',  sein: 'sein', seiner: 'seiner' },
   ub02w:  { disp: 'die Unfallbeteiligte 02', dativ: 'der Unfallbeteiligten 02', btyp: 'zeuge', er: 'Sie', erLow: 'sie', sein: 'ihr',  seiner: 'ihrer'  },
   beschm: { disp: 'der Beschuldigte',        dativ: 'dem Beschuldigten',        btyp: 'besch', er: 'Er',  erLow: 'er',  sein: 'sein', seiner: 'seiner' },
-  beschw: { disp: 'die Beschuldigte',        dativ: 'der Beschuldigten',        btyp: 'besch', er: 'Sie', erLow: 'sie', sein: 'ihr',  seiner: 'ihrer'  }
+  beschw: { disp: 'die Beschuldigte',        dativ: 'der Beschuldigten',        btyp: 'besch', er: 'Sie', erLow: 'sie', sein: 'ihr',  seiner: 'ihrer'  },
+  geschm: { disp: 'der Geschädigte',         dativ: 'dem Geschädigten',         btyp: 'zeuge', er: 'Er',  erLow: 'er',  sein: 'sein', seiner: 'seiner' },
+  geschw: { disp: 'die Geschädigte',         dativ: 'der Geschädigten',         btyp: 'zeuge', er: 'Sie', erLow: 'sie', sein: 'ihr',  seiner: 'ihrer'  }
 };
 
 var schilderungen = [];
@@ -364,10 +376,14 @@ var haftbefehlData = {
   kontrolleUhrzeit: '',
   zielort: 'ZPG Gütersloh'
 };
+var anzeigeIntro = { datum: '', uhrzeit: '', wer: '', was: '' };
+var anzeigePersonen = [];
+var anzeigeCounter = 0;
+var anzeigeCurrentIdx = null;
 
 function getActiveSlides() {
   var slides = [];
-  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','massnahmen','psychkg','haftbefehl'];
+  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','massnahmen','psychkg','haftbefehl','anzeige'];
   ORDER.forEach(function(key) {
     if (selectedSections.indexOf(key) === -1) return;
     var def = SECTION_DEFS[key];
@@ -458,6 +474,11 @@ document.getElementById('auffCustomInput').addEventListener('keydown', function(
 });
 document.getElementById('btnAddWeiterePerson').onclick = function() { addSchilderung(); jumpToSlide('slide-schilderungen'); };
 document.getElementById('btnErstelleBericht').onclick = nextSlide;
+document.getElementById('btnAnzeigeIntroWeiter').onclick = nextSlide;
+document.getElementById('btnAnzeigeSchlWeiter').onclick = nextSlide;
+document.getElementById('btnAnzeigeAngabenWeiter').onclick = nextSlide;
+document.getElementById('btnAnzeigeWeiterePerson').onclick = function() { addAnzeigePerson(); jumpToSlide('slide-anzeige-schild'); };
+document.getElementById('btnAnzeigeErstelleBericht').onclick = nextSlide;
 document.getElementById('btnBack').onclick = prevSlide;
 document.getElementById('btnCopy').onclick = copyText;
 document.getElementById('btnReset').onclick = resetAll;
@@ -542,7 +563,7 @@ function renderLibrary() {
   var cont = document.getElementById('libraryBausteins');
   if (!cont) return;
   cont.innerHTML = '';
-  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','massnahmen','psychkg','haftbefehl'];
+  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','massnahmen','psychkg','haftbefehl','anzeige'];
   ORDER.forEach(function(key) {
     var def = SECTION_DEFS[key];
     var isOn = selectedSections.indexOf(key) !== -1;
@@ -550,6 +571,9 @@ function renderLibrary() {
     // Compute dependency notes
     var depNote = '';
     if (key === 'schilderungen' && isOn && selectedSections.indexOf('allgemeines') === -1) {
+      depNote = '+ Besatzung wird automatisch abgefragt';
+    }
+    if (key === 'anzeige' && isOn && selectedSections.indexOf('allgemeines') === -1) {
       depNote = '+ Besatzung wird automatisch abgefragt';
     }
     if (key === 'verhaeltnisse' && isOn && selectedSections.indexOf('oertlichkeit') === -1) {
@@ -868,6 +892,13 @@ function render() {
   if (slides[current] === 'slide-psychkg-spd') renderPsychKGSpd();
   if (slides[current] === 'slide-psychkg-transport') renderPsychKGTransport();
   if (slides[current] === 'slide-haftbefehl') renderHaftbefehl();
+  if (slides[current] === 'slide-anzeige-intro') renderAnzeigeIntro();
+  if (slides[current] === 'slide-anzeige-schild') {
+    if (anzeigePersonen.length === 0) addAnzeigePerson();
+    renderAnzeigeSchild();
+  }
+  if (slides[current] === 'slide-anzeige-angaben') renderAnzeigeAngaben();
+  if (slides[current] === 'slide-anzeige-overview') renderAnzeigeOverview();
   var activeSlideEl = document.getElementById(slides[current]);
   if (activeSlideEl) injectOrUpdatePreview(activeSlideEl, slides[current]);
 }
@@ -3687,6 +3718,215 @@ function renderHaftbefehl() {
   function refreshPreview() {}
 }
 
+// ── Anzeigenaufnahme auf der Wache ──────────────────────────
+
+function addAnzeigePerson() {
+  anzeigeCounter++;
+  anzeigePersonen.push({ id: anzeigeCounter, name: '', rolle: '', belehrender: '', gegenueber: '', freitext: '' });
+  anzeigeCurrentIdx = anzeigePersonen.length - 1;
+}
+
+function renderAnzeigeIntro() {
+  var cont = document.getElementById('anzeigeIntroList');
+  if (!cont) return;
+  cont.innerHTML = '';
+  var d = anzeigeIntro;
+
+  function row(label, el, mb) {
+    var wrap = document.createElement('div'); wrap.style.marginBottom = mb || '14px';
+    var lbl = document.createElement('div'); lbl.className = 'input-label'; lbl.textContent = label;
+    wrap.appendChild(lbl); wrap.appendChild(el); cont.appendChild(wrap);
+  }
+
+  var datInp = document.createElement('input');
+  datInp.type = 'date'; datInp.className = 'field-input'; datInp.value = d.datum || '';
+  datInp.oninput = function() { d.datum = this.value; };
+  row('Datum', datInp);
+
+  var uhrInp = document.createElement('input');
+  uhrInp.type = 'time'; uhrInp.className = 'field-input'; uhrInp.value = d.uhrzeit || '';
+  uhrInp.oninput = function() { d.uhrzeit = this.value; };
+  row('Uhrzeit', uhrInp);
+
+  var werInp = document.createElement('input');
+  werInp.type = 'text'; werInp.className = 'field-input'; werInp.value = d.wer || '';
+  werInp.placeholder = 'z.B. der Geschädigte Max Mustermann';
+  werInp.oninput = function() { d.wer = this.value; };
+  row('Erschienene Person', werInp);
+
+  var wasInp = document.createElement('textarea');
+  wasInp.className = 'field-input field-textarea psychkg-ta'; wasInp.value = d.was || '';
+  wasInp.placeholder = 'Sachverhalt in Kurzform ...';
+  wasInp.oninput = function() { d.was = this.value; };
+  row('Anzeigeinhalt', wasInp);
+}
+
+function renderAnzeigeSchild() {
+  var list = document.getElementById('anzeigeSchlList');
+  if (!list) return;
+  list.innerHTML = '';
+  if (anzeigeCurrentIdx === null || !anzeigePersonen[anzeigeCurrentIdx]) return;
+  var s = anzeigePersonen[anzeigeCurrentIdx];
+  var officers = getBesatzungLabels();
+  var card = document.createElement('div'); card.className = 'schild-card';
+
+  var nameInp = document.createElement('input');
+  nameInp.type = 'text'; nameInp.className = 'field-input schild-name-inp';
+  nameInp.placeholder = 'Name der Person (optional)'; nameInp.value = s.name || '';
+  nameInp.oninput = function() { s.name = this.value; };
+  card.appendChild(nameInp);
+
+  var rolleWrap = document.createElement('div'); rolleWrap.style.marginTop = '10px';
+  var rolleLabel = document.createElement('div'); rolleLabel.className = 'input-label'; rolleLabel.textContent = 'Rolle';
+  rolleWrap.appendChild(rolleLabel);
+  var rolleChips = document.createElement('div'); rolleChips.className = 'suggestions';
+  [{ v:'geschm', label:'Geschädigter' }, { v:'geschw', label:'Geschädigte' },
+   { v:'zeuge',  label:'Zeuge' },        { v:'zeugin', label:'Zeugin' }
+  ].forEach(function(opt) {
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.dataset.v = opt.v; btn.textContent = opt.label;
+    btn.className = 'btn-suggestion' + (s.rolle === opt.v ? ' active' : '');
+    rolleChips.appendChild(btn);
+  });
+  rolleWrap.appendChild(rolleChips);
+  card.appendChild(rolleWrap);
+
+  var belWrap = document.createElement('div');
+  belWrap.style.marginTop = '10px'; belWrap.style.display = s.rolle ? '' : 'none';
+  var belLabel = document.createElement('div'); belLabel.className = 'input-label'; belLabel.textContent = 'Belehrung durch';
+  belWrap.appendChild(belLabel);
+  var belChips = document.createElement('div'); belChips.className = 'suggestions';
+  if (!officers.length) {
+    var note = document.createElement('div'); note.className = 'schild-note';
+    note.innerHTML = '<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg> Besatzung auf Seite 1 eintragen.';
+    belChips.appendChild(note);
+  } else {
+    officers.forEach(function(name) {
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.dataset.v = name; btn.textContent = name;
+      btn.className = 'btn-suggestion' + (s.belehrender === name ? ' active' : '');
+      belChips.appendChild(btn);
+    });
+  }
+  belWrap.appendChild(belChips);
+  card.appendChild(belWrap);
+
+  var gegWrap = document.createElement('div');
+  gegWrap.style.marginTop = '10px'; gegWrap.style.display = s.belehrender ? '' : 'none';
+  var gegLabel = document.createElement('div'); gegLabel.className = 'input-label'; gegLabel.textContent = 'Geäußert gegenüber';
+  gegWrap.appendChild(gegLabel);
+  var gegChips = document.createElement('div'); gegChips.className = 'suggestions';
+  officers.forEach(function(name) {
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.dataset.v = name; btn.textContent = name;
+    btn.className = 'btn-suggestion' + (s.gegenueber === name ? ' active' : '');
+    gegChips.appendChild(btn);
+  });
+  gegWrap.appendChild(gegChips);
+  card.appendChild(gegWrap);
+
+  rolleChips.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
+    s.rolle = btn.dataset.v;
+    rolleChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    belWrap.style.display = '';
+  });
+  belChips.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
+    s.belehrender = btn.dataset.v;
+    belChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    if (!s.gegenueber) {
+      s.gegenueber = btn.dataset.v;
+      gegChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.toggle('active', b.dataset.v === s.gegenueber); });
+    }
+    gegWrap.style.display = '';
+  });
+  gegChips.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
+    s.gegenueber = btn.dataset.v;
+    gegChips.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+  });
+
+  list.appendChild(card);
+  requestAnimationFrame(function() { var inp = list.querySelector('.schild-name-inp'); if (inp && !inp.value) inp.focus(); });
+}
+
+function renderAnzeigeAngaben() {
+  var cont = document.getElementById('anzeigeAngabenList');
+  if (!cont) return;
+  cont.innerHTML = '';
+  var s = anzeigeCurrentIdx !== null ? anzeigePersonen[anzeigeCurrentIdx] : null;
+  if (!s) return;
+  var rm = ROLLEN_MAP[s.rolle];
+  var bel = s.belehrender || '[Beamter/Beamtin]';
+  var geg = s.gegenueber  || '[Beamter/Beamtin]';
+  var belTyp = rm && rm.btyp === 'besch' ? 'Beschuldigtenbelehrung' : 'zeugenschaftlicher Belehrung';
+
+  var personLbl = document.createElement('div'); personLbl.className = 'input-label';
+  personLbl.style.marginBottom = '8px';
+  personLbl.textContent = (s.name || ('Person ' + (anzeigeCurrentIdx + 1))) + (rm ? ' – ' + rm.disp : '');
+  cont.appendChild(personLbl);
+
+  var intro = document.createElement('div'); intro.className = 'schild-note'; intro.style.marginBottom = '10px';
+  intro.textContent = 'Nach erfolgter ' + belTyp + ' durch ' + bel + ' machte ' + (rm ? rm.disp : '[Person]') + ' gegenüber ' + geg + ' sinngemäß folgende Angaben:';
+  cont.appendChild(intro);
+
+  var ta = document.createElement('textarea');
+  ta.className = 'field-input field-textarea psychkg-ta';
+  ta.placeholder = 'Angaben der Person ...';
+  ta.value = s.freitext || '';
+  ta.oninput = function() { s.freitext = this.value; };
+  cont.appendChild(ta);
+  requestAnimationFrame(function() { ta.focus(); });
+}
+
+function renderAnzeigeOverview() {
+  var cont = document.getElementById('anzeigeOverviewList');
+  if (!cont) return;
+  cont.innerHTML = '';
+  anzeigePersonen.forEach(function(s, idx) {
+    var rm = ROLLEN_MAP[s.rolle];
+    var isComplete = !!(s.rolle && s.belehrender);
+    var card = document.createElement('div');
+    card.className = 'schild-overview-card' + (isComplete ? ' complete' : '');
+    var nameEl = document.createElement('div'); nameEl.className = 'schild-ov-name';
+    nameEl.textContent = s.name || ('Person ' + (idx + 1));
+    card.appendChild(nameEl);
+    var rolleEl = document.createElement('div'); rolleEl.className = 'schild-ov-rolle';
+    rolleEl.textContent = rm ? rm.disp.replace(/^(der|die) /, '') : 'Keine Rolle gewählt';
+    card.appendChild(rolleEl);
+    if (isComplete) {
+      var badge = document.createElement('div'); badge.className = 'schild-ov-badge';
+      badge.textContent = '✓ Erfasst';
+      card.appendChild(badge);
+    }
+    cont.appendChild(card);
+  });
+}
+
+function generateAnzeigeText() {
+  var d = anzeigeIntro;
+  var datum = d.datum ? formatDateDE(d.datum) : '[Datum]';
+  var uhr   = d.uhrzeit || '[Uhrzeit]';
+  var wer   = d.wer  || '[erschienene Person]';
+  var was   = d.was  || '[Sachverhalt]';
+  var parts = [];
+  parts.push('Am ' + datum + ', um ' + uhr + ' Uhr, erschien ' + wer + ' auf der Polizeiwache Gütersloh und zeigte folgenden Sachverhalt an: ' + was + '.');
+  anzeigePersonen.forEach(function(s) {
+    var rm = ROLLEN_MAP[s.rolle];
+    if (!rm) return;
+    var bel = s.belehrender || '[Beamter/Beamtin]';
+    var geg = s.gegenueber  || '[Beamter/Beamtin]';
+    var belTyp = rm.btyp === 'besch' ? 'Beschuldigtenbelehrung' : 'zeugenschaftlicher Belehrung';
+    var intro = 'Nach erfolgter ' + belTyp + ' durch ' + bel + ' machte ' + rm.disp + ' gegenüber ' + geg + ' sinngemäß folgende Angaben:';
+    parts.push(intro + '\n\n' + (s.freitext || '[Keine Angaben erfasst]'));
+  });
+  return parts.join('\n\n');
+}
+
 function generateResult() {
   var doc = document.getElementById('reportDoc');
   doc.innerHTML = '';
@@ -3732,7 +3972,8 @@ function generateResult() {
     schilderungen: function() { return generateSchilderungenText(); },
     massnahmen:    function() { return generateMassnahmenText(); },
     psychkg:       function() { return generatePsychKGText(); },
-    haftbefehl:    function() { return generateHaftbefehlText(); }
+    haftbefehl:    function() { return generateHaftbefehlText(); },
+    anzeige:       function() { return generateAnzeigeText(); }
   };
 
   var titles = {
@@ -3744,7 +3985,8 @@ function generateResult() {
     schilderungen: 'Schilderungen',
     massnahmen:    'Maßnahmen / Sonstiges',
     psychkg:       'Maßnahmen nach dem PsychKG',
-    haftbefehl:    'Haftbefehl'
+    haftbefehl:    'Haftbefehl',
+    anzeige:       'Anzeigenaufnahme auf der Wache'
   };
 
   selectedSections.forEach(function(key) {
