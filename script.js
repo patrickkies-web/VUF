@@ -3173,8 +3173,21 @@ function renderMassnahmen() {
     massnahmenData.bescheinigungenUhrzeit = this.value;
     refreshEmailPreviews();
   });
+  var azUebernehmen = document.createElement('button');
+  azUebernehmen.type = 'button';
+  azUebernehmen.className = 'az-uebernehmen-btn';
+  azUebernehmen.textContent = '↑ Aus Einsatzdaten übernehmen';
+  azUebernehmen.onclick = function() {
+    var src = document.getElementById('uhrzeit');
+    if (src && src.value) {
+      massnahmenData.bescheinigungenUhrzeit = src.value;
+      azUhrInp.value = src.value;
+      refreshEmailPreviews();
+    }
+  };
   azUhrWrap.appendChild(azUhrLbl);
   azUhrWrap.appendChild(azUhrInp);
+  azUhrWrap.appendChild(azUebernehmen);
   azRow.appendChild(azUhrWrap);
 
   var nwWrap = document.createElement('div');
@@ -4180,13 +4193,23 @@ function generateAnzeigeText() {
   return parts.join('\n\n');
 }
 
+function goBackToSection(key) {
+  var def = SECTION_DEFS[key]; if (!def) return;
+  var slides = getActiveSlides();
+  var firstSlide = def.getSlides()[0];
+  var idx = slides.indexOf(firstSlide);
+  if (idx === -1) idx = 0;
+  current = idx;
+  render();
+}
+
 function generateResult() {
   var doc = document.getElementById('reportDoc');
   doc.innerHTML = '';
   var delay = 0;
   var sectionNum = 1;
 
-  function appendSection(title, text) {
+  function appendSection(title, text, key) {
     if (!text || !text.trim()) return;
     if (doc.children.length > 0) {
       var sp = document.createElement('div');
@@ -4196,7 +4219,17 @@ function generateResult() {
     var h = document.createElement('div');
     h.className = 'report-heading report-item-in';
     h.style.animationDelay = delay + 'ms';
-    h.textContent = sectionNum + ' ' + title;
+    var titleSpan = document.createElement('span');
+    titleSpan.textContent = sectionNum + ' ' + title;
+    h.appendChild(titleSpan);
+    if (key) {
+      var editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'report-edit-btn';
+      editBtn.textContent = 'Bearbeiten';
+      (function(k) { editBtn.onclick = function() { goBackToSection(k); }; })(key);
+      h.appendChild(editBtn);
+    }
     doc.appendChild(h);
     delay += 80;
     var b = document.createElement('div');
@@ -4243,7 +4276,7 @@ function generateResult() {
   };
 
   selectedSections.forEach(function(key) {
-    if (generators[key]) appendSection(titles[key], generators[key]());
+    if (generators[key]) appendSection(titles[key], generators[key](), key);
   });
 
   var slides = getActiveSlides();

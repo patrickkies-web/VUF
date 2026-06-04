@@ -543,6 +543,46 @@ body {
   font-family: 'Calibri', 'Trebuchet MS', Arial, sans-serif;
   color: var(--text);
   margin: 0 0 2px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.report-edit-btn {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color .15s, border-color .15s;
+}
+.report-edit-btn:hover {
+  color: var(--text);
+  border-color: var(--text);
+}
+
+.az-uebernehmen-btn {
+  margin-top: 5px;
+  font-size: 11px;
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color .15s, border-color .15s;
+  display: inline-block;
+}
+.az-uebernehmen-btn:hover {
+  color: var(--text);
+  border-color: var(--text);
 }
 .report-body {
   white-space: pre-wrap;
