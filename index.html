@@ -6,8 +6,8 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Polizeibericht v3.38</title>
-  <link rel="stylesheet" href="style.css?v=3.38">
+  <title>Polizeibericht v3.39</title>
+  <link rel="stylesheet" href="style.css?v=3.39">
 </head>
 <body>
 
@@ -855,6 +855,30 @@
       </div>
     </div>
 
+    <!-- Häusliche Gewalt 1a2: Verletzungen -->
+    <div class="slide" id="slide-hg-verletzung">
+      <div class="question-number">H&auml;usliche Gewalt &middot; Verletzungen</div>
+      <div class="question-text">Welche<br><strong>Verletzungen?</strong></div>
+      <div id="hgVerletzungContent"></div>
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;margin-top:16px">
+        <button class="btn-next" id="btnHgVerletzung">Weiter
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Häusliche Gewalt 1a3: Beschuldigte Person -->
+    <div class="slide" id="slide-hg-beschuldigte">
+      <div class="question-number">H&auml;usliche Gewalt &middot; Beschuldigte Person</div>
+      <div class="question-text">Beschuldigte<br><strong>Person</strong></div>
+      <div id="hgBeschuldigteContent"></div>
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;margin-top:16px">
+        <button class="btn-next" id="btnHgBeschuldigte">Weiter
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+
     <!-- Häusliche Gewalt 1b: Tatort / Wohnung -->
     <div class="slide" id="slide-hg-tatort">
       <div class="question-number">H&auml;usliche Gewalt &middot; Tatort</div>
@@ -913,7 +937,7 @@
   <div style="width:80px"></div>
 </div>
 
-<script src="script.js?v=3.38"></script>
+<script src="script.js?v=3.39"></script>
 <script>if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js').catch(function(){});}</script>
 
 <!-- Bericht-Generierungs-Overlay -->

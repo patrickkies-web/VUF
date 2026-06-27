@@ -136,7 +136,7 @@ var SECTION_DEFS = {
   },
   haeuslichegewalt: {
     label: 'Häusliche Gewalt', desc: 'Eintreffsituation & Tatort (vor den Schilderungen)', icon: '🛡',
-    getSlides: function() { return ['slide-hg-eintreffen', 'slide-hg-tatort']; }
+    getSlides: function() { return ['slide-hg-eintreffen', 'slide-hg-verletzung', 'slide-hg-beschuldigte', 'slide-hg-tatort']; }
   },
   haeuslichegewalt2: {
     label: 'HG – Verfügungen & Prognose', desc: 'Wohnungsverweisung, Opferschutz, Gefahrenprognose (nach den Schilderungen)', icon: '🛡',
@@ -477,6 +477,8 @@ document.getElementById('btnPsychKGWeiter2').onclick = nextSlide;
 document.getElementById('btnGeneratePsychKG').onclick = nextSlide;
 document.getElementById('btnGenerateHaftbefehl').onclick = nextSlide;
 document.getElementById('btnHgEintreffen').onclick = nextSlide;
+document.getElementById('btnHgVerletzung').onclick = nextSlide;
+document.getElementById('btnHgBeschuldigte').onclick = nextSlide;
 document.getElementById('btnHgTatort').onclick = nextSlide;
 document.getElementById('btnHgMassnahmen').onclick = nextSlide;
 document.getElementById('btnHgPrognose').onclick = nextSlide;
@@ -918,6 +920,8 @@ function render() {
   if (slides[current] === 'slide-psychkg-transport') renderPsychKGTransport();
   if (slides[current] === 'slide-haftbefehl') renderHaftbefehl();
   if (slides[current] === 'slide-hg-eintreffen') renderHgEintreffen();
+  if (slides[current] === 'slide-hg-verletzung') renderHgVerletzung();
+  if (slides[current] === 'slide-hg-beschuldigte') renderHgBeschuldigte();
   if (slides[current] === 'slide-hg-tatort') renderHgTatort();
   if (slides[current] === 'slide-hg-massnahmen') renderHgMassnahmen();
   if (slides[current] === 'slide-hg-prognose') renderHgPrognose();
@@ -3898,10 +3902,9 @@ var hgData = {
   beschRolle: 'beschm',
   empfang: 'erwartet',          // 'erwartet' | 'tuer' | 'none'
   wirkungGesch: [],             // Mehrfach-Chips zum Wirken der geschädigten Person
-  verletzungen: [],             // Mehrfach-Chips Verletzungen
-  verletzungFrei: '',           // Freitext-Verletzung
+  verletzungText: '',           // wie Schilderungen-Maske (Freitext)
+  verletzungRtw: null,          // 'kein-rtw' | 'rtw' | null (wie Schilderungen)
   beschVorOrt: 'ja',            // 'ja' | 'nein' – war der/die Beschuldigte vor Ort?
-  rtw: 'nein-attest',           // 'nein-attest' | 'ja' | 'none'
   // Tatort
   hausTyp: 'Mehrfamilienhaus',
   familienName: '',
@@ -4024,20 +4027,6 @@ function hgEinsatzAdresse() {
   return parts.join(', ');
 }
 
-var HG_VERLETZUNG_CHIPS = [
-  { v: 'Rötungen im Halsbereich',          label: 'Rötungen am Hals' },
-  { v: 'Hämatome',                          label: 'Hämatome / Blutergüsse' },
-  { v: 'Kratz- und Schürfwunden',           label: 'Kratzer / Schürfwunden' },
-  { v: 'eine gerötete Wange',               label: 'gerötete Wange' },
-  { v: 'eine Schwellung im Gesicht',        label: 'Schwellung im Gesicht' },
-  { v: 'Druckspuren am Arm',                label: 'Druckspuren am Arm' },
-  { v: 'eine Rissquetschwunde',             label: 'Rissquetschwunde' },
-  { v: 'eine blutende Lippe',               label: 'blutende Lippe' },
-  { v: 'eine Platzwunde',                   label: 'Platzwunde' },
-  { v: 'Würgemale am Hals',                 label: 'Würgemale' },
-  { v: 'keine äußerlich sichtbaren Verletzungen', label: 'keine sichtbaren Verletzungen' }
-];
-
 function renderHgEintreffen() {
   var cont = document.getElementById('hgEintreffenContent');
   if (!cont) return;
@@ -4073,27 +4062,91 @@ function renderHgEintreffen() {
     ], p.wirkungGesch
   )));
 
-  cont.appendChild(hgField('Verletzungen (mehrere möglich)', hgMultiChips(HG_VERLETZUNG_CHIPS, p.verletzungen)));
-  cont.appendChild(hgField('Weitere Verletzung (Freitext)', hgTextInp('z.B. eine Rissquetschwunde an der Stirn', p.verletzungFrei, function(v) { p.verletzungFrei = v; })));
+}
 
-  cont.appendChild(hgField('Rettungsdienst', hgChips(
-    [
-      { v: 'nein-attest', label: 'Kein RTW – ggf. eigene Behandlung + Attest' },
-      { v: 'ja',          label: 'RTW hinzugezogen' },
-      { v: 'none',        label: '—' }
-    ],
-    function() { return p.rtw; }, function(v) { p.rtw = v; }
-  )));
+// Karte 2: Verletzungen – Maske 1:1 wie im Knotenpunkt Schilderungen
+function renderHgVerletzung() {
+  var cont = document.getElementById('hgVerletzungContent');
+  if (!cont) return;
+  cont.innerHTML = '';
+  var p = hgData;
 
-  cont.appendChild(hgField('Beschuldigte Person', hgChips(
+  var pseudo = function() { return { rolle: p.geschRolle, verletzungText: p.verletzungText, verletzungRtw: p.verletzungRtw }; };
+
+  // RTW chips (wie Schilderungen)
+  var rtwLabel = document.createElement('div'); rtwLabel.className = 'input-label';
+  rtwLabel.style.marginBottom = '6px'; rtwLabel.textContent = 'Rettungswagen';
+  cont.appendChild(rtwLabel);
+
+  var rtwChips = document.createElement('div'); rtwChips.className = 'suggestions';
+  [{ v: 'kein-rtw', label: 'Kein RTW benötigt' }, { v: 'rtw', label: 'RTW angefordert' }].forEach(function(opt) {
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.dataset.v = opt.v; btn.textContent = opt.label;
+    btn.className = 'btn-suggestion' + (p.verletzungRtw === opt.v ? ' active' : '');
+    rtwChips.appendChild(btn);
+  });
+
+  var prevBox = document.createElement('div');
+  prevBox.className = 'verletzung-preview schild-preview-box';
+  prevBox.textContent = buildVerletzungText(pseudo());
+
+  rtwChips.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-suggestion'); if (!btn) return;
+    p.verletzungRtw = btn.dataset.v;
+    rtwChips.querySelectorAll('.btn-suggestion').forEach(function(b) {
+      b.classList.toggle('active', b.dataset.v === p.verletzungRtw);
+    });
+    prevBox.textContent = buildVerletzungText(pseudo());
+  });
+  cont.appendChild(rtwChips);
+
+  // Verletzungs-Freitext (wie Schilderungen)
+  var injLabel = document.createElement('div'); injLabel.className = 'input-label';
+  injLabel.style.marginTop = '14px'; injLabel.style.marginBottom = '4px';
+  injLabel.textContent = 'Verletzungen';
+  cont.appendChild(injLabel);
+
+  var injHint = document.createElement('div');
+  injHint.style.cssText = 'font-size:12px;color:var(--muted);margin-bottom:6px;';
+  injHint.textContent = 'z. B. eine Rissquetschwunde an der Stirn';
+  cont.appendChild(injHint);
+
+  var injInp = document.createElement('input');
+  injInp.type = 'text'; injInp.className = 'field-input';
+  injInp.placeholder = 'Verletzungsbeschreibung…';
+  injInp.value = p.verletzungText || '';
+  injInp.oninput = function() { p.verletzungText = this.value; prevBox.textContent = buildVerletzungText(pseudo()); };
+  cont.appendChild(injInp);
+
+  prevBox.style.cssText = 'margin-top:14px;font-size:13px;color:var(--text);background:var(--surface,#f5f5f7);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;white-space:pre-wrap;line-height:1.5;';
+  cont.appendChild(prevBox);
+}
+
+// Karte 3: beschuldigte Person + war vor Ort?
+function renderHgBeschuldigte() {
+  var cont = document.getElementById('hgBeschuldigteContent');
+  if (!cont) return;
+  cont.innerHTML = '';
+  var p = hgData;
+
+  cont.appendChild(hgField('Wer wird beschuldigt?', hgChips(
     [ { v: 'beschm', label: 'Beschuldigter' }, { v: 'beschw', label: 'Beschuldigte' } ],
     function() { return p.beschRolle; }, function(v) { p.beschRolle = v; }
   )));
 
   cont.appendChild(hgField('War die beschuldigte Person vor Ort?', hgChips(
-    [ { v: 'ja', label: 'Ja, vor Ort angetroffen' }, { v: 'nein', label: 'Nein, nicht vor Ort' } ],
-    function() { return p.beschVorOrt; }, function(v) { p.beschVorOrt = v; }
+    [ { v: 'ja', label: 'Ja, vor Ort angetroffen' }, { v: 'nein', label: 'Nein, nicht angetroffen' } ],
+    function() { return p.beschVorOrt; }, function(v) { p.beschVorOrt = v; renderHgBeschuldigte(); }
   )));
+
+  var note = document.createElement('div');
+  note.className = 'hb-ort-hint'; note.style.marginTop = '4px';
+  if (p.beschVorOrt === 'nein') {
+    note.textContent = 'ℹ️ Nicht angetroffen: Vor Ort kann kein mündliches Rückkehrverbot ausgesprochen werden – diese Maßnahmen entfallen.';
+  } else {
+    note.textContent = 'ℹ️ Vor Ort angetroffen: Rückkehrverbot, Schlüssel-Aushändigung etc. werden nach den Schilderungen abgefragt.';
+  }
+  cont.appendChild(note);
 }
 
 function hgSelect(opts, getter, setter) {
@@ -4235,6 +4288,14 @@ function renderHgMassnahmen() {
   cont.innerHTML = '';
   var p = hgData;
 
+  if (p.beschVorOrt === 'nein') {
+    var hinweis = document.createElement('div');
+    hinweis.className = 'hb-ort-hint'; hinweis.style.marginBottom = '14px';
+    hinweis.textContent = 'ℹ️ Die beschuldigte Person war nicht vor Ort – ein mündliches Rückkehrverbot konnte nicht ausgesprochen werden. Diese Maßnahmen entfallen.';
+    cont.appendChild(hinweis);
+  }
+
+  if (p.beschVorOrt !== 'nein') {
   var sep1 = document.createElement('div');
   sep1.className = 'input-label';
   sep1.style.cssText = 'margin:2px 0 10px;opacity:.8;font-weight:600';
@@ -4281,6 +4342,7 @@ function renderHgMassnahmen() {
   } else {
     cont.appendChild(hgField('Hinterlegungsort der Polizeiverfügung', hgTextInp('z.B. PW Minden', p.hinterlegungOrt, function(v) { p.hinterlegungOrt = v; })));
   }
+  } // Ende Wohnungsverweisung (nur wenn vor Ort)
 
   var sep2 = document.createElement('div');
   sep2.className = 'input-label';
@@ -4399,6 +4461,11 @@ function generateHgEintreffenText() {
   }
   eintreff.push(empfangSatz);
 
+  // Verletzungen (Maske 1:1 wie Schilderungen)
+  if (p.verletzungText && p.verletzungText.trim()) {
+    eintreff.push(buildVerletzungText({ rolle: p.geschRolle, verletzungText: p.verletzungText, verletzungRtw: p.verletzungRtw }));
+  }
+
   // Tatort
   var hausTyp = p.hausTyp || 'Mehrfamilienhaus';
   var fam = p.familienName ? 'der Familie ' + p.familienName : 'der betroffenen Familie';
@@ -4426,12 +4493,6 @@ function generateHgEintreffenText() {
     eintreff.push('Gemeinsame Kinder leben nicht im Haushalt.');
   }
 
-  // RTW
-  if (p.rtw === 'nein-attest') {
-    eintreff.push('Auf Nachfrage gab ' + g.nom.charAt(0).toLowerCase() + g.nom.slice(1) + ' an, keinen Rettungswagen zu benötigen und sich ggf. selbstständig in ärztliche Behandlung zu begeben. Der Hinweis, dass ' + g.pron + ' das daraus resultierende Attest bei dem zuständigen Kommissariat einreichen sollte, wurde zur Kenntnis genommen.');
-  } else if (p.rtw === 'ja') {
-    eintreff.push('Zur Versorgung ' + g.gen + ' wurde ein Rettungswagen hinzugezogen.');
-  }
   return eintreff.join('\n\n');
 }
 
@@ -4450,25 +4511,29 @@ function generateHgMassnahmenText() {
   else if (p.strafantrag === 'vorOrt') opfer.push(g.nom + ' stellt vor Ort Strafantrag für alle in Frage kommenden Delikte. Der unterschriebene Strafantrag liegt dem Vorgang bei.');
   if (opfer.length) blocks.push(opfer.join(' '));
 
-  // ── Wohnungsverweisung / Rückkehrverbot (Beschuldigter) ──
-  var verweis = [];
-  var tage = p.rueckkehrTage || '10';
-  verweis.push('Das polizeiliche Handeln bei dem Vorliegen einer Häuslichen Gewalt wurde ' + b.dat + ' zuvor erklärt. ' + b.nom + ' erhielt ein ' + tage + '-tägiges Rückkehrverbot und gab an, die Maßnahmen verstanden zu haben und sich an das Rückkehrverbot halten zu wollen.');
-  verweis.push('Die benannten Anordnungen erfolgten mündlich, mit der Beschreibung der Örtlichkeit, dem Zeitrahmen, der Rechtsgrundlage sowie mit dem Hinweis auf die Möglichkeit einer Durchsetzung durch Ingewahrsamnahme. Die Androhung eines Zwangsgeldes i.H.v. ' + (p.zwangsgeld || '300') + '€ ist erfolgt.');
-  var gegenstandSatz = 'Der beschuldigten Person wurde die Gelegenheit gegeben, ' + b.possAkk + ' dringend benötigten Gegenstände des persönlichen Bedarfs mitzunehmen.';
-  if (p.schluessel === 'ausgehaendigt') {
-    gegenstandSatz += ' Zudem wurde ' + b.nom.charAt(0).toLowerCase() + b.nom.slice(1) + ' dazu aufgefordert, den eigenen Wohnungsschlüssel auszuhändigen, was ' + b.pron + ' auch tat.';
-  } else if (p.schluessel === 'durchsucht') {
-    gegenstandSatz += ' Zudem wurde ' + b.nom.charAt(0).toLowerCase() + b.nom.slice(1) + ' dazu aufgefordert, den eigenen Wohnungsschlüssel auszuhändigen. ' + b.nom + ' gab an, keinen mitzuführen, und wurde mit ' + b.possDatF + ' Zustimmung nach dem Schlüssel durchsucht.';
-  }
-  verweis.push(gegenstandSatz);
-
-  if (p.aufenthalt === 'keine-angabe') {
-    verweis.push(b.nom + ' gab gegenüber den Beamten nicht an, wo ' + b.pron + ' sich für die Zeit der Wohnungsverweisung aufhalten werde. Eine zustellungsbevollmächtigte Person wurde nicht benannt, sodass ' + b.dat + ' mitgeteilt wurde, dass ein ausgefertigtes Exemplar der schriftlichen Bestätigung der mündlichen Polizeiverfügung in der ' + (p.hinterlegungOrt || 'PW Minden') + ' hinterlegt wird.');
+  // ── Wohnungsverweisung / Rückkehrverbot (nur wenn beschuldigte Person vor Ort) ──
+  if (p.beschVorOrt === 'nein') {
+    blocks.push('Da ' + b.nom.charAt(0).toLowerCase() + b.nom.slice(1) + ' bei unserem Eintreffen nicht angetroffen wurde, konnte vor Ort kein mündliches Rückkehrverbot ausgesprochen werden.');
   } else {
-    verweis.push(b.nom + ' gab gegenüber den Beamten an, dass ' + b.pron + ' sich für den Zeitraum des Rückkehrverbots an folgender Anschrift aufhalten werde: ' + (p.aufenthaltAdresse || '[Anschrift]') + '.');
+    var verweis = [];
+    var tage = p.rueckkehrTage || '10';
+    verweis.push('Das polizeiliche Handeln bei dem Vorliegen einer Häuslichen Gewalt wurde ' + b.dat + ' zuvor erklärt. ' + b.nom + ' erhielt ein ' + tage + '-tägiges Rückkehrverbot und gab an, die Maßnahmen verstanden zu haben und sich an das Rückkehrverbot halten zu wollen.');
+    verweis.push('Die benannten Anordnungen erfolgten mündlich, mit der Beschreibung der Örtlichkeit, dem Zeitrahmen, der Rechtsgrundlage sowie mit dem Hinweis auf die Möglichkeit einer Durchsetzung durch Ingewahrsamnahme. Die Androhung eines Zwangsgeldes i.H.v. ' + (p.zwangsgeld || '300') + '€ ist erfolgt.');
+    var gegenstandSatz = 'Der beschuldigten Person wurde die Gelegenheit gegeben, ' + b.possAkk + ' dringend benötigten Gegenstände des persönlichen Bedarfs mitzunehmen.';
+    if (p.schluessel === 'ausgehaendigt') {
+      gegenstandSatz += ' Zudem wurde ' + b.nom.charAt(0).toLowerCase() + b.nom.slice(1) + ' dazu aufgefordert, den eigenen Wohnungsschlüssel auszuhändigen, was ' + b.pron + ' auch tat.';
+    } else if (p.schluessel === 'durchsucht') {
+      gegenstandSatz += ' Zudem wurde ' + b.nom.charAt(0).toLowerCase() + b.nom.slice(1) + ' dazu aufgefordert, den eigenen Wohnungsschlüssel auszuhändigen. ' + b.nom + ' gab an, keinen mitzuführen, und wurde mit ' + b.possDatF + ' Zustimmung nach dem Schlüssel durchsucht.';
+    }
+    verweis.push(gegenstandSatz);
+
+    if (p.aufenthalt === 'keine-angabe') {
+      verweis.push(b.nom + ' gab gegenüber den Beamten nicht an, wo ' + b.pron + ' sich für die Zeit der Wohnungsverweisung aufhalten werde. Eine zustellungsbevollmächtigte Person wurde nicht benannt, sodass ' + b.dat + ' mitgeteilt wurde, dass ein ausgefertigtes Exemplar der schriftlichen Bestätigung der mündlichen Polizeiverfügung in der ' + (p.hinterlegungOrt || 'PW Minden') + ' hinterlegt wird.');
+    } else {
+      verweis.push(b.nom + ' gab gegenüber den Beamten an, dass ' + b.pron + ' sich für den Zeitraum des Rückkehrverbots an folgender Anschrift aufhalten werde: ' + (p.aufenthaltAdresse || '[Anschrift]') + '.');
+    }
+    blocks.push(verweis.join('\n\n'));
   }
-  blocks.push(verweis.join('\n\n'));
 
   // ── Gefahrenprognose ──
   if (p.prognoseText && p.prognoseText.trim()) {
