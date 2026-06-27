@@ -135,8 +135,12 @@ var SECTION_DEFS = {
     getSlides: function() { return ['slide-haftbefehl']; }
   },
   haeuslichegewalt: {
-    label: 'Häusliche Gewalt', desc: 'Eintreffsituation, Wohnungsverweisung, Opferschutz & Gefahrenprognose', icon: '🛡',
-    getSlides: function() { return ['slide-hg-eintreffen', 'slide-hg-massnahmen', 'slide-hg-prognose']; }
+    label: 'Häusliche Gewalt', desc: 'Eintreffsituation & Tatort (vor den Schilderungen)', icon: '🛡',
+    getSlides: function() { return ['slide-hg-eintreffen', 'slide-hg-tatort']; }
+  },
+  haeuslichegewalt2: {
+    label: 'HG – Verfügungen & Prognose', desc: 'Wohnungsverweisung, Opferschutz, Gefahrenprognose (nach den Schilderungen)', icon: '🛡',
+    getSlides: function() { return ['slide-hg-massnahmen', 'slide-hg-prognose']; }
   },
   anzeige: {
     label: 'Anzeigenaufnahme auf der Wache', desc: 'Strafanzeige – Sachverhalt & Schilderungen der erschienenen Personen', icon: '📝',
@@ -153,7 +157,7 @@ var LEITFAEDEN = {
   strasse:   { label: 'VUF Straße',            sections: ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','massnahmen'] },
   parkplatz: { label: 'VUF Parkplatz',          sections: ['allgemeines','oertlichkeit','spuren','fahrzeug','schilderungen','massnahmen'] },
   anzeige:   { label: 'Anzeige auf der Wache',  sections: ['allgemeines','anzeige','massnahmen'] },
-  hg:        { label: 'Häusliche Gewalt',       sections: ['allgemeines','haeuslichegewalt','schilderungen','massnahmen'] }
+  hg:        { label: 'Häusliche Gewalt',       sections: ['allgemeines','haeuslichegewalt','schilderungen','haeuslichegewalt2','massnahmen'] }
 };
 
 var UMSTAENDE_DEFS = [
@@ -395,7 +399,7 @@ var anzeigeCurrentIdx = null;
 
 function getActiveSlides() {
   var slides = [];
-  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','haeuslichegewalt','schilderungen','massnahmen','psychkg','haftbefehl','anzeige'];
+  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','haeuslichegewalt','schilderungen','haeuslichegewalt2','massnahmen','psychkg','haftbefehl','anzeige'];
   ORDER.forEach(function(key) {
     if (selectedSections.indexOf(key) === -1) return;
     var def = SECTION_DEFS[key];
@@ -473,6 +477,7 @@ document.getElementById('btnPsychKGWeiter2').onclick = nextSlide;
 document.getElementById('btnGeneratePsychKG').onclick = nextSlide;
 document.getElementById('btnGenerateHaftbefehl').onclick = nextSlide;
 document.getElementById('btnHgEintreffen').onclick = nextSlide;
+document.getElementById('btnHgTatort').onclick = nextSlide;
 document.getElementById('btnHgMassnahmen').onclick = nextSlide;
 document.getElementById('btnHgPrognose').onclick = nextSlide;
 
@@ -579,7 +584,7 @@ function renderLibrary() {
   var cont = document.getElementById('libraryBausteins');
   if (!cont) return;
   cont.innerHTML = '';
-  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','haeuslichegewalt','schilderungen','massnahmen','psychkg','haftbefehl','anzeige'];
+  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','haeuslichegewalt','schilderungen','haeuslichegewalt2','massnahmen','psychkg','haftbefehl','anzeige'];
   ORDER.forEach(function(key) {
     var def = SECTION_DEFS[key];
     var isOn = selectedSections.indexOf(key) !== -1;
@@ -913,6 +918,7 @@ function render() {
   if (slides[current] === 'slide-psychkg-transport') renderPsychKGTransport();
   if (slides[current] === 'slide-haftbefehl') renderHaftbefehl();
   if (slides[current] === 'slide-hg-eintreffen') renderHgEintreffen();
+  if (slides[current] === 'slide-hg-tatort') renderHgTatort();
   if (slides[current] === 'slide-hg-massnahmen') renderHgMassnahmen();
   if (slides[current] === 'slide-hg-prognose') renderHgPrognose();
   if (slides[current] === 'slide-anzeige-intro') renderAnzeigeIntro();
@@ -3891,17 +3897,21 @@ var hgData = {
   geschRolle: 'geschw',
   beschRolle: 'beschm',
   empfang: 'erwartet',          // 'erwartet' | 'tuer' | 'none'
-  wirkungGesch: [],             // chips: aufgelöst, weinend, verängstigt, ruhig, aufgebracht
-  bes: null,                    // true | false | null (Beweissicherung/BES vor Ort)
+  wirkungGesch: [],             // Mehrfach-Chips zum Wirken der geschädigten Person
+  verletzungen: [],             // Mehrfach-Chips Verletzungen
+  verletzungFrei: '',           // Freitext-Verletzung
+  beschVorOrt: 'ja',            // 'ja' | 'nein' – war der/die Beschuldigte vor Ort?
   rtw: 'nein-attest',           // 'nein-attest' | 'ja' | 'none'
   // Tatort
   hausTyp: 'Mehrfamilienhaus',
   familienName: '',
-  stockwerk: '',
+  stockwerk: '',                // (Alt) Freitext-Lage, weiterhin als Fallback
+  geschoss: '',                 // Dropdown bei Mehrfamilienhaus
+  lageWohnung: '',              // links | rechts | Mitte (bei Mehrfamilienhaus)
   tatortAdresse: '',            // optional, sonst aus Allgemeines
   wohnungWirkung: '',
-  anzahlKinder: '',
-  kinderAlter: '',
+  hatKinder: '',                // 'ja' | 'nein'
+  kinderListe: [],              // [{ alter: '' }]
   // Wohnungsverweisung (Beschuldigter)
   rueckkehrTage: '10',
   zwangsgeld: '300',
@@ -3983,17 +3993,21 @@ function hgTextarea(placeholder, val, setter) {
   return ta;
 }
 function hgToggle(labelText, getter, setter) {
-  var wrap = document.createElement('div');
-  wrap.className = 'nachtragen-wrap'; wrap.style.marginBottom = '10px';
-  var cb = document.createElement('input');
-  cb.type = 'checkbox';
-  cb.style.cssText = 'width:18px;height:18px;accent-color:var(--accent);cursor:pointer;flex-shrink:0';
-  cb.checked = !!getter();
-  cb.addEventListener('change', function() { setter(this.checked); });
-  var lbl = document.createElement('label'); lbl.textContent = labelText; lbl.style.cursor = 'pointer';
-  lbl.addEventListener('click', function() { cb.checked = !cb.checked; setter(cb.checked); });
-  wrap.appendChild(cb); wrap.appendChild(lbl);
-  return wrap;
+  var row = document.createElement('div');
+  row.className = 'hg-switch-row ' + (getter() ? 'on' : 'off');
+  var lbl = document.createElement('div');
+  lbl.className = 'hg-switch-label';
+  lbl.textContent = labelText;
+  var sw = document.createElement('div');
+  sw.className = 'hg-switch';
+  row.appendChild(lbl); row.appendChild(sw);
+  row.addEventListener('click', function() {
+    var next = !getter();
+    setter(next);
+    row.classList.toggle('on', next);
+    row.classList.toggle('off', !next);
+  });
+  return row;
 }
 
 function hgEinsatzAdresse() {
@@ -4010,41 +4024,57 @@ function hgEinsatzAdresse() {
   return parts.join(', ');
 }
 
+var HG_VERLETZUNG_CHIPS = [
+  { v: 'Rötungen im Halsbereich',          label: 'Rötungen am Hals' },
+  { v: 'Hämatome',                          label: 'Hämatome / Blutergüsse' },
+  { v: 'Kratz- und Schürfwunden',           label: 'Kratzer / Schürfwunden' },
+  { v: 'eine gerötete Wange',               label: 'gerötete Wange' },
+  { v: 'eine Schwellung im Gesicht',        label: 'Schwellung im Gesicht' },
+  { v: 'Druckspuren am Arm',                label: 'Druckspuren am Arm' },
+  { v: 'eine Rissquetschwunde',             label: 'Rissquetschwunde' },
+  { v: 'eine blutende Lippe',               label: 'blutende Lippe' },
+  { v: 'eine Platzwunde',                   label: 'Platzwunde' },
+  { v: 'Würgemale am Hals',                 label: 'Würgemale' },
+  { v: 'keine äußerlich sichtbaren Verletzungen', label: 'keine sichtbaren Verletzungen' }
+];
+
 function renderHgEintreffen() {
   var cont = document.getElementById('hgEintreffenContent');
   if (!cont) return;
   cont.innerHTML = '';
   var p = hgData;
 
-  cont.appendChild(hgField('Geschädigte Person', hgChips(
-    [ { v: 'geschw', label: 'Geschädigte (f)' }, { v: 'geschm', label: 'Geschädigter (m)' } ],
+  cont.appendChild(hgField('Von wem wurden wir erwartet?', hgChips(
+    [ { v: 'geschw', label: 'Geschädigte' }, { v: 'geschm', label: 'Geschädigter' } ],
     function() { return p.geschRolle; }, function(v) { p.geschRolle = v; }
   )));
 
-  cont.appendChild(hgField('Beschuldigte Person', hgChips(
-    [ { v: 'beschm', label: 'Beschuldigter (m)' }, { v: 'beschw', label: 'Beschuldigte (f)' } ],
-    function() { return p.beschRolle; }, function(v) { p.beschRolle = v; }
-  )));
-
-  cont.appendChild(hgField('Empfang beim Eintreffen', hgChips(
+  cont.appendChild(hgField('Die Person wirkte … (mehrere möglich)', hgMultiChips(
     [
-      { v: 'erwartet', label: 'Wurde erwartet' },
-      { v: 'tuer',     label: 'Öffnete die Tür' },
-      { v: 'none',     label: '—' }
-    ],
-    function() { return p.empfang; }, function(v) { p.empfang = v; }
-  )));
-
-  cont.appendChild(hgField('Die geschädigte Person wirkte … (Mehrfachauswahl)', hgMultiChips(
-    [
-      { v: 'aufgelöst',   label: 'aufgelöst' },
-      { v: 'weinend',     label: 'weinend' },
-      { v: 'verängstigt', label: 'verängstigt' },
-      { v: 'aufgebracht', label: 'aufgebracht' },
-      { v: 'ruhig',       label: 'gefasst/ruhig' },
-      { v: 'eingeschüchtert', label: 'eingeschüchtert' }
+      { v: 'aufgelöst',            label: 'aufgelöst' },
+      { v: 'weinend',              label: 'weinend' },
+      { v: 'den Tränen nahe',      label: 'den Tränen nahe' },
+      { v: 'verängstigt',          label: 'verängstigt' },
+      { v: 'ängstlich',            label: 'ängstlich' },
+      { v: 'eingeschüchtert',      label: 'eingeschüchtert' },
+      { v: 'unter Schock stehend', label: 'unter Schock' },
+      { v: 'zitternd',             label: 'zitternd' },
+      { v: 'nervös',               label: 'nervös' },
+      { v: 'unruhig',              label: 'unruhig' },
+      { v: 'aufgewühlt',           label: 'aufgewühlt' },
+      { v: 'aufgebracht',          label: 'aufgebracht' },
+      { v: 'wütend',               label: 'wütend' },
+      { v: 'erschöpft',            label: 'erschöpft' },
+      { v: 'apathisch',            label: 'apathisch' },
+      { v: 'eingeschränkt ansprechbar', label: 'eingeschränkt ansprechbar' },
+      { v: 'gefasst',              label: 'gefasst' },
+      { v: 'ruhig',                label: 'ruhig' },
+      { v: 'erleichtert',          label: 'erleichtert' }
     ], p.wirkungGesch
   )));
+
+  cont.appendChild(hgField('Verletzungen (mehrere möglich)', hgMultiChips(HG_VERLETZUNG_CHIPS, p.verletzungen)));
+  cont.appendChild(hgField('Weitere Verletzung (Freitext)', hgTextInp('z.B. eine Rissquetschwunde an der Stirn', p.verletzungFrei, function(v) { p.verletzungFrei = v; })));
 
   cont.appendChild(hgField('Rettungsdienst', hgChips(
     [
@@ -4055,18 +4085,37 @@ function renderHgEintreffen() {
     function() { return p.rtw; }, function(v) { p.rtw = v; }
   )));
 
-  cont.appendChild(hgField('Beweissicherung (BES) vor Ort', hgChips(
-    [ { v: 'ja', label: 'Ja' }, { v: 'nein', label: 'Nein' } ],
-    function() { return p.bes === true ? 'ja' : p.bes === false ? 'nein' : ''; },
-    function(v) { p.bes = (v === 'ja'); }
+  cont.appendChild(hgField('Beschuldigte Person', hgChips(
+    [ { v: 'beschm', label: 'Beschuldigter' }, { v: 'beschw', label: 'Beschuldigte' } ],
+    function() { return p.beschRolle; }, function(v) { p.beschRolle = v; }
   )));
 
-  // Tatort
-  var sep = document.createElement('div');
-  sep.className = 'input-label';
-  sep.style.cssText = 'margin:18px 0 10px;opacity:.8;font-weight:600';
-  sep.textContent = 'Tatort (Wohnung)';
-  cont.appendChild(sep);
+  cont.appendChild(hgField('War die beschuldigte Person vor Ort?', hgChips(
+    [ { v: 'ja', label: 'Ja, vor Ort angetroffen' }, { v: 'nein', label: 'Nein, nicht vor Ort' } ],
+    function() { return p.beschVorOrt; }, function(v) { p.beschVorOrt = v; }
+  )));
+}
+
+function hgSelect(opts, getter, setter) {
+  var sel = document.createElement('select');
+  sel.className = 'field-input';
+  opts.forEach(function(o) {
+    var op = document.createElement('option');
+    op.value = o.v; op.textContent = o.label;
+    if (getter() === o.v) op.selected = true;
+    sel.appendChild(op);
+  });
+  sel.addEventListener('change', function() { setter(this.value); });
+  return sel;
+}
+
+function renderHgTatort() {
+  var cont = document.getElementById('hgTatortContent');
+  if (!cont) return;
+  cont.innerHTML = '';
+  var p = hgData;
+
+  cont.appendChild(hgField('Wohnung der Familie … (Name)', hgTextInp('z.B. Mustermann', p.familienName, function(v) { p.familienName = v; })));
 
   cont.appendChild(hgField('Art des Wohnhauses', hgChips(
     [
@@ -4074,10 +4123,8 @@ function renderHgEintreffen() {
       { v: 'Einfamilienhaus',  label: 'Einfamilienhaus' },
       { v: 'Reihenhaus',       label: 'Reihenhaus' }
     ],
-    function() { return p.hausTyp; }, function(v) { p.hausTyp = v; }
+    function() { return p.hausTyp; }, function(v) { p.hausTyp = v; renderHgTatort(); }
   )));
-
-  cont.appendChild(hgField('Familienname (Wohnung der Familie …)', hgTextInp('z.B. Mustermann', p.familienName, function(v) { p.familienName = v; })));
 
   // Tatort-Adresse mit Übernahme aus Allgemeines
   var adrWrap = document.createElement('div'); adrWrap.style.marginBottom = '16px';
@@ -4089,8 +4136,8 @@ function renderHgEintreffen() {
     var hint = document.createElement('div');
     hint.className = 'hb-ort-hint';
     hint.style.cursor = 'pointer';
-    hint.textContent = '📍 Aus Einsatzörtlichkeit übernehmen: ' + einsatzAdr;
-    hint.addEventListener('click', function() { p.tatortAdresse = einsatzAdr; renderHgEintreffen(); });
+    hint.textContent = '📍 Aus Knotenpunkt „Allgemeines“ übernehmen: ' + einsatzAdr;
+    hint.addEventListener('click', function() { p.tatortAdresse = einsatzAdr; renderHgTatort(); });
     adrWrap.appendChild(hint);
   }
   var adrInp = document.createElement('input');
@@ -4101,26 +4148,85 @@ function renderHgEintreffen() {
   adrWrap.appendChild(adrInp);
   cont.appendChild(adrWrap);
 
-  cont.appendChild(hgField('Lage der Wohnung im Haus', hgTextInp('z.B. 1. OG (rechts)', p.stockwerk, function(v) { p.stockwerk = v; })));
+  // Bei Mehrfamilienhaus: Geschoss + Lage (rechts/links/mitte)
+  if (p.hausTyp === 'Mehrfamilienhaus') {
+    var lageRow = document.createElement('div');
+    lageRow.className = 'besch-az-row'; lageRow.style.marginBottom = '16px';
+    var geschWrap = document.createElement('div'); geschWrap.className = 'besch-az-field';
+    var geschLbl = document.createElement('label'); geschLbl.textContent = 'Geschoss';
+    geschWrap.appendChild(geschLbl);
+    geschWrap.appendChild(hgSelect(
+      [
+        { v: '', label: '– bitte wählen –' },
+        { v: 'Erdgeschoss', label: 'Erdgeschoss' },
+        { v: '1. OG', label: '1. OG' },
+        { v: '2. OG', label: '2. OG' },
+        { v: '3. OG', label: '3. OG' },
+        { v: '4. OG', label: '4. OG' },
+        { v: '5. OG', label: '5. OG' },
+        { v: 'Dachgeschoss', label: 'Dachgeschoss' },
+        { v: 'Untergeschoss', label: 'Untergeschoss' }
+      ],
+      function() { return p.geschoss; }, function(v) { p.geschoss = v; }
+    ));
+    var seiteWrap = document.createElement('div'); seiteWrap.className = 'besch-az-field';
+    var seiteLbl = document.createElement('label'); seiteLbl.textContent = 'Lage';
+    seiteWrap.appendChild(seiteLbl);
+    seiteWrap.appendChild(hgSelect(
+      [
+        { v: '', label: '– bitte wählen –' },
+        { v: 'links', label: 'links' },
+        { v: 'rechts', label: 'rechts' },
+        { v: 'Mitte', label: 'Mitte' }
+      ],
+      function() { return p.lageWohnung; }, function(v) { p.lageWohnung = v; }
+    ));
+    lageRow.appendChild(geschWrap); lageRow.appendChild(seiteWrap);
+    cont.appendChild(lageRow);
+  }
 
   cont.appendChild(hgField('Die Wohnung wirkte …', hgTextInp('z.B. aufgeräumt / verwüstet / Spuren eines Streits', p.wohnungWirkung, function(v) { p.wohnungWirkung = v; })));
 
-  var kinderRow = document.createElement('div');
-  kinderRow.className = 'besch-az-row'; kinderRow.style.marginBottom = '16px';
-  var akWrap = document.createElement('div'); akWrap.className = 'besch-az-field';
-  var akLbl = document.createElement('label'); akLbl.textContent = 'Anzahl Kinder im Haushalt';
-  var akInp = document.createElement('input'); akInp.type = 'number'; akInp.min = '0'; akInp.className = 'field-input';
-  akInp.placeholder = '2'; akInp.value = p.anzahlKinder;
-  akInp.addEventListener('input', function() { p.anzahlKinder = this.value; });
-  akWrap.appendChild(akLbl); akWrap.appendChild(akInp);
-  var altWrap = document.createElement('div'); altWrap.className = 'besch-az-field';
-  var altLbl = document.createElement('label'); altLbl.textContent = 'Alter (gemeinsame Kinder)';
-  var altInp = document.createElement('input'); altInp.type = 'text'; altInp.className = 'field-input';
-  altInp.placeholder = 'z.B. 4 und 7'; altInp.value = p.kinderAlter;
-  altInp.addEventListener('input', function() { p.kinderAlter = this.value; });
-  altWrap.appendChild(altLbl); altWrap.appendChild(altInp);
-  kinderRow.appendChild(akWrap); kinderRow.appendChild(altWrap);
-  cont.appendChild(kinderRow);
+  // Kinder im Haushalt?
+  cont.appendChild(hgField('Kinder im Haushalt?', hgChips(
+    [ { v: 'ja', label: 'Ja' }, { v: 'nein', label: 'Nein' } ],
+    function() { return p.hatKinder; }, function(v) { p.hatKinder = v; renderHgTatort(); }
+  )));
+
+  if (p.hatKinder === 'ja') {
+    var kinderWrap = document.createElement('div'); kinderWrap.style.marginBottom = '12px';
+    var kLbl = document.createElement('div'); kLbl.className = 'input-label'; kLbl.style.marginBottom = '8px';
+    kLbl.textContent = 'Kinder (gemeinsame Kinder – Alter in Jahren)';
+    kinderWrap.appendChild(kLbl);
+
+    if (!p.kinderListe.length) p.kinderListe.push({ alter: '' });
+    p.kinderListe.forEach(function(kind, idx) {
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:8px';
+      var nr = document.createElement('span');
+      nr.style.cssText = 'font-size:13px;color:var(--c-muted,#888);min-width:64px';
+      nr.textContent = (idx + 1) + '. Kind';
+      var alterInp = document.createElement('input');
+      alterInp.type = 'number'; alterInp.min = '0'; alterInp.max = '30'; alterInp.className = 'field-input';
+      alterInp.placeholder = 'Alter (J.)'; alterInp.value = kind.alter; alterInp.style.flex = '1';
+      alterInp.addEventListener('input', function() { kind.alter = this.value; });
+      row.appendChild(nr); row.appendChild(alterInp);
+      if (p.kinderListe.length > 1) {
+        var del = document.createElement('button');
+        del.type = 'button'; del.className = 'btn-add-custom'; del.textContent = '−';
+        del.addEventListener('click', function() { p.kinderListe.splice(idx, 1); renderHgTatort(); });
+        row.appendChild(del);
+      }
+      kinderWrap.appendChild(row);
+    });
+
+    var addBtn = document.createElement('button');
+    addBtn.type = 'button'; addBtn.className = 'btn-add';
+    addBtn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Kind hinzufügen';
+    addBtn.addEventListener('click', function() { p.kinderListe.push({ alter: '' }); renderHgTatort(); });
+    kinderWrap.appendChild(addBtn);
+    cont.appendChild(kinderWrap);
+  }
 }
 
 function renderHgMassnahmen() {
@@ -4261,11 +4367,10 @@ function renderHgPrognose() {
   cont.appendChild(gaWrap);
 }
 
-function generateHaeuslicheGewaltText() {
+function generateHgEintreffenText() {
   var p = hgData;
   var g = HG_PERSONEN[p.geschRolle] || HG_PERSONEN.geschw;
   var b = HG_PERSONEN[p.beschRolle] || HG_PERSONEN.beschm;
-  var blocks = [];
 
   // ── Eintreffsituation ──
   var eintreff = [];
@@ -4280,7 +4385,18 @@ function generateHaeuslicheGewaltText() {
   if (p.wirkungGesch.length) {
     empfangSatz += ' ' + g.Pron + ' wirkte ' + joinAnd(p.wirkungGesch) + '.';
   }
-  if (p.bes === true) empfangSatz += ' Zur Beweissicherung wurde der Bezirksdienst (BES) hinzugezogen.';
+  // Verletzungen (Chips + Freitext)
+  var verlList = (p.verletzungen || []).slice();
+  if (p.verletzungFrei && p.verletzungFrei.trim()) verlList.push(p.verletzungFrei.trim());
+  if (verlList.length) {
+    empfangSatz += ' ' + g.Pron + ' wies vor Ort ' + joinAnd(verlList) + ' auf.';
+  }
+  // War die beschuldigte Person vor Ort?
+  if (p.beschVorOrt === 'ja') {
+    empfangSatz += ' ' + b.nom + ' war bei unserem Eintreffen vor Ort.';
+  } else if (p.beschVorOrt === 'nein') {
+    empfangSatz += ' ' + b.nom + ' war bei unserem Eintreffen nicht mehr vor Ort anzutreffen.';
+  }
   eintreff.push(empfangSatz);
 
   // Tatort
@@ -4288,16 +4404,26 @@ function generateHaeuslicheGewaltText() {
   var fam = p.familienName ? 'der Familie ' + p.familienName : 'der betroffenen Familie';
   var adr = p.tatortAdresse || hgEinsatzAdresse() || '[Anschrift]';
   var tatort = 'Bei dem Tatort handelt es sich um die Wohnung ' + fam + '. Bei dem Wohnhaus handelt es sich um ein ' + hausTyp + ' an der Anschrift ' + adr + '.';
-  if (p.stockwerk) tatort += ' Die Wohnung der Familie befindet sich im ' + p.stockwerk + '.';
+  var lageWohnung = '';
+  if (p.hausTyp === 'Mehrfamilienhaus' && p.geschoss) {
+    lageWohnung = p.geschoss + (p.lageWohnung ? ' (' + p.lageWohnung + ')' : '');
+  } else if (p.stockwerk) {
+    lageWohnung = p.stockwerk;
+  }
+  if (lageWohnung) tatort += ' Die Wohnung der Familie befindet sich im ' + lageWohnung + '.';
   if (p.wohnungWirkung) tatort += ' Die Wohnung wirkte ' + p.wohnungWirkung + '.';
   eintreff.push(tatort);
 
-  // Bewohner
-  if (p.anzahlKinder) {
-    var kinderSatz = 'In der Wohnung leben neben ' + g.dat + ' und ' + b.dat + ' ' + p.anzahlKinder + ' Kinder';
-    if (p.kinderAlter) kinderSatz += ' (gemeinsame Kinder: ' + p.kinderAlter + ' J.)';
+  // Bewohner / Kinder
+  if (p.hatKinder === 'ja') {
+    var alterList = (p.kinderListe || []).map(function(k) { return (k.alter || '').toString().trim(); }).filter(Boolean);
+    var anzahl = (p.kinderListe || []).length;
+    var kinderSatz = 'In der Wohnung leben neben ' + g.dat + ' und ' + b.dat + ' ' + anzahl + (anzahl === 1 ? ' Kind' : ' Kinder');
+    if (alterList.length) kinderSatz += ' (gemeinsame Kinder: ' + joinAnd(alterList) + ' J.)';
     kinderSatz += '.';
     eintreff.push(kinderSatz);
+  } else if (p.hatKinder === 'nein') {
+    eintreff.push('Gemeinsame Kinder leben nicht im Haushalt.');
   }
 
   // RTW
@@ -4306,7 +4432,14 @@ function generateHaeuslicheGewaltText() {
   } else if (p.rtw === 'ja') {
     eintreff.push('Zur Versorgung ' + g.gen + ' wurde ein Rettungswagen hinzugezogen.');
   }
-  blocks.push(eintreff.join('\n\n'));
+  return eintreff.join('\n\n');
+}
+
+function generateHgMassnahmenText() {
+  var p = hgData;
+  var g = HG_PERSONEN[p.geschRolle] || HG_PERSONEN.geschw;
+  var b = HG_PERSONEN[p.beschRolle] || HG_PERSONEN.beschm;
+  var blocks = [];
 
   // ── Opferschutz / Strafantrag (Geschädigte) ──
   var opfer = [];
@@ -4761,7 +4894,8 @@ function generateResult() {
     massnahmen:    function() { return generateMassnahmenText(); },
     psychkg:       function() { return generatePsychKGText(); },
     haftbefehl:    function() { return generateHaftbefehlText(); },
-    haeuslichegewalt: function() { return generateHaeuslicheGewaltText(); },
+    haeuslichegewalt:  function() { return generateHgEintreffenText(); },
+    haeuslichegewalt2: function() { return generateHgMassnahmenText(); },
     anzeige:       function() { return generateAnzeigeText(); }
   };
 
@@ -4775,7 +4909,8 @@ function generateResult() {
     massnahmen:    'Maßnahmen / Sonstiges',
     psychkg:       'Maßnahmen nach dem PsychKG',
     haftbefehl:    'Haftbefehl',
-    haeuslichegewalt: 'Häusliche Gewalt',
+    haeuslichegewalt:  'Eintreffsituation',
+    haeuslichegewalt2: 'Häusliche Gewalt – Verfügungen, Gefahrenprognose & Maßnahmen',
     anzeige:       'Anzeigenaufnahme auf der Wache'
   };
 
