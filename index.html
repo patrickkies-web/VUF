@@ -6,8 +6,8 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Polizeibericht v3.36</title>
-  <link rel="stylesheet" href="style.css?v=3.36">
+  <title>Polizeibericht v3.37</title>
+  <link rel="stylesheet" href="style.css?v=3.37">
 </head>
 <body>
 
@@ -27,6 +27,10 @@
       <button class="btn-preset" id="btnPresetParkplatz">
         <span class="preset-name">VUF Parkplatz</span>
         <span class="preset-sub">5&nbsp;Abschnitte</span>
+      </button>
+      <button class="btn-preset" id="btnPresetHg">
+        <span class="preset-name">H&auml;usliche Gewalt</span>
+        <span class="preset-sub">4&nbsp;Abschnitte</span>
       </button>
     </div>
     <div class="lib-group-label">Oder einzeln w&auml;hlen</div>
@@ -839,6 +843,42 @@
       </div>
     </div>
 
+    <!-- Häusliche Gewalt 1: Eintreffsituation -->
+    <div class="slide" id="slide-hg-eintreffen">
+      <div class="question-number">H&auml;usliche Gewalt &middot; Eintreffsituation</div>
+      <div class="question-text">Eintreffen &amp;<br><strong>Tatort</strong></div>
+      <div id="hgEintreffenContent"></div>
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;margin-top:16px">
+        <button class="btn-next" id="btnHgEintreffen">Weiter
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Häusliche Gewalt 2: Wohnungsverweisung & Opferschutz -->
+    <div class="slide" id="slide-hg-massnahmen">
+      <div class="question-number">H&auml;usliche Gewalt &middot; Verf&uuml;gungen</div>
+      <div class="question-text">Wohnungsverweisung &amp;<br><strong>Opferschutz</strong></div>
+      <div id="hgMassnahmenContent"></div>
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;margin-top:16px">
+        <button class="btn-next" id="btnHgMassnahmen">Weiter
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Häusliche Gewalt 3: Gefahrenprognose & Sonstiges -->
+    <div class="slide" id="slide-hg-prognose">
+      <div class="question-number">H&auml;usliche Gewalt &middot; Prognose &amp; Sonstiges</div>
+      <div class="question-text">Gefahrenprognose &amp;<br><strong>Sonstiges</strong></div>
+      <div id="hgPrognoseContent"></div>
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;margin-top:16px">
+        <button class="btn-next" id="btnHgPrognose">Bericht erstellen
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+
     <!-- Ergebnis -->
     <div class="slide" id="slide-result">
       <div class="question-number">Fertig</div>
@@ -861,7 +901,7 @@
   <div style="width:80px"></div>
 </div>
 
-<script src="script.js?v=3.36"></script>
+<script src="script.js?v=3.37"></script>
 <script>if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js').catch(function(){});}</script>
 
 <!-- Bericht-Generierungs-Overlay -->
