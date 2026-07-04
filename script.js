@@ -370,7 +370,9 @@ var massnahmenData = {
   kunoSperrung: false,
   sachfahndung: false,
   lichtbilder: false,
-  dokumente: false, dokumenteRollen: [], dokumenteBeamterGender: 'm'
+  dokumente: false, dokumenteRollen: [], dokumenteBeamterGender: 'm',
+  bescheinigungAusgehaendigt: [],
+  weiterfahrtUntersagt: []
 };
 var psychkgData = { verhaltensText: '', personRolle: '', anlass: '', orgTyp: '', mitGender: 'm', mitName: '', arztGender: 'm', arztName: '', transport: '', begleitung: null };
 var haftbefehlData = {
@@ -3128,6 +3130,21 @@ function generateMassnahmenText() {
       : 'dem aufnehmenden Beamten';
     parts.push(nomCap + ' händigte ' + beamter + ' sachdienliche Dokumente aus, welche eingescannt und digital beigefügt wurden.');
   });
+  massnahmenData.bescheinigungAusgehaendigt.forEach(function(rolleKey) {
+    var rm = ROLLEN_MAP[rolleKey]; if (!rm) return;
+    var dativCap = rm.dativ.charAt(0).toUpperCase() + rm.dativ.slice(1);
+    parts.push(dativCap + ' wurde eine Bescheinigung über die Erstattung einer Anzeige ausgehändigt.');
+  });
+  massnahmenData.weiterfahrtUntersagt.forEach(function(rolleKey) {
+    var rm = ROLLEN_MAP[rolleKey]; if (!rm) return;
+    var dativCap = rm.dativ.charAt(0).toUpperCase() + rm.dativ.slice(1);
+    var nomCap = rm.disp.charAt(0).toUpperCase() + rm.disp.slice(1);
+    parts.push(
+      dativCap + ' wurde ausdrücklich und unmissverständlich untersagt, bis zum Erreichen der vollständigen Nüchternheit ein Fahrzeug im öffentlichen Straßenverkehr zu führen. ' +
+      rm.er + ' wurde darüber belehrt, dass das Führen eines Kraftfahrzeugs unter der Wirkung von Alkohol bzw. berauschenden Mitteln eine Straftat gemäß § 316 StGB darstellt und eine gleichwohl angetretene Fahrt ein weiteres Strafverfahren nach sich zieht. ' +
+      nomCap + ' bestätigte, die Belehrung verstanden zu haben.'
+    );
+  });
   return parts.join('\n\n');
 }
 
@@ -3425,6 +3442,62 @@ function renderMassnahmen() {
   dokWrap.appendChild(dokBtn);
   dokWrap.appendChild(dokDetail);
   cont.appendChild(dokWrap);
+
+  // ── Wiederverwendbare Maßnahme mit Personenauswahl ──────────
+  var MASSN_ICON_CHECK = '<span class="mb-check"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>';
+  var MASSN_ICON_CHEV = '<span class="mb-chevron"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span>';
+  var MASSN_ROLLEN = [
+    { v: 'geschm', label: 'Geschädigter' }, { v: 'geschw', label: 'Geschädigte' },
+    { v: 'zeuge',  label: 'Zeuge' },        { v: 'zeugin', label: 'Zeugin' },
+    { v: 'beschm', label: 'Beschuldigter' },{ v: 'beschw', label: 'Beschuldigte' }
+  ];
+  function massnahmeRolleMeasure(labelText, arr, frageText) {
+    var wrap = document.createElement('div');
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'massnahme-btn' + (arr.length > 0 ? ' active open' : '');
+    btn.innerHTML = MASSN_ICON_CHECK + '<span class="mb-label">' + labelText + '</span>' + MASSN_ICON_CHEV;
+    var detail = document.createElement('div');
+    detail.className = 'massnahme-sub';
+    detail.style.display = arr.length > 0 ? '' : 'none';
+    var lbl = document.createElement('div'); lbl.className = 'input-label'; lbl.style.marginBottom = '6px';
+    lbl.textContent = frageText || 'Person(en)';
+    detail.appendChild(lbl);
+    var chips = document.createElement('div'); chips.className = 'suggestions';
+    MASSN_ROLLEN.forEach(function(opt) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.dataset.v = opt.v; b.textContent = opt.label;
+      b.className = 'btn-suggestion' + (arr.indexOf(opt.v) !== -1 ? ' active' : '');
+      b.addEventListener('click', function() {
+        var i = arr.indexOf(opt.v);
+        if (i !== -1) { arr.splice(i, 1); b.classList.remove('active'); }
+        else          { arr.push(opt.v);   b.classList.add('active'); }
+        btn.classList.toggle('active', arr.length > 0);
+      });
+      chips.appendChild(b);
+    });
+    detail.appendChild(chips);
+    btn.onclick = function() {
+      var isOpen = detail.style.display !== 'none';
+      detail.style.display = isOpen ? 'none' : '';
+      btn.classList.toggle('open', !isOpen);
+      if (!isOpen) btn.classList.add('active');
+      else if (arr.length === 0) btn.classList.remove('active');
+    };
+    wrap.appendChild(btn); wrap.appendChild(detail);
+    return wrap;
+  }
+
+  cont.appendChild(massnahmeRolleMeasure(
+    'Bescheinigung über Anzeigeerstattung ausgehändigt',
+    massnahmenData.bescheinigungAusgehaendigt,
+    'Wem wurde die Bescheinigung ausgehändigt?'
+  ));
+  cont.appendChild(massnahmeRolleMeasure(
+    'Weiterfahrt bis zur Ausnüchterung untersagt',
+    massnahmenData.weiterfahrtUntersagt,
+    'Wem wurde die Weiterfahrt untersagt?'
+  ));
 }
 
 // ── PsychKG ────────────────────────────────────────────────────────────────
