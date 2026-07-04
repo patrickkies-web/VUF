@@ -2968,11 +2968,34 @@ function formatDateDE(iso) {
   return p.length === 3 ? p[2] + '.' + p[1] + '.' + p[0] : iso;
 }
 
-function generateSchilderungenText() {
-  if (!schilderungen.length) return '';
+var ROLLE_KURZ = {
+  zeuge: 'Zeuge', zeugin: 'Zeugin',
+  ub01m: 'Unfallbeteiligter 01', ub01w: 'Unfallbeteiligte 01',
+  ub02m: 'Unfallbeteiligter 02', ub02w: 'Unfallbeteiligte 02',
+  beschm: 'Beschuldigter', beschw: 'Beschuldigte',
+  geschm: 'Geschädigter', geschw: 'Geschädigte'
+};
+function rolleRef(rolle, name) {
+  var k = ROLLE_KURZ[rolle] || 'Person';
+  return name && name.trim() ? k + ' ' + name.trim() : k;
+}
+
+function schilderungenPersonList() {
   return schilderungen.map(function (s) {
     var rm = ROLLEN_MAP[s.rolle];
-    if (!rm) return '';
+    if (!rm) return null;
+    var text = buildSchilderungBlock(s, rm);
+    return { ref: rolleRef(s.rolle, s.name), text: text };
+  }).filter(Boolean);
+}
+
+function generateSchilderungenText() {
+  return schilderungenPersonList().map(function (p) { return p.text; })
+    .filter(function (t) { return t && t.trim(); }).join('\n\n');
+}
+
+function buildSchilderungBlock(s, rm) {
+  {
     var bel = s.belehrender || '[Beamter/Beamtin]';
     var geg = s.gegenueber || '[Beamter/Beamtin]';
     var belTyp = rm.btyp === 'besch' ? 'Beschuldigtenbelehrung' : 'zeugenschaftlicher Belehrung';
@@ -3043,7 +3066,7 @@ function generateSchilderungenText() {
 
     parts.push(buildAngabenText(s));
     return parts.join('\n\n');
-  }).filter(Boolean).join('\n\n');
+  }
 }
 
 function buildAktenzeichen(uhrzeit, nwKennung) {
@@ -4941,11 +4964,10 @@ function generateAnzeigeText() {
   return buildAnzeigeEinleitungSatz(anzeigeIntro.was || '[Sachverhalt]');
 }
 
-function generateAnzeigeSchilderungenText() {
-  var parts = [];
-  anzeigePersonen.forEach(function(s) {
+function anzeigeSchilderungenPersonList() {
+  return anzeigePersonen.map(function(s) {
     var rm = ROLLEN_MAP[s.rolle];
-    if (!rm) return;
+    if (!rm) return null;
     var bel = s.belehrender || '[Beamter/Beamtin]';
     var geg = s.gegenueber  || '[Beamter/Beamtin]';
     var belTyp = rm.btyp === 'besch' ? 'Beschuldigtenbelehrung' : 'zeugenschaftlicher Belehrung';
@@ -4965,9 +4987,13 @@ function generateAnzeigeSchilderungenText() {
       angaben += '\n\n' + nomCap + ' stellt keinen Strafantrag.';
     }
     personBlock.push(introSatz + '\n\n' + angaben);
-    parts.push(personBlock.join('\n\n'));
-  });
-  return parts.join('\n\n');
+    return { ref: rolleRef(s.rolle, s.name), text: personBlock.join('\n\n') };
+  }).filter(Boolean);
+}
+
+function generateAnzeigeSchilderungenText() {
+  return anzeigeSchilderungenPersonList().map(function(p) { return p.text; })
+    .filter(function(t) { return t && t.trim(); }).join('\n\n');
 }
 
 function goBackToSection(key) {
@@ -4986,18 +5012,17 @@ function generateResult() {
   var delay = 0;
   var sectionNum = 1;
 
-  function appendSection(title, text, key) {
-    if (!text || !text.trim()) return;
+  function renderBlock(numLabel, title, text, key, isSub) {
     if (doc.children.length > 0) {
       var sp = document.createElement('div');
       sp.className = 'report-spacer';
       doc.appendChild(sp);
     }
     var h = document.createElement('div');
-    h.className = 'report-heading report-item-in';
+    h.className = 'report-heading report-item-in' + (isSub ? ' report-subheading' : '');
     h.style.animationDelay = delay + 'ms';
     var titleSpan = document.createElement('span');
-    titleSpan.textContent = sectionNum + ' ' + title;
+    titleSpan.textContent = numLabel + ' ' + title;
     h.appendChild(titleSpan);
     if (key) {
       var editBtn = document.createElement('button');
@@ -5009,12 +5034,35 @@ function generateResult() {
     }
     doc.appendChild(h);
     delay += 80;
-    var b = document.createElement('div');
-    b.className = 'report-body report-item-in';
-    b.style.animationDelay = delay + 'ms';
-    b.textContent = text;
-    doc.appendChild(b);
-    delay += 160;
+    if (text && text.trim()) {
+      var b = document.createElement('div');
+      b.className = 'report-body report-item-in';
+      b.style.animationDelay = delay + 'ms';
+      b.textContent = text;
+      doc.appendChild(b);
+      delay += 160;
+    }
+  }
+
+  function appendSection(title, text, key) {
+    if (!text || !text.trim()) return;
+    renderBlock(String(sectionNum), title, text, key, false);
+    sectionNum++;
+  }
+
+  function appendSchilderungen(key, list) {
+    list = (list || []).filter(function(p) { return p.text && p.text.trim(); });
+    if (!list.length) return;
+    if (list.length === 1) {
+      renderBlock(String(sectionNum), 'Schilderungen (' + list[0].ref + ')', list[0].text, key, false);
+      sectionNum++;
+      return;
+    }
+    var main = sectionNum;
+    renderBlock(String(main), 'Schilderungen', '', key, false);
+    list.forEach(function(p, i) {
+      renderBlock(main + '.' + (i + 1), p.ref, p.text, key, true);
+    });
     sectionNum++;
   }
 
@@ -5060,7 +5108,11 @@ function generateResult() {
     }
     if (key === 'anzeige') {
       appendSection('Anzeigenaufnahme auf der Wache', generateAnzeigeText(), 'anzeige');
-      appendSection('Schilderungen', generateAnzeigeSchilderungenText(), 'anzeige');
+      appendSchilderungen('anzeige', anzeigeSchilderungenPersonList());
+      return;
+    }
+    if (key === 'schilderungen') {
+      appendSchilderungen('schilderungen', schilderungenPersonList());
       return;
     }
     if (generators[key]) appendSection(titles[key], generators[key](), key);

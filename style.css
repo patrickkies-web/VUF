@@ -593,6 +593,7 @@ body {
   margin: 0;
 }
 .report-spacer { height: 1.28em; }
+.report-subheading { margin-left: 14px; }
 
 .btn-copy {
   display: inline-flex;
