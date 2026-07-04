@@ -374,7 +374,8 @@ var massnahmenData = {
   dokumente: false, dokumenteRollen: [], dokumenteBeamterGender: 'm',
   bescheinigungAusgehaendigt: [],
   weiterfahrtUntersagt: [],
-  entsorgungVerzicht: [], entsorgungGegenstaende: ''
+  entsorgungVerzicht: [], entsorgungGegenstaende: '',
+  gefaehrderanspracheRolle: 'beschm', gefaehrderanspracheKomp: [], gefaehrderanspracheHg: false
 };
 var psychkgData = { verhaltensText: '', personRolle: '', anlass: '', orgTyp: '', mitGender: 'm', mitName: '', arztGender: 'm', arztName: '', transport: '', begleitung: null };
 var haftbefehlData = {
@@ -3168,6 +3169,21 @@ function generateMassnahmenText() {
       rm.er + ' stimmte einer Entsorgung bzw. Vernichtung durch die Polizei ausdrücklich zu und verzichtete auf jegliche Ansprüche, insbesondere auf Herausgabe, Verwahrung und Schadensersatz. Die Erklärung erfolgte freiwillig und außergerichtlich; ' + rm.disp + ' bestätigte, den Inhalt und die Tragweite verstanden zu haben.'
     );
   });
+  if (massnahmenData.gefaehrderanspracheKomp.length > 0 || massnahmenData.gefaehrderanspracheHg) {
+    var grm = ROLLEN_MAP[massnahmenData.gefaehrderanspracheRolle] || ROLLEN_MAP.beschm;
+    var Ihm = grm.erLow === 'er' ? 'Ihm' : 'Ihr';
+    var ihm = grm.erLow === 'er' ? 'ihm' : 'ihr';
+    var K = massnahmenData.gefaehrderanspracheKomp;
+    var g = [];
+    g.push('Bei ' + grm.dativ + ' wurde eine Gefährderansprache durchgeführt.');
+    if (K.indexOf('ermittlungsstand') !== -1) g.push(grm.er + ' wurde mit dem polizeilichen Ermittlungs- und Erkenntnisstand konfrontiert.');
+    if (K.indexOf('tatvorwurf') !== -1) g.push(Ihm + ' wurde der konkrete Tatvorwurf benannt.');
+    if (K.indexOf('nulltoleranz') !== -1) g.push(Ihm + ' wurde verdeutlicht, dass das von ' + ihm + ' gezeigte Verhalten ernst genommen sowie konsequent strafrechtlich verfolgt wird (Null Toleranz – die Polizei wird mit gebotener Härte (weitere) Straftaten verhindern).');
+    if (K.indexOf('verschriftlicht') !== -1) g.push(Ihm + ' wurde erklärt, dass eine Gefährderansprache verschriftlicht wird und der Akte beiliegt.');
+    if (K.indexOf('strafverschaerfend') !== -1) g.push(Ihm + ' wurde erklärt, dass sich weitere strafbare Handlungen strafverschärfend auswirken können.');
+    if (massnahmenData.gefaehrderanspracheHg) g.push(Ihm + ' wurde das Vorgehen der Polizei bei dem Vorliegen einer Häuslichen Gewalt aufgezeigt und bei der Gefährderansprache ein 10-tägiges Rückkehrverbot ausgesprochen (samt Androhung polizeilicher Folgemaßnahmen, wie freiheitsentziehende Maßnahmen).');
+    parts.push(g.join(' '));
+  }
   return parts.join('\n\n');
 }
 
@@ -3585,6 +3601,86 @@ function renderMassnahmen() {
   };
   entWrap.appendChild(entBtn); entWrap.appendChild(entDetail);
   cont.appendChild(entWrap);
+
+  // ── Gefährderansprache ──────────────────────────────────────
+  var gaActive = function() { return massnahmenData.gefaehrderanspracheKomp.length > 0 || massnahmenData.gefaehrderanspracheHg; };
+  var gaWrap = document.createElement('div');
+  var gaBtn = document.createElement('button');
+  gaBtn.type = 'button';
+  gaBtn.className = 'massnahme-btn' + (gaActive() ? ' active open' : '');
+  gaBtn.innerHTML = MASSN_ICON_CHECK + '<span class="mb-label">Gefährderansprache durchgeführt</span>' + MASSN_ICON_CHEV;
+  var gaDetail = document.createElement('div');
+  gaDetail.className = 'massnahme-sub';
+  gaDetail.style.display = gaActive() ? '' : 'none';
+
+  // Person
+  var gaPersLbl = document.createElement('div'); gaPersLbl.className = 'input-label'; gaPersLbl.style.marginBottom = '6px';
+  gaPersLbl.textContent = 'Bei wem?';
+  gaDetail.appendChild(gaPersLbl);
+  var gaPersChips = document.createElement('div'); gaPersChips.className = 'suggestions';
+  [{ v: 'beschm', label: 'Beschuldigter' }, { v: 'beschw', label: 'Beschuldigte' }].forEach(function(opt) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.textContent = opt.label;
+    b.className = 'btn-suggestion' + (massnahmenData.gefaehrderanspracheRolle === opt.v ? ' active' : '');
+    b.addEventListener('click', function() {
+      massnahmenData.gefaehrderanspracheRolle = opt.v;
+      gaPersChips.querySelectorAll('.btn-suggestion').forEach(function(x) { x.classList.remove('active'); });
+      b.classList.add('active');
+    });
+    gaPersChips.appendChild(b);
+  });
+  gaDetail.appendChild(gaPersChips);
+
+  // Inhalte
+  var gaKompLbl = document.createElement('div'); gaKompLbl.className = 'input-label'; gaKompLbl.style.cssText = 'margin-top:14px;margin-bottom:6px';
+  gaKompLbl.textContent = 'Inhalte der Ansprache';
+  gaDetail.appendChild(gaKompLbl);
+  var gaKompChips = document.createElement('div'); gaKompChips.className = 'suggestions';
+  [
+    { v: 'ermittlungsstand',   label: 'Ermittlungs-/Erkenntnisstand' },
+    { v: 'tatvorwurf',         label: 'konkreter Tatvorwurf' },
+    { v: 'nulltoleranz',       label: 'Null Toleranz' },
+    { v: 'verschriftlicht',    label: 'wird verschriftlicht' },
+    { v: 'strafverschaerfend', label: 'strafverschärfend' }
+  ].forEach(function(opt) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.textContent = opt.label;
+    b.className = 'btn-suggestion' + (massnahmenData.gefaehrderanspracheKomp.indexOf(opt.v) !== -1 ? ' active' : '');
+    b.addEventListener('click', function() {
+      var i = massnahmenData.gefaehrderanspracheKomp.indexOf(opt.v);
+      if (i !== -1) { massnahmenData.gefaehrderanspracheKomp.splice(i, 1); b.classList.remove('active'); }
+      else          { massnahmenData.gefaehrderanspracheKomp.push(opt.v);  b.classList.add('active'); }
+      gaBtn.classList.toggle('active', gaActive());
+    });
+    gaKompChips.appendChild(b);
+  });
+  gaDetail.appendChild(gaKompChips);
+
+  // Bei Häuslicher Gewalt
+  var gaHgLbl = document.createElement('div'); gaHgLbl.className = 'input-label'; gaHgLbl.style.cssText = 'margin-top:14px;margin-bottom:6px';
+  gaHgLbl.textContent = 'Bei Häuslicher Gewalt';
+  gaDetail.appendChild(gaHgLbl);
+  var gaHgChips = document.createElement('div'); gaHgChips.className = 'suggestions';
+  var gaHgBtn = document.createElement('button');
+  gaHgBtn.type = 'button'; gaHgBtn.textContent = '10-tägiges Rückkehrverbot ausgesprochen';
+  gaHgBtn.className = 'btn-suggestion' + (massnahmenData.gefaehrderanspracheHg ? ' active' : '');
+  gaHgBtn.addEventListener('click', function() {
+    massnahmenData.gefaehrderanspracheHg = !massnahmenData.gefaehrderanspracheHg;
+    gaHgBtn.classList.toggle('active', massnahmenData.gefaehrderanspracheHg);
+    gaBtn.classList.toggle('active', gaActive());
+  });
+  gaHgChips.appendChild(gaHgBtn);
+  gaDetail.appendChild(gaHgChips);
+
+  gaBtn.onclick = function() {
+    var isOpen = gaDetail.style.display !== 'none';
+    gaDetail.style.display = isOpen ? 'none' : '';
+    gaBtn.classList.toggle('open', !isOpen);
+    if (!isOpen) gaBtn.classList.add('active');
+    else if (!gaActive()) gaBtn.classList.remove('active');
+  };
+  gaWrap.appendChild(gaBtn); gaWrap.appendChild(gaDetail);
+  cont.appendChild(gaWrap);
 }
 
 // ── PsychKG ────────────────────────────────────────────────────────────────
