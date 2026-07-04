@@ -906,6 +906,7 @@ function render() {
   if (slides[current] === 'slide-psychkg-spd') renderPsychKGSpd();
   if (slides[current] === 'slide-psychkg-transport') renderPsychKGTransport();
   if (slides[current] === 'slide-haftbefehl') renderHaftbefehl();
+  if (slides[current] === 'slide-0') renderStreifenwagen();
   if (slides[current] === 'slide-blutprobe-anordnung') renderBlutprobeAnordnung();
   if (slides[current] === 'slide-blutprobe-entnahme') renderBlutprobeEntnahme();
   if (slides[current] === 'slide-anzeige-intro') renderAnzeigeIntro();
@@ -3978,23 +3979,68 @@ function renderBlutprobeAnordnung() {
   )));
 
   if (p.anordnungPolizei === 'ja') {
-    // Welcher Beamte hat angeordnet
-    var beamte = bpBeamte();
-    if (!beamte.length) {
-      var hint = document.createElement('div');
-      hint.className = 'hb-ort-hint'; hint.style.marginBottom = '12px';
-      hint.textContent = 'ℹ️ Noch keine benannten Beamten im Abschnitt „Allgemeines". Bitte dort die Besatzung erfassen.';
-      cont.appendChild(hint);
-    }
-    var sel = document.createElement('select'); sel.className = 'field-input';
-    var opt0 = document.createElement('option'); opt0.value = ''; opt0.textContent = '– Beamten wählen –'; sel.appendChild(opt0);
-    beamte.forEach(function(b) {
-      var op = document.createElement('option'); op.value = b.id; op.textContent = b.label;
-      if (p.beamterId === b.id) op.selected = true;
-      sel.appendChild(op);
+    var lbl = document.createElement('div'); lbl.className = 'input-label'; lbl.style.marginBottom = '6px';
+    lbl.textContent = 'Eingesetzte Beamte';
+    cont.appendChild(lbl);
+    var hint = document.createElement('div');
+    hint.style.cssText = 'font-size:12px;color:var(--muted);margin-bottom:10px';
+    hint.textContent = 'Geteilt mit dem Abschnitt „Allgemeines". Markiere, wer die Blutprobe angeordnet hat.';
+    cont.appendChild(hint);
+
+    var members = [];
+    streifenwagen.forEach(function(sw) { sw.besatzung.forEach(function(b) { members.push({ sw: sw, b: b }); }); });
+
+    members.forEach(function(m) {
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:8px';
+
+      var pick = document.createElement('button');
+      pick.type = 'button';
+      var isSel = p.beamterId === String(m.b.id);
+      pick.className = 'btn-suggestion' + (isSel ? ' active' : '');
+      pick.textContent = isSel ? '✓ angeordnet' : 'angeordnet';
+      pick.style.cssText = 'flex:0 0 auto;white-space:nowrap';
+      pick.addEventListener('click', function() {
+        p.beamterId = isSel ? '' : String(m.b.id);
+        renderBlutprobeAnordnung();
+      });
+      row.appendChild(pick);
+
+      var gsel = document.createElement('select'); gsel.className = 'field-select'; gsel.style.flex = '0 0 auto';
+      DIENSTGRADE.forEach(function(g) {
+        var o = document.createElement('option'); o.value = g; o.textContent = g;
+        if (g === m.b.grad) o.selected = true; gsel.appendChild(o);
+      });
+      gsel.addEventListener('change', function() { m.b.grad = this.value; });
+      row.appendChild(gsel);
+
+      var ni = document.createElement('input'); ni.type = 'text'; ni.className = 'field-input'; ni.style.flex = '1';
+      ni.placeholder = 'Nachname'; ni.value = m.b.name;
+      ni.addEventListener('input', function() { m.b.name = this.value; });
+      row.appendChild(ni);
+
+      var rm = document.createElement('button'); rm.type = 'button'; rm.className = 'btn-add-custom'; rm.textContent = '−';
+      rm.title = 'Beamten entfernen';
+      rm.addEventListener('click', function() {
+        m.sw.besatzung = m.sw.besatzung.filter(function(x) { return x.id !== m.b.id; });
+        if (p.beamterId === String(m.b.id)) p.beamterId = '';
+        renderBlutprobeAnordnung();
+      });
+      row.appendChild(rm);
+
+      cont.appendChild(row);
     });
-    sel.addEventListener('change', function() { p.beamterId = this.value; });
-    cont.appendChild(bpField('Anordnender Beamter', sel));
+
+    var addB = document.createElement('button'); addB.type = 'button'; addB.className = 'btn-add'; addB.style.marginBottom = '16px';
+    addB.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Beamten hinzufügen';
+    addB.addEventListener('click', function() {
+      var sw = streifenwagen[0];
+      if (!sw) { addStreifenwagen(); sw = streifenwagen[0]; }
+      idCounter++;
+      sw.besatzung.push({ id: idCounter, name: '', grad: 'POK' });
+      renderBlutprobeAnordnung();
+    });
+    cont.appendChild(addB);
 
     cont.appendChild(bpTwoCol('Datum der Anordnung', bpDate(p.polDatum, function(v) { p.polDatum = v; }),
                               'Uhrzeit', bpTime(p.polUhrzeit, function(v) { p.polUhrzeit = v; })));
