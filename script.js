@@ -366,7 +366,7 @@ var schildCounter = 0;
 var schildCurrentIdx = null;
 var massnahmenData = {
   unfallmitteilungen: false,
-  unfallmitteilungenDigital: false,
+  unfallDigitalRollen: [], unfallDigitalUhrzeit: '', unfallDigitalNwKennung: '',
   bescheinigungen: [], bescheinigungenUhrzeit: '', bescheinigungenNwKennung: '',
   kunoSperrung: false,
   sachfahndung: false,
@@ -3046,10 +3046,10 @@ function generateSchilderungenText() {
   }).filter(Boolean).join('\n\n');
 }
 
-function buildAktenzeichen() {
+function buildAktenzeichen(uhrzeit, nwKennung) {
   var datum = document.getElementById('datum').value; // YYYY-MM-DD
-  var uhr = massnahmenData.bescheinigungenUhrzeit || '';
-  var nw = (massnahmenData.bescheinigungenNwKennung || '').toUpperCase();
+  var uhr = (uhrzeit !== undefined ? uhrzeit : massnahmenData.bescheinigungenUhrzeit) || '';
+  var nw = ((nwKennung !== undefined ? nwKennung : massnahmenData.bescheinigungenNwKennung) || '').toUpperCase();
   var datePart = '';
   if (datum) {
     var dp = datum.split('-');
@@ -3089,6 +3089,33 @@ function buildBescheinigungsEmail(rolle) {
     'Mit freundlichen Grüßen';
 }
 
+function findPersonName(rolle) {
+  for (var i = 0; i < schilderungen.length; i++) {
+    if (schilderungen[i].rolle === rolle && schilderungen[i].name) return schilderungen[i].name.trim();
+  }
+  if (typeof anzeigePersonen !== 'undefined') {
+    for (var j = 0; j < anzeigePersonen.length; j++) {
+      if (anzeigePersonen[j].rolle === rolle && anzeigePersonen[j].name) return anzeigePersonen[j].name.trim();
+    }
+  }
+  return '';
+}
+
+function buildUnfallDigitalEmail(rolle) {
+  var rm = ROLLEN_MAP[rolle];
+  if (!rm) return '';
+  var personName = findPersonName(rolle);
+  var isFemale = ['zeugin', 'ub01w', 'ub02w', 'beschw', 'geschw'].indexOf(rolle) !== -1;
+  var anrede = isFemale
+    ? 'Sehr geehrte Frau' + (personName ? ' ' + personName : '')
+    : 'Sehr geehrter Herr' + (personName ? ' ' + personName : '');
+  var az = buildAktenzeichen(massnahmenData.unfallDigitalUhrzeit, massnahmenData.unfallDigitalNwKennung);
+  return anrede + ',\n\n' +
+    'anbei erhalten Sie die Unfallmitteilung zu dem gemeldeten Verkehrsunfall in digitaler Form. Auf dem Dokument ist das Aktenzeichen verzeichnet, unter welchem die Vorgangsbearbeitung erfolgen wird (' + az + ').\n\n' +
+    'Sollten Sie Fragen haben, besteht die Möglichkeit, diese den Mitarbeitenden der Polizeiwache Gütersloh zu stellen (05241 869 0). Bitte halten Sie dafür das Aktenzeichen bereit.\n\n' +
+    'Mit freundlichen Grüßen';
+}
+
 function copyToClipboard(text, btn) {
   function onSuccess() {
     var orig = btn.innerHTML;
@@ -3117,9 +3144,12 @@ function generateMassnahmenText() {
   if (massnahmenData.unfallmitteilungen) {
     parts.push('Den Unfallbeteiligten wurden vor Ort jeweils eine Durchschrift der Unfallmitteilung ausgehändigt.');
   }
-  if (massnahmenData.unfallmitteilungenDigital) {
-    parts.push('Den Unfallbeteiligten wurde die Unfallmitteilung jeweils in digitaler Form übermittelt.');
-  }
+  massnahmenData.unfallDigitalRollen.forEach(function(rolle) {
+    var rm = ROLLEN_MAP[rolle]; if (!rm) return;
+    var dativCap = rm.dativ.charAt(0).toUpperCase() + rm.dativ.slice(1);
+    var az = buildAktenzeichen(massnahmenData.unfallDigitalUhrzeit, massnahmenData.unfallDigitalNwKennung);
+    parts.push(dativCap + ' wurde die Unfallmitteilung in digitaler Form per E-Mail übersandt (Az.: ' + az + ').');
+  });
   massnahmenData.bescheinigungen.forEach(function(rolle) {
     var rm = ROLLEN_MAP[rolle]; if (!rm) return;
     var dativCap = rm.dativ.charAt(0).toUpperCase() + rm.dativ.slice(1);
@@ -3205,18 +3235,111 @@ function renderMassnahmen() {
   };
   cont.appendChild(umBtn);
 
-  // ── Unfallmitteilungen digital ──────────────────────────────
-  var umDigBtn = document.createElement('button');
-  umDigBtn.type = 'button';
-  umDigBtn.className = 'massnahme-btn' + (massnahmenData.unfallmitteilungenDigital ? ' active' : '');
-  umDigBtn.innerHTML =
+  // ── Unfallmitteilungen digital (per E-Mail) ─────────────────
+  var udWrap = document.createElement('div');
+  var udActive = function() { return massnahmenData.unfallDigitalRollen.length > 0; };
+  var udBtn = document.createElement('button');
+  udBtn.type = 'button';
+  udBtn.className = 'massnahme-btn' + (udActive() ? ' active open' : '');
+  udBtn.innerHTML =
     '<span class="mb-check"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>' +
-    '<span class="mb-label">Unfallmitteilungen digital übermittelt</span>';
-  umDigBtn.onclick = function() {
-    massnahmenData.unfallmitteilungenDigital = !massnahmenData.unfallmitteilungenDigital;
-    umDigBtn.classList.toggle('active', massnahmenData.unfallmitteilungenDigital);
+    '<span class="mb-label">Unfallmitteilung digital (per E-Mail)</span>' +
+    '<span class="mb-chevron"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span>';
+  var udDetail = document.createElement('div');
+  udDetail.className = 'massnahme-sub';
+  udDetail.style.display = (udActive() || massnahmenData.unfallDigitalUhrzeit || massnahmenData.unfallDigitalNwKennung) ? '' : 'none';
+
+  // AZ-Felder
+  var udAzRow = document.createElement('div'); udAzRow.className = 'besch-az-row';
+  var udUhrWrap = document.createElement('div'); udUhrWrap.className = 'besch-az-field';
+  var udUhrLbl = document.createElement('label'); udUhrLbl.textContent = 'Uhrzeit für Aktenzeichen';
+  var udUhrInp = document.createElement('input'); udUhrInp.type = 'time'; udUhrInp.className = 'field-input';
+  udUhrInp.value = massnahmenData.unfallDigitalUhrzeit;
+  udUhrInp.addEventListener('input', function() { massnahmenData.unfallDigitalUhrzeit = this.value; refreshUdPreviews(); });
+  var udUeb = document.createElement('button'); udUeb.type = 'button'; udUeb.className = 'az-uebernehmen-btn';
+  udUeb.textContent = '↑ Aus Einsatzdaten übernehmen';
+  udUeb.onclick = function() {
+    var src = document.getElementById('uhrzeit');
+    if (src && src.value) { massnahmenData.unfallDigitalUhrzeit = src.value; udUhrInp.value = src.value; refreshUdPreviews(); }
   };
-  cont.appendChild(umDigBtn);
+  udUhrWrap.appendChild(udUhrLbl); udUhrWrap.appendChild(udUhrInp); udUhrWrap.appendChild(udUeb);
+  udAzRow.appendChild(udUhrWrap);
+  var udNwWrap = document.createElement('div'); udNwWrap.className = 'besch-az-field';
+  var udNwLbl = document.createElement('label'); udNwLbl.textContent = 'NW-Kennung (6 Zeichen)';
+  var udNwInp = document.createElement('input'); udNwInp.type = 'text'; udNwInp.className = 'field-input';
+  udNwInp.maxLength = 6; udNwInp.placeholder = 'z.B. GT0001'; udNwInp.style.textTransform = 'uppercase';
+  udNwInp.value = massnahmenData.unfallDigitalNwKennung;
+  udNwInp.addEventListener('input', function() { massnahmenData.unfallDigitalNwKennung = this.value.toUpperCase(); refreshUdPreviews(); });
+  udNwWrap.appendChild(udNwLbl); udNwWrap.appendChild(udNwInp);
+  udAzRow.appendChild(udNwWrap);
+  udDetail.appendChild(udAzRow);
+
+  // AZ-Vorschau
+  var udAzPrev = document.createElement('div'); udAzPrev.className = 'az-preview-wrap';
+  var udAzPrevLbl = document.createElement('span'); udAzPrevLbl.className = 'az-preview-label'; udAzPrevLbl.textContent = 'Aktenzeichen: ';
+  var udAzPrevVal = document.createElement('span'); udAzPrevVal.className = 'az-preview-val';
+  udAzPrevVal.textContent = buildAktenzeichen(massnahmenData.unfallDigitalUhrzeit, massnahmenData.unfallDigitalNwKennung);
+  udAzPrev.appendChild(udAzPrevLbl); udAzPrev.appendChild(udAzPrevVal);
+  udDetail.appendChild(udAzPrev);
+
+  // Person(en)
+  var udRolleLbl = document.createElement('div'); udRolleLbl.className = 'input-label'; udRolleLbl.style.cssText = 'margin-top:14px;margin-bottom:6px';
+  udRolleLbl.textContent = 'Empfänger (Unfallbeteiligte)';
+  udDetail.appendChild(udRolleLbl);
+  var udChips = document.createElement('div'); udChips.className = 'suggestions';
+  [
+    { v: 'ub01m', label: 'UB 01 (m)' }, { v: 'ub01w', label: 'UB 01 (w)' },
+    { v: 'ub02m', label: 'UB 02 (m)' }, { v: 'ub02w', label: 'UB 02 (w)' },
+    { v: 'beschm', label: 'Beschuldigter' }, { v: 'beschw', label: 'Beschuldigte' },
+    { v: 'zeuge', label: 'Zeuge' }, { v: 'zeugin', label: 'Zeugin' }
+  ].forEach(function(opt) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.dataset.v = opt.v; b.textContent = opt.label;
+    b.className = 'btn-suggestion' + (massnahmenData.unfallDigitalRollen.indexOf(opt.v) !== -1 ? ' active' : '');
+    b.addEventListener('click', function() {
+      var i = massnahmenData.unfallDigitalRollen.indexOf(opt.v);
+      if (i !== -1) { massnahmenData.unfallDigitalRollen.splice(i, 1); b.classList.remove('active'); }
+      else          { massnahmenData.unfallDigitalRollen.push(opt.v);  b.classList.add('active'); }
+      udBtn.classList.toggle('active', udActive());
+      refreshUdPreviews();
+    });
+    udChips.appendChild(b);
+  });
+  udDetail.appendChild(udChips);
+
+  // E-Mail-Vorschauen
+  var udPreviews = document.createElement('div'); udPreviews.className = 'email-previews-wrap';
+  udDetail.appendChild(udPreviews);
+
+  function refreshUdPreviews() {
+    udAzPrevVal.textContent = buildAktenzeichen(massnahmenData.unfallDigitalUhrzeit, massnahmenData.unfallDigitalNwKennung);
+    udPreviews.innerHTML = '';
+    massnahmenData.unfallDigitalRollen.forEach(function(rolle) {
+      var rm = ROLLEN_MAP[rolle]; if (!rm) return;
+      var emailText = buildUnfallDigitalEmail(rolle);
+      var card = document.createElement('div'); card.className = 'email-preview-card';
+      var hdr = document.createElement('div'); hdr.className = 'email-preview-hdr';
+      var title = document.createElement('span'); title.textContent = rm.disp.charAt(0).toUpperCase() + rm.disp.slice(1);
+      var copyBtn = document.createElement('button'); copyBtn.type = 'button'; copyBtn.className = 'btn-copy-email';
+      copyBtn.innerHTML = '<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Kopieren';
+      (function(et, cb) { cb.addEventListener('click', function() { copyToClipboard(et, cb); }); }(emailText, copyBtn));
+      hdr.appendChild(title); hdr.appendChild(copyBtn);
+      var body = document.createElement('div'); body.className = 'email-preview-body'; body.textContent = emailText;
+      card.appendChild(hdr); card.appendChild(body);
+      udPreviews.appendChild(card);
+    });
+  }
+  refreshUdPreviews();
+
+  udBtn.onclick = function() {
+    var isOpen = udDetail.style.display !== 'none';
+    udDetail.style.display = isOpen ? 'none' : '';
+    udBtn.classList.toggle('open', !isOpen);
+    if (!isOpen) udBtn.classList.add('active');
+    else if (!udActive()) udBtn.classList.remove('active');
+  };
+  udWrap.appendChild(udBtn); udWrap.appendChild(udDetail);
+  cont.appendChild(udWrap);
 
   // ── Bescheinigung per E-Mail ────────────────────────────────
   var bescWrap = document.createElement('div');
