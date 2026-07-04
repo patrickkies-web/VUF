@@ -372,7 +372,8 @@ var massnahmenData = {
   lichtbilder: false,
   dokumente: false, dokumenteRollen: [], dokumenteBeamterGender: 'm',
   bescheinigungAusgehaendigt: [],
-  weiterfahrtUntersagt: []
+  weiterfahrtUntersagt: [],
+  entsorgungVerzicht: [], entsorgungGegenstaende: ''
 };
 var psychkgData = { verhaltensText: '', personRolle: '', anlass: '', orgTyp: '', mitGender: 'm', mitName: '', arztGender: 'm', arztName: '', transport: '', begleitung: null };
 var haftbefehlData = {
@@ -3145,6 +3146,17 @@ function generateMassnahmenText() {
       nomCap + ' bestätigte, die Belehrung verstanden zu haben.'
     );
   });
+  massnahmenData.entsorgungVerzicht.forEach(function(rolleKey) {
+    var rm = ROLLEN_MAP[rolleKey]; if (!rm) return;
+    var nomCap = rm.disp.charAt(0).toUpperCase() + rm.disp.slice(1);
+    var gg = massnahmenData.entsorgungGegenstaende && massnahmenData.entsorgungGegenstaende.trim()
+      ? 'die folgenden Gegenstände (' + massnahmenData.entsorgungGegenstaende.trim() + ')'
+      : 'die betreffenden Gegenstände';
+    parts.push(
+      nomCap + ' gab gegenüber den eingesetzten Beamten ' + gg + ' freiwillig heraus und erklärte ausdrücklich und unmissverständlich, ' + rm.sein + ' Eigentum sowie den Gewahrsam an diesen Gegenständen vollständig und unwiderruflich aufzugeben (Eigentumsverzicht gemäß § 959 BGB). ' +
+      rm.er + ' stimmte einer Entsorgung bzw. Vernichtung durch die Polizei ausdrücklich zu und verzichtete auf jegliche Ansprüche, insbesondere auf Herausgabe, Verwahrung und Schadensersatz. Die Erklärung erfolgte freiwillig und außergerichtlich; ' + rm.disp + ' bestätigte, den Inhalt und die Tragweite verstanden zu haben.'
+    );
+  });
   return parts.join('\n\n');
 }
 
@@ -3498,6 +3510,55 @@ function renderMassnahmen() {
     massnahmenData.weiterfahrtUntersagt,
     'Wem wurde die Weiterfahrt untersagt?'
   ));
+
+  // ── Eigentums-/Gewahrsamsverzicht zur Entsorgung ────────────
+  var entArr = massnahmenData.entsorgungVerzicht;
+  var entWrap = document.createElement('div');
+  var entBtn = document.createElement('button');
+  entBtn.type = 'button';
+  entBtn.className = 'massnahme-btn' + (entArr.length > 0 ? ' active open' : '');
+  entBtn.innerHTML = MASSN_ICON_CHECK + '<span class="mb-label">Eigentums-/Gewahrsamsverzicht zur Entsorgung</span>' + MASSN_ICON_CHEV;
+  var entDetail = document.createElement('div');
+  entDetail.className = 'massnahme-sub';
+  entDetail.style.display = entArr.length > 0 ? '' : 'none';
+
+  var entLbl = document.createElement('div'); entLbl.className = 'input-label'; entLbl.style.marginBottom = '6px';
+  entLbl.textContent = 'Wer verzichtet auf Eigentum/Gewahrsam?';
+  entDetail.appendChild(entLbl);
+  var entChips = document.createElement('div'); entChips.className = 'suggestions';
+  MASSN_ROLLEN.forEach(function(opt) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.dataset.v = opt.v; b.textContent = opt.label;
+    b.className = 'btn-suggestion' + (entArr.indexOf(opt.v) !== -1 ? ' active' : '');
+    b.addEventListener('click', function() {
+      var i = entArr.indexOf(opt.v);
+      if (i !== -1) { entArr.splice(i, 1); b.classList.remove('active'); }
+      else          { entArr.push(opt.v);   b.classList.add('active'); }
+      entBtn.classList.toggle('active', entArr.length > 0);
+    });
+    entChips.appendChild(b);
+  });
+  entDetail.appendChild(entChips);
+
+  var ggLbl = document.createElement('div'); ggLbl.className = 'input-label'; ggLbl.style.cssText = 'margin-top:14px;margin-bottom:6px';
+  ggLbl.textContent = 'Gegenstände (optional)';
+  entDetail.appendChild(ggLbl);
+  var ggInp = document.createElement('input');
+  ggInp.type = 'text'; ggInp.className = 'field-input';
+  ggInp.placeholder = 'z.B. eine Konsumeinheit Marihuana, eine Glaspfeife';
+  ggInp.value = massnahmenData.entsorgungGegenstaende;
+  ggInp.addEventListener('input', function() { massnahmenData.entsorgungGegenstaende = this.value; });
+  entDetail.appendChild(ggInp);
+
+  entBtn.onclick = function() {
+    var isOpen = entDetail.style.display !== 'none';
+    entDetail.style.display = isOpen ? 'none' : '';
+    entBtn.classList.toggle('open', !isOpen);
+    if (!isOpen) entBtn.classList.add('active');
+    else if (entArr.length === 0) entBtn.classList.remove('active');
+  };
+  entWrap.appendChild(entBtn); entWrap.appendChild(entDetail);
+  cont.appendChild(entWrap);
 }
 
 // ── PsychKG ────────────────────────────────────────────────────────────────
@@ -4619,8 +4680,11 @@ function renderAnzeigeOverview() {
 }
 
 function generateAnzeigeText() {
+  return buildAnzeigeEinleitungSatz(anzeigeIntro.was || '[Sachverhalt]');
+}
+
+function generateAnzeigeSchilderungenText() {
   var parts = [];
-  parts.push(buildAnzeigeEinleitungSatz(anzeigeIntro.was || '[Sachverhalt]'));
   anzeigePersonen.forEach(function(s) {
     var rm = ROLLEN_MAP[s.rolle];
     if (!rm) return;
@@ -4734,6 +4798,11 @@ function generateResult() {
     if (key === 'blutprobe') {
       appendSection('Entscheidungsweg zur Anordnung der Blutentnahme', generateBlutprobeAnordnungText(), 'blutprobe');
       appendSection('Blutprobe', generateBlutprobeEntnahmeText(), 'blutprobe');
+      return;
+    }
+    if (key === 'anzeige') {
+      appendSection('Anzeigenaufnahme auf der Wache', generateAnzeigeText(), 'anzeige');
+      appendSection('Schilderungen', generateAnzeigeSchilderungenText(), 'anzeige');
       return;
     }
     if (generators[key]) appendSection(titles[key], generators[key](), key);
