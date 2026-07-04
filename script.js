@@ -3201,17 +3201,30 @@ function generateMassnahmenText() {
   });
   if (massnahmenData.gefaehrderanspracheKomp.length > 0 || massnahmenData.gefaehrderanspracheHg) {
     var grm = ROLLEN_MAP[massnahmenData.gefaehrderanspracheRolle] || ROLLEN_MAP.beschm;
-    var Ihm = grm.erLow === 'er' ? 'Ihm' : 'Ihr';
-    var ihm = grm.erLow === 'er' ? 'ihm' : 'ihr';
+    var erLow = grm.erLow;                                   // er | sie
+    var ihm = grm.erLow === 'er' ? 'ihm' : 'ihr';            // dativ (klein)
     var K = massnahmenData.gefaehrderanspracheKomp;
-    var g = [];
-    g.push('Bei ' + grm.dativ + ' wurde eine Gefährderansprache durchgeführt.');
-    if (K.indexOf('ermittlungsstand') !== -1) g.push(grm.er + ' wurde mit dem polizeilichen Ermittlungs- und Erkenntnisstand konfrontiert.');
-    if (K.indexOf('tatvorwurf') !== -1) g.push(Ihm + ' wurde der konkrete Tatvorwurf benannt.');
-    if (K.indexOf('nulltoleranz') !== -1) g.push(Ihm + ' wurde verdeutlicht, dass das von ' + ihm + ' gezeigte Verhalten ernst genommen sowie konsequent strafrechtlich verfolgt wird (Null Toleranz – die Polizei wird mit gebotener Härte (weitere) Straftaten verhindern).');
-    if (K.indexOf('verschriftlicht') !== -1) g.push(Ihm + ' wurde erklärt, dass eine Gefährderansprache verschriftlicht wird und der Akte beiliegt.');
-    if (K.indexOf('strafverschaerfend') !== -1) g.push(Ihm + ' wurde erklärt, dass sich weitere strafbare Handlungen strafverschärfend auswirken können.');
-    if (massnahmenData.gefaehrderanspracheHg) g.push(Ihm + ' wurde das Vorgehen der Polizei bei dem Vorliegen einer Häuslichen Gewalt aufgezeigt und bei der Gefährderansprache ein 10-tägiges Rückkehrverbot ausgesprochen (samt Androhung polizeilicher Folgemaßnahmen, wie freiheitsentziehende Maßnahmen).');
+    function hasK(v) { return K.indexOf(v) !== -1; }
+    var g = ['Bei ' + grm.dativ + ' wurde eine Gefährderansprache durchgeführt.'];
+
+    // Block A: konfrontiert / Tatvorwurf (Nominativ, kombinierbar)
+    var aParts = [];
+    if (hasK('ermittlungsstand')) aParts.push('mit dem polizeilichen Ermittlungs- und Erkenntnisstand konfrontiert');
+    if (hasK('tatvorwurf'))       aParts.push('auf den konkreten Tatvorwurf hingewiesen');
+    if (aParts.length) g.push('Dabei wurde ' + erLow + ' ' + aParts.join(' und ') + '.');
+
+    // Block B: Null Toleranz
+    if (hasK('nulltoleranz')) g.push('Es wurde verdeutlicht, dass das von ' + ihm + ' gezeigte Verhalten ernst genommen sowie konsequent strafrechtlich verfolgt wird (Null Toleranz – die Polizei wird mit gebotener Härte (weitere) Straftaten verhindern).');
+
+    // Block C: die beiden "erklärt"-Punkte zusammengefasst
+    var cParts = [];
+    if (hasK('verschriftlicht'))    cParts.push('dass eine Gefährderansprache verschriftlicht wird und der Akte beiliegt');
+    if (hasK('strafverschaerfend')) cParts.push('dass sich weitere strafbare Handlungen strafverschärfend auswirken können');
+    if (cParts.length) g.push((g.length > 1 ? 'Ferner' : 'Dabei') + ' wurde ' + ihm + ' erklärt, ' + cParts.join(' sowie ') + '.');
+
+    // Block D: HG
+    if (massnahmenData.gefaehrderanspracheHg) g.push((g.length > 1 ? 'Darüber hinaus' : 'Dabei') + ' wurde ' + ihm + ' das Vorgehen der Polizei bei dem Vorliegen einer Häuslichen Gewalt aufgezeigt und ein 10-tägiges Rückkehrverbot ausgesprochen (samt Androhung polizeilicher Folgemaßnahmen, wie freiheitsentziehende Maßnahmen).');
+
     parts.push(g.join(' '));
   }
   return parts.join('\n\n');
