@@ -134,6 +134,10 @@ var SECTION_DEFS = {
     label: 'Haftbefehl', desc: 'Vollstreckung eines Strafbefehls / Haftbefehls', icon: '⚖️',
     getSlides: function() { return ['slide-haftbefehl']; }
   },
+  blutprobe: {
+    label: 'Blutprobe', desc: 'Anordnung (Richtervorbehalt/Polizei) & ärztliche Blutentnahme', icon: '🩸',
+    getSlides: function() { return ['slide-blutprobe-anordnung', 'slide-blutprobe-entnahme']; }
+  },
   anzeige: {
     label: 'Anzeigenaufnahme auf der Wache', desc: 'Strafanzeige – Sachverhalt & Schilderungen der erschienenen Personen', icon: '📝',
     getSlides: function() {
@@ -390,7 +394,7 @@ var anzeigeCurrentIdx = null;
 
 function getActiveSlides() {
   var slides = [];
-  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','massnahmen','psychkg','haftbefehl','anzeige'];
+  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','blutprobe','massnahmen','psychkg','haftbefehl','anzeige'];
   ORDER.forEach(function(key) {
     if (selectedSections.indexOf(key) === -1) return;
     var def = SECTION_DEFS[key];
@@ -467,6 +471,8 @@ document.getElementById('btnPsychKGWeiter1').onclick = nextSlide;
 document.getElementById('btnPsychKGWeiter2').onclick = nextSlide;
 document.getElementById('btnGeneratePsychKG').onclick = nextSlide;
 document.getElementById('btnGenerateHaftbefehl').onclick = nextSlide;
+document.getElementById('btnBlutprobeAnordnung').onclick = nextSlide;
+document.getElementById('btnBlutprobeEntnahme').onclick = nextSlide;
 
 document.getElementById('btnAuffCustomAdd').onclick = function() {
   var inp = document.getElementById('auffCustomInput');
@@ -571,7 +577,7 @@ function renderLibrary() {
   var cont = document.getElementById('libraryBausteins');
   if (!cont) return;
   cont.innerHTML = '';
-  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','massnahmen','psychkg','haftbefehl','anzeige'];
+  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','blutprobe','massnahmen','psychkg','haftbefehl','anzeige'];
   ORDER.forEach(function(key) {
     var def = SECTION_DEFS[key];
     var isOn = selectedSections.indexOf(key) !== -1;
@@ -900,6 +906,8 @@ function render() {
   if (slides[current] === 'slide-psychkg-spd') renderPsychKGSpd();
   if (slides[current] === 'slide-psychkg-transport') renderPsychKGTransport();
   if (slides[current] === 'slide-haftbefehl') renderHaftbefehl();
+  if (slides[current] === 'slide-blutprobe-anordnung') renderBlutprobeAnordnung();
+  if (slides[current] === 'slide-blutprobe-entnahme') renderBlutprobeEntnahme();
   if (slides[current] === 'slide-anzeige-intro') renderAnzeigeIntro();
   if (slides[current] === 'slide-anzeige-was') renderAnzeigeWas();
   if (slides[current] === 'slide-anzeige-schild') {
@@ -3862,6 +3870,326 @@ function renderHaftbefehl() {
   function refreshPreview() {}
 }
 
+// ── Blutprobe ───────────────────────────────────────────────
+
+var BP_ROLLEN = {
+  betroffm: { nom: 'Der Betroffene',    dat: 'dem Betroffenen',    akk: 'den Betroffenen' },
+  betroffw: { nom: 'Die Betroffene',    dat: 'der Betroffenen',    akk: 'die Betroffene'  },
+  beschm:   { nom: 'Der Beschuldigte',  dat: 'dem Beschuldigten',  akk: 'den Beschuldigten' },
+  beschw:   { nom: 'Die Beschuldigte',  dat: 'der Beschuldigten',  akk: 'die Beschuldigte'  }
+};
+
+var BP_ORTE = {
+  klinikum:  { name: 'Klinikum Gütersloh',      zu: 'in das Klinikum Gütersloh',      in: 'im Klinikum Gütersloh' },
+  elisabeth: { name: 'St. Elisabeth Hospital',  zu: 'in das St. Elisabeth Hospital',  in: 'im St. Elisabeth Hospital' },
+  pwgt:      { name: 'Polizeiwache Gütersloh',  zu: 'zur Polizeiwache Gütersloh',      in: 'in der Polizeiwache Gütersloh' }
+};
+
+var blutprobeData = {
+  anordnungPolizei: '',          // 'ja' | 'nein'
+  // Polizei-Anordnung
+  beamterId: '',
+  polDatum: '', polUhrzeit: '',
+  // Richtervorbehalt
+  staGeschlecht: 'Staatsanwalt', staName: '', staDatum: '', staUhrzeit: '',
+  richterGeschlecht: 'Richter',  richterName: '', richterDatum: '', richterUhrzeit: '',
+  // gemeinsam
+  rolle: 'beschm',
+  ort: 'klinikum',
+  transportKm: '',
+  // Blutprobe
+  arztName: '', blutDatum: '',
+  entnahmen: [ { uhrzeit: '', venuelen: [ { nummer: '' } ] } ]
+};
+
+function bpBeamte() {
+  var list = [];
+  streifenwagen.forEach(function(sw) {
+    sw.besatzung.forEach(function(b) {
+      if (b.name && b.name.trim()) list.push({ id: String(b.id), label: (b.grad ? b.grad + ' ' : '') + b.name.trim() });
+    });
+  });
+  return list;
+}
+
+// gemeinsame Render-Helfer
+function bpField(labelText, el) {
+  var wrap = document.createElement('div'); wrap.style.marginBottom = '16px';
+  var lbl = document.createElement('div'); lbl.className = 'input-label'; lbl.style.marginBottom = '6px';
+  lbl.textContent = labelText;
+  wrap.appendChild(lbl); wrap.appendChild(el); return wrap;
+}
+function bpChips(opts, getter, setter) {
+  var row = document.createElement('div'); row.className = 'suggestions';
+  opts.forEach(function(o) {
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.textContent = o.label;
+    btn.className = 'btn-suggestion' + (getter() === o.v ? ' active' : '');
+    btn.addEventListener('click', function() {
+      setter(o.v);
+      row.querySelectorAll('.btn-suggestion').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+    });
+    row.appendChild(btn);
+  });
+  return row;
+}
+function bpTextInp(placeholder, val, setter, type) {
+  var inp = document.createElement('input');
+  inp.type = type || 'text'; inp.className = 'field-input';
+  inp.placeholder = placeholder; inp.value = val || '';
+  inp.addEventListener('input', function() { setter(this.value); });
+  return inp;
+}
+function bpTwoCol(l1, el1, l2, el2) {
+  var row = document.createElement('div'); row.className = 'besch-az-row'; row.style.marginBottom = '16px';
+  [[l1, el1], [l2, el2]].forEach(function(pair) {
+    var w = document.createElement('div'); w.className = 'besch-az-field';
+    var lb = document.createElement('label'); lb.textContent = pair[0];
+    w.appendChild(lb); w.appendChild(pair[1]); row.appendChild(w);
+  });
+  return row;
+}
+function bpDate(val, setter) { return bpTextInp('', val, setter, 'date'); }
+function bpTime(val, setter) { return bpTextInp('', val, setter, 'time'); }
+
+function renderBlutprobeAnordnung() {
+  var cont = document.getElementById('blutprobeAnordnungContent');
+  if (!cont) return;
+  cont.innerHTML = '';
+  var p = blutprobeData;
+
+  // Rolle
+  cont.appendChild(bpField('Um wen handelt es sich?', bpChips(
+    [
+      { v: 'beschm',   label: 'Beschuldigter' },
+      { v: 'beschw',   label: 'Beschuldigte' },
+      { v: 'betroffm', label: 'Betroffener' },
+      { v: 'betroffw', label: 'Betroffene' }
+    ],
+    function() { return p.rolle; }, function(v) { p.rolle = v; }
+  )));
+
+  // Anordnungskompetenz
+  cont.appendChild(bpField('Liegt die Anordnungskompetenz bei der Polizei?', bpChips(
+    [ { v: 'ja', label: 'Ja (Polizei)' }, { v: 'nein', label: 'Nein (Richtervorbehalt)' } ],
+    function() { return p.anordnungPolizei; },
+    function(v) { p.anordnungPolizei = v; renderBlutprobeAnordnung(); }
+  )));
+
+  if (p.anordnungPolizei === 'ja') {
+    // Welcher Beamte hat angeordnet
+    var beamte = bpBeamte();
+    if (!beamte.length) {
+      var hint = document.createElement('div');
+      hint.className = 'hb-ort-hint'; hint.style.marginBottom = '12px';
+      hint.textContent = 'ℹ️ Noch keine benannten Beamten im Abschnitt „Allgemeines". Bitte dort die Besatzung erfassen.';
+      cont.appendChild(hint);
+    }
+    var sel = document.createElement('select'); sel.className = 'field-input';
+    var opt0 = document.createElement('option'); opt0.value = ''; opt0.textContent = '– Beamten wählen –'; sel.appendChild(opt0);
+    beamte.forEach(function(b) {
+      var op = document.createElement('option'); op.value = b.id; op.textContent = b.label;
+      if (p.beamterId === b.id) op.selected = true;
+      sel.appendChild(op);
+    });
+    sel.addEventListener('change', function() { p.beamterId = this.value; });
+    cont.appendChild(bpField('Anordnender Beamter', sel));
+
+    cont.appendChild(bpTwoCol('Datum der Anordnung', bpDate(p.polDatum, function(v) { p.polDatum = v; }),
+                              'Uhrzeit', bpTime(p.polUhrzeit, function(v) { p.polUhrzeit = v; })));
+  } else if (p.anordnungPolizei === 'nein') {
+    // Staatsanwaltschaft (Bereitschaftsdienst)
+    var sep1 = document.createElement('div'); sep1.className = 'input-label';
+    sep1.style.cssText = 'margin:4px 0 10px;opacity:.8;font-weight:600';
+    sep1.textContent = 'Staatsanwaltschaft (Bereitschaftsdienst StA Bielefeld)';
+    cont.appendChild(sep1);
+    cont.appendChild(bpField('Funktion', bpChips(
+      [ { v: 'Staatsanwalt', label: 'Staatsanwalt' }, { v: 'Staatsanwältin', label: 'Staatsanwältin' } ],
+      function() { return p.staGeschlecht; }, function(v) { p.staGeschlecht = v; }
+    )));
+    cont.appendChild(bpField('Name', bpTextInp('z.B. Müller', p.staName, function(v) { p.staName = v; })));
+    cont.appendChild(bpTwoCol('Datum', bpDate(p.staDatum, function(v) { p.staDatum = v; }),
+                              'Uhrzeit', bpTime(p.staUhrzeit, function(v) { p.staUhrzeit = v; })));
+
+    // Richter (AG Bielefeld / Konzentrationsgericht)
+    var sep2 = document.createElement('div'); sep2.className = 'input-label';
+    sep2.style.cssText = 'margin:18px 0 10px;opacity:.8;font-weight:600';
+    sep2.textContent = 'AG Bielefeld (Konzentrationsgericht)';
+    cont.appendChild(sep2);
+    cont.appendChild(bpField('Funktion', bpChips(
+      [ { v: 'Richter', label: 'Richter' }, { v: 'Richterin', label: 'Richterin' } ],
+      function() { return p.richterGeschlecht; }, function(v) { p.richterGeschlecht = v; }
+    )));
+    cont.appendChild(bpField('Name', bpTextInp('z.B. Schmitz', p.richterName, function(v) { p.richterName = v; })));
+    cont.appendChild(bpTwoCol('Datum', bpDate(p.richterDatum, function(v) { p.richterDatum = v; }),
+                              'Uhrzeit', bpTime(p.richterUhrzeit, function(v) { p.richterUhrzeit = v; })));
+  }
+}
+
+function renderBlutprobeEntnahme() {
+  var cont = document.getElementById('blutprobeEntnahmeContent');
+  if (!cont) return;
+  cont.innerHTML = '';
+  var p = blutprobeData;
+
+  // Ort der Blutprobe
+  cont.appendChild(bpField('Wo wurde die Blutprobe durchgeführt?', bpChips(
+    [
+      { v: 'klinikum',  label: 'Klinikum Gütersloh' },
+      { v: 'elisabeth', label: 'St. Elisabeth Hospital' },
+      { v: 'pwgt',      label: 'Polizeiwache Gütersloh' }
+    ],
+    function() { return p.ort; }, function(v) { p.ort = v; }
+  )));
+
+  cont.appendChild(bpField('Transportstrecke (km)', bpTextInp('z.B. 6', p.transportKm, function(v) { p.transportKm = v; }, 'number')));
+
+  cont.appendChild(bpField('Arzt / Ärztin (Name)', bpTextInp('z.B. Dr. Weber', p.arztName, function(v) { p.arztName = v; })));
+  cont.appendChild(bpField('Datum der Blutentnahme', bpDate(p.blutDatum, function(v) { p.blutDatum = v; })));
+
+  // Blutentnahmen (mehrere)
+  var sep = document.createElement('div'); sep.className = 'input-label';
+  sep.style.cssText = 'margin:6px 0 10px;opacity:.8;font-weight:600';
+  sep.textContent = 'Blutentnahmen';
+  cont.appendChild(sep);
+
+  if (!p.entnahmen.length) p.entnahmen.push({ uhrzeit: '', venuelen: [ { nummer: '' } ] });
+
+  p.entnahmen.forEach(function(en, ei) {
+    var card = document.createElement('div');
+    card.style.cssText = 'border:1.5px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px';
+
+    var head = document.createElement('div');
+    head.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:10px';
+    var title = document.createElement('div'); title.className = 'input-label';
+    title.style.margin = '0'; title.textContent = 'Blutentnahme ' + (ei + 1);
+    head.appendChild(title);
+    if (p.entnahmen.length > 1) {
+      var delEn = document.createElement('button');
+      delEn.type = 'button'; delEn.className = 'btn-add-custom'; delEn.textContent = '−';
+      delEn.title = 'Blutentnahme entfernen';
+      delEn.addEventListener('click', function() { p.entnahmen.splice(ei, 1); renderBlutprobeEntnahme(); });
+      head.appendChild(delEn);
+    }
+    card.appendChild(head);
+
+    // Uhrzeit
+    var uhrWrap = document.createElement('div'); uhrWrap.style.marginBottom = '12px';
+    var uhrLbl = document.createElement('div'); uhrLbl.className = 'input-label'; uhrLbl.style.marginBottom = '6px';
+    uhrLbl.textContent = 'Uhrzeit';
+    var uhrInp = document.createElement('input'); uhrInp.type = 'time'; uhrInp.className = 'field-input';
+    uhrInp.value = en.uhrzeit;
+    uhrInp.addEventListener('input', function() { en.uhrzeit = this.value; });
+    uhrWrap.appendChild(uhrLbl); uhrWrap.appendChild(uhrInp);
+    card.appendChild(uhrWrap);
+
+    // Venülen
+    var venLbl = document.createElement('div'); venLbl.className = 'input-label'; venLbl.style.marginBottom = '6px';
+    venLbl.textContent = 'Venülen (je eigene Nummer)';
+    card.appendChild(venLbl);
+
+    if (!en.venuelen.length) en.venuelen.push({ nummer: '' });
+    en.venuelen.forEach(function(ven, vi) {
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:8px';
+      var nr = document.createElement('span');
+      nr.style.cssText = 'font-size:13px;color:var(--muted);min-width:74px';
+      nr.textContent = (vi + 1) + '. Venüle';
+      var numInp = document.createElement('input');
+      numInp.type = 'text'; numInp.className = 'field-input'; numInp.style.flex = '1';
+      numInp.placeholder = 'Venülnummer'; numInp.value = ven.nummer;
+      numInp.addEventListener('input', function() { ven.nummer = this.value; });
+      row.appendChild(nr); row.appendChild(numInp);
+      if (en.venuelen.length > 1) {
+        var delV = document.createElement('button');
+        delV.type = 'button'; delV.className = 'btn-add-custom'; delV.textContent = '−';
+        delV.addEventListener('click', function() { en.venuelen.splice(vi, 1); renderBlutprobeEntnahme(); });
+        row.appendChild(delV);
+      }
+      card.appendChild(row);
+    });
+
+    var addVen = document.createElement('button');
+    addVen.type = 'button'; addVen.className = 'btn-add'; addVen.style.marginTop = '2px';
+    addVen.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Venüle hinzufügen';
+    addVen.addEventListener('click', function() { en.venuelen.push({ nummer: '' }); renderBlutprobeEntnahme(); });
+    card.appendChild(addVen);
+
+    cont.appendChild(card);
+  });
+
+  var addEn = document.createElement('button');
+  addEn.type = 'button'; addEn.className = 'btn-add';
+  addEn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Blutentnahme hinzufügen';
+  addEn.addEventListener('click', function() { p.entnahmen.push({ uhrzeit: '', venuelen: [ { nummer: '' } ] }); renderBlutprobeEntnahme(); });
+  cont.appendChild(addEn);
+}
+
+function generateBlutprobeAnordnungText() {
+  var p = blutprobeData;
+  var r = BP_ROLLEN[p.rolle] || BP_ROLLEN.beschm;
+  var lines = [];
+
+  if (p.anordnungPolizei === 'ja') {
+    var beamte = bpBeamte();
+    var b = beamte.filter(function(x) { return x.id === p.beamterId; })[0];
+    var beamterStr = b ? b.label : '[Beamter]';
+    var dat = p.polDatum ? formatDateDE(p.polDatum) : '[Datum]';
+    var uhr = p.polUhrzeit || '[Uhrzeit]';
+    lines.push('Die Anordnungskompetenz zur Entnahme einer Blutprobe lag bei der Polizei.');
+    lines.push('Am ' + dat + ', um ' + uhr + ' Uhr ordnete ' + beamterStr + ' die Entnahme einer Blutprobe bei ' + r.dat + ' an.');
+  } else if (p.anordnungPolizei === 'nein') {
+    var staRel = p.staGeschlecht === 'Staatsanwältin' ? 'welche' : 'welcher';
+    var staName = p.staName || '[Name]';
+    var staDat = p.staDatum ? formatDateDE(p.staDatum) : '[Datum]';
+    var staUhr = p.staUhrzeit || '[Uhrzeit]';
+    lines.push('Am ' + staDat + ', um ' + staUhr + ' Uhr wurde von ' + p.staGeschlecht + ' ' + staName +
+      ' (' + p.staGeschlecht + ' beim Bereitschaftsdienst der StA Bielefeld) das AG Bielefeld (Konzentrationsgericht) erreicht, ' +
+      staRel + ' einen Antrag auf Anordnung einer Blutprobe bei ' + r.dat + ' stellte.');
+
+    var riRel = p.richterGeschlecht === 'Richterin' ? 'welche' : 'welcher';
+    var riName = p.richterName || '[Name]';
+    var riDat = p.richterDatum ? formatDateDE(p.richterDatum) : '[Datum]';
+    var riUhr = p.richterUhrzeit || '[Uhrzeit]';
+    lines.push('Am ' + riDat + ', um ' + riUhr + ' Uhr wurde sodann ' + riName + ', ' + p.richterGeschlecht +
+      ' des AG Bielefeld erreicht, ' + riRel + ' die Blutprobe bei ' + r.dat + ' anordnete.');
+  } else {
+    lines.push('[Anordnungskompetenz noch nicht erfasst.]');
+  }
+
+  // Transport zum Ort der Blutprobe
+  var ort = BP_ORTE[p.ort] || BP_ORTE.klinikum;
+  var kmStr = p.transportKm ? ' (Transportstrecke: ' + p.transportKm + ' km)' : '';
+  lines.push('Zum Zwecke der Blutprobe wurde ' + r.nom.charAt(0).toLowerCase() + r.nom.slice(1) + ' ' + ort.zu + ' verbracht' + kmStr + '.');
+
+  return lines.join('\n\n');
+}
+
+function generateBlutprobeEntnahmeText() {
+  var p = blutprobeData;
+  var ort = BP_ORTE[p.ort] || BP_ORTE.klinikum;
+  var arzt = p.arztName || '[Name]';
+  var dat = p.blutDatum ? formatDateDE(p.blutDatum) : '[Datum]';
+  var lines = [];
+
+  lines.push('Die ärztliche Blutentnahme, durchgeführt von ' + arzt + ', erfolgte am ' + dat +
+    ', zu den unten benannten Uhrzeiten, ' + ort.in + '.');
+  lines.push('Anzahl der Blutentnahmen: ' + p.entnahmen.length);
+
+  p.entnahmen.forEach(function(en, ei) {
+    var uhr = en.uhrzeit || '[Uhrzeit]';
+    var block = 'Blutentnahme ' + (ei + 1) + ' (' + uhr + ' Uhr):\n' +
+      'Bei der Blutentnahme wurden folgende Venülen befüllt:';
+    en.venuelen.forEach(function(ven, vi) {
+      block += '\n' + (vi + 1) + '. Venülnummer: ' + (ven.nummer || '[Nummer]');
+    });
+    lines.push(block);
+  });
+
+  return lines.join('\n\n');
+}
+
 // ── Anzeigenaufnahme auf der Wache ──────────────────────────
 
 function addAnzeigePerson() {
@@ -4276,6 +4604,11 @@ function generateResult() {
   };
 
   selectedSections.forEach(function(key) {
+    if (key === 'blutprobe') {
+      appendSection('Entscheidungsweg zur Anordnung der Blutentnahme', generateBlutprobeAnordnungText(), 'blutprobe');
+      appendSection('Blutprobe', generateBlutprobeEntnahmeText(), 'blutprobe');
+      return;
+    }
     if (generators[key]) appendSection(titles[key], generators[key](), key);
   });
 
