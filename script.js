@@ -3990,23 +3990,16 @@ function renderBlutprobeAnordnung() {
     var members = [];
     streifenwagen.forEach(function(sw) { sw.besatzung.forEach(function(b) { members.push({ sw: sw, b: b }); }); });
 
-    members.forEach(function(m) {
+    members.forEach(function(m, mi) {
+      var card = document.createElement('div');
+      card.style.cssText = 'border:1.5px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px';
+
+      // Zeile 1: Dienstgrad + Nachname + Entfernen
       var row = document.createElement('div');
-      row.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:8px';
+      row.style.cssText = 'display:flex;gap:8px;align-items:center';
 
-      var pick = document.createElement('button');
-      pick.type = 'button';
-      var isSel = p.beamterId === String(m.b.id);
-      pick.className = 'btn-suggestion' + (isSel ? ' active' : '');
-      pick.textContent = isSel ? '✓ angeordnet' : 'angeordnet';
-      pick.style.cssText = 'flex:0 0 auto;white-space:nowrap';
-      pick.addEventListener('click', function() {
-        p.beamterId = isSel ? '' : String(m.b.id);
-        renderBlutprobeAnordnung();
-      });
-      row.appendChild(pick);
-
-      var gsel = document.createElement('select'); gsel.className = 'field-select'; gsel.style.flex = '0 0 auto';
+      var gsel = document.createElement('select'); gsel.className = 'field-select';
+      gsel.style.cssText = 'flex:0 0 88px';
       DIENSTGRADE.forEach(function(g) {
         var o = document.createElement('option'); o.value = g; o.textContent = g;
         if (g === m.b.grad) o.selected = true; gsel.appendChild(o);
@@ -4019,16 +4012,32 @@ function renderBlutprobeAnordnung() {
       ni.addEventListener('input', function() { m.b.name = this.value; });
       row.appendChild(ni);
 
-      var rm = document.createElement('button'); rm.type = 'button'; rm.className = 'btn-add-custom'; rm.textContent = '−';
-      rm.title = 'Beamten entfernen';
-      rm.addEventListener('click', function() {
-        m.sw.besatzung = m.sw.besatzung.filter(function(x) { return x.id !== m.b.id; });
-        if (p.beamterId === String(m.b.id)) p.beamterId = '';
+      if (members.length > 1) {
+        var rm = document.createElement('button'); rm.type = 'button'; rm.className = 'btn-add-custom'; rm.textContent = '−';
+        rm.title = 'Beamten entfernen';
+        rm.addEventListener('click', function() {
+          m.sw.besatzung = m.sw.besatzung.filter(function(x) { return x.id !== m.b.id; });
+          if (p.beamterId === String(m.b.id)) p.beamterId = '';
+          renderBlutprobeAnordnung();
+        });
+        row.appendChild(rm);
+      }
+      card.appendChild(row);
+
+      // Zeile 2: als anordnenden Beamten markieren
+      var isSel = p.beamterId === String(m.b.id);
+      var pick = document.createElement('button');
+      pick.type = 'button';
+      pick.className = 'btn-suggestion' + (isSel ? ' active' : '');
+      pick.textContent = isSel ? '✓ hat die Blutprobe angeordnet' : 'als anordnenden Beamten wählen';
+      pick.style.cssText = 'margin-top:8px;width:100%';
+      pick.addEventListener('click', function() {
+        p.beamterId = isSel ? '' : String(m.b.id);
         renderBlutprobeAnordnung();
       });
-      row.appendChild(rm);
+      card.appendChild(pick);
 
-      cont.appendChild(row);
+      cont.appendChild(card);
     });
 
     var addB = document.createElement('button'); addB.type = 'button'; addB.className = 'btn-add'; addB.style.marginBottom = '16px';
@@ -4183,7 +4192,6 @@ function generateBlutprobeAnordnungText() {
     var beamterStr = b ? b.label : '[Beamter]';
     var dat = p.polDatum ? formatDateDE(p.polDatum) : '[Datum]';
     var uhr = p.polUhrzeit || '[Uhrzeit]';
-    lines.push('Die Anordnungskompetenz zur Entnahme einer Blutprobe lag bei der Polizei.');
     lines.push('Am ' + dat + ', um ' + uhr + ' Uhr ordnete ' + beamterStr + ' die Entnahme einer Blutprobe bei ' + r.dat + ' an.');
   } else if (p.anordnungPolizei === 'nein') {
     var staRel = p.staGeschlecht === 'Staatsanwältin' ? 'welche' : 'welcher';
