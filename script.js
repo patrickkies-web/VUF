@@ -366,6 +366,7 @@ var schildCounter = 0;
 var schildCurrentIdx = null;
 var massnahmenData = {
   unfallmitteilungen: false,
+  unfallmitteilungenDigital: false,
   bescheinigungen: [], bescheinigungenUhrzeit: '', bescheinigungenNwKennung: '',
   kunoSperrung: false,
   sachfahndung: false,
@@ -3067,16 +3068,23 @@ function buildBescheinigungsEmail(rolle) {
       break;
     }
   }
-  var isFemale = ['zeugin', 'ub01w', 'ub02w', 'beschw'].indexOf(rolle) !== -1;
+  if (!personName && typeof anzeigePersonen !== 'undefined') {
+    for (var j = 0; j < anzeigePersonen.length; j++) {
+      if (anzeigePersonen[j].rolle === rolle && anzeigePersonen[j].name) {
+        personName = anzeigePersonen[j].name.trim();
+        break;
+      }
+    }
+  }
+  var isFemale = ['zeugin', 'ub01w', 'ub02w', 'beschw', 'geschw'].indexOf(rolle) !== -1;
   var anrede = isFemale
     ? 'Sehr geehrte Frau' + (personName ? ' ' + personName : '')
     : 'Sehr geehrter Herr' + (personName ? ' ' + personName : '');
   var az = buildAktenzeichen();
   return anrede + ',\n\n' +
-    'anbei befindet sich das versprochene Dokument. Auf dem Dokument ist das Aktenzeichen verzeichnet, unter welchem die Vorgangsbearbeitung erfolgen wird (' + az + '). ' +
-    'Sollten Sie Fragen haben, besteht die Möglichkeit, auf der Wache Gütersloh anzurufen und dort das Aktenzeichen sowie Ihr Anliegen zu nennen. ' +
-    'Sollten Sie beabsichtigen, Akteneinsicht anzufordern, wenden Sie sich bitte an den zuständigen Sachbearbeiter des Kommissariats. ' +
-    'Meine Rufnummer als Sachbearbeiter können Sie telefonisch in den kommenden zwei Werktagen erfragen.\n\n' +
+    'anbei befindet sich das versprochene Dokument. Auf dem Dokument ist das Aktenzeichen verzeichnet, unter welchem die Vorgangsbearbeitung erfolgen wird (' + az + ').\n\n' +
+    'Sollten Sie Fragen haben, besteht die Möglichkeit, diese den Mitarbeitenden der Polizeiwache Gütersloh zu stellen (05241 869 0). Bitte halten Sie dafür das Aktenzeichen bereit.\n\n' +
+    'Sollten Sie beabsichtigen, Akteneinsicht anzufordern, wenden Sie sich bitte an den zuständigen Sachbearbeiter des Kommissariats. Dessen Durchwahl können Sie ebenfalls erfragen (05241 869 [Durchwahl]).\n\n' +
     'Mit freundlichen Grüßen';
 }
 
@@ -3107,6 +3115,9 @@ function generateMassnahmenText() {
   var parts = [];
   if (massnahmenData.unfallmitteilungen) {
     parts.push('Den Unfallbeteiligten wurden vor Ort jeweils eine Durchschrift der Unfallmitteilung ausgehändigt.');
+  }
+  if (massnahmenData.unfallmitteilungenDigital) {
+    parts.push('Den Unfallbeteiligten wurde die Unfallmitteilung jeweils in digitaler Form übermittelt.');
   }
   massnahmenData.bescheinigungen.forEach(function(rolle) {
     var rm = ROLLEN_MAP[rolle]; if (!rm) return;
@@ -3177,6 +3188,19 @@ function renderMassnahmen() {
     umBtn.classList.toggle('active', massnahmenData.unfallmitteilungen);
   };
   cont.appendChild(umBtn);
+
+  // ── Unfallmitteilungen digital ──────────────────────────────
+  var umDigBtn = document.createElement('button');
+  umDigBtn.type = 'button';
+  umDigBtn.className = 'massnahme-btn' + (massnahmenData.unfallmitteilungenDigital ? ' active' : '');
+  umDigBtn.innerHTML =
+    '<span class="mb-check"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>' +
+    '<span class="mb-label">Unfallmitteilungen digital übermittelt</span>';
+  umDigBtn.onclick = function() {
+    massnahmenData.unfallmitteilungenDigital = !massnahmenData.unfallmitteilungenDigital;
+    umDigBtn.classList.toggle('active', massnahmenData.unfallmitteilungenDigital);
+  };
+  cont.appendChild(umDigBtn);
 
   // ── Bescheinigung per E-Mail ────────────────────────────────
   var bescWrap = document.createElement('div');
@@ -3272,6 +3296,8 @@ function renderMassnahmen() {
   var rolleChips = document.createElement('div');
   rolleChips.className = 'suggestions';
   [
+    { v: 'geschm', label: 'Geschädigter' },
+    { v: 'geschw', label: 'Geschädigte'  },
     { v: 'zeuge',  label: 'Zeuge'         },
     { v: 'zeugin', label: 'Zeugin'        },
     { v: 'ub01m',  label: 'UB 01 (m)'    },
