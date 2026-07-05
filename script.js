@@ -4681,6 +4681,7 @@ var vermisstData = {
   pkwZugriff: '', pkwBeschreibung: '', pkwKennzeichen: '', pkwVorOrt: '',
   andFzZugriff: '', andFzBeschreibung: '', andFzKennzeichen: '', andFzVorOrt: '',
   krankheiten: '', krankheitenWelche: '',
+  medikamente: '', medikamenteLebenswichtig: '', medikamenteWelche: '', medikamenteEingenommen: '',
   suizidGeaeussert: '', suizidWann: '', suizidWelche: '', suizidBehandlung: '', suizidAktuell: '',
   statur: '', groesse: '', haarfarbe: '', haarlaenge: '', auffaelligkeiten: '', bekleidung: '',
   handy: '', handyNummer: '',
@@ -4818,6 +4819,18 @@ function renderVermisst2() {
     cont.appendChild(vmField('Welche Krankheiten?', vmInput('z.B. Diabetes, Epilepsie', d.krankheitenWelche, function(v) { d.krankheitenWelche = v; })));
   }
 
+  cont.appendChild(vmSep('Medikamente'));
+  cont.appendChild(vmField('Auf Medikamente angewiesen?', vmChips(VM_JNU,
+    function() { return d.medikamente; }, function(v) { d.medikamente = v; }, renderVermisst2)));
+  if (d.medikamente === 'ja') {
+    cont.appendChild(vmField('Sind diese lebenswichtig?', vmChips(VM_JN,
+      function() { return d.medikamenteLebenswichtig; }, function(v) { d.medikamenteLebenswichtig = v; })));
+    cont.appendChild(vmField('Welche Medikamente?', vmInput('z.B. Insulin, Marcumar', d.medikamenteWelche, function(v) { d.medikamenteWelche = v; })));
+    cont.appendChild(vmField('Hinweise auf Einnahme am heutigen Tag?', vmChips(
+      [{ v: 'eingenommen', label: 'eingenommen' }, { v: 'nicht eingenommen', label: 'nicht eingenommen' }, { v: 'keine Hinweise', label: 'keine Hinweise' }],
+      function() { return d.medikamenteEingenommen; }, function(v) { d.medikamenteEingenommen = v; })));
+  }
+
   cont.appendChild(vmSep('Suizidalität'));
   cont.appendChild(vmField('Suizidale Gedanken geäußert?', vmChips(VM_JN,
     function() { return d.suizidGeaeussert; }, function(v) { d.suizidGeaeussert = v; }, renderVermisst2)));
@@ -4902,6 +4915,14 @@ function generateVermisstText() {
 
   if (d.krankheiten === 'ja') add('Krankheiten bekannt', 'ja' + (d.krankheitenWelche ? ' – ' + d.krankheitenWelche : ''));
   else if (d.krankheiten) add('Krankheiten bekannt', jnu(d.krankheiten));
+
+  if (d.medikamente === 'ja') {
+    var mdet = [];
+    if (d.medikamenteLebenswichtig) mdet.push(d.medikamenteLebenswichtig === 'ja' ? 'lebenswichtig' : 'nicht lebenswichtig');
+    if (d.medikamenteWelche) mdet.push('Art: ' + d.medikamenteWelche);
+    if (d.medikamenteEingenommen) mdet.push('heute: ' + d.medikamenteEingenommen);
+    add('Auf Medikamente angewiesen', 'ja' + (mdet.length ? ' – ' + mdet.join('; ') : ''));
+  } else if (d.medikamente) { add('Auf Medikamente angewiesen', jnu(d.medikamente)); }
 
   if (d.suizidGeaeussert === 'ja') {
     var det = [];
