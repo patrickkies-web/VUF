@@ -138,6 +138,10 @@ var SECTION_DEFS = {
     label: 'Blutprobe', desc: 'Anordnung (Richtervorbehalt/Polizei) & ärztliche Blutentnahme', icon: '🩸',
     getSlides: function() { return ['slide-blutprobe-anordnung', 'slide-blutprobe-entnahme']; }
   },
+  vermisst: {
+    label: 'Vermisste Person', desc: 'Fragenkatalog & Kurzübersicht zur vermissten Person', icon: '🔎',
+    getSlides: function() { return ['slide-vermisst-1', 'slide-vermisst-2', 'slide-vermisst-3']; }
+  },
   anzeige: {
     label: 'Anzeigenaufnahme auf der Wache', desc: 'Strafanzeige – Sachverhalt & Schilderungen der erschienenen Personen', icon: '📝',
     getSlides: function() {
@@ -399,7 +403,7 @@ var anzeigeCurrentIdx = null;
 
 function getActiveSlides() {
   var slides = [];
-  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','blutprobe','massnahmen','psychkg','haftbefehl','anzeige'];
+  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','blutprobe','vermisst','massnahmen','psychkg','haftbefehl','anzeige'];
   ORDER.forEach(function(key) {
     if (selectedSections.indexOf(key) === -1) return;
     var def = SECTION_DEFS[key];
@@ -478,6 +482,9 @@ document.getElementById('btnGeneratePsychKG').onclick = nextSlide;
 document.getElementById('btnGenerateHaftbefehl').onclick = nextSlide;
 document.getElementById('btnBlutprobeAnordnung').onclick = nextSlide;
 document.getElementById('btnBlutprobeEntnahme').onclick = nextSlide;
+document.getElementById('btnVermisst1').onclick = nextSlide;
+document.getElementById('btnVermisst2').onclick = nextSlide;
+document.getElementById('btnVermisst3').onclick = nextSlide;
 
 document.getElementById('btnAuffCustomAdd').onclick = function() {
   var inp = document.getElementById('auffCustomInput');
@@ -582,7 +589,7 @@ function renderLibrary() {
   var cont = document.getElementById('libraryBausteins');
   if (!cont) return;
   cont.innerHTML = '';
-  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','blutprobe','massnahmen','psychkg','haftbefehl','anzeige'];
+  var ORDER = ['allgemeines','oertlichkeit','verhaeltnisse','spuren','fahrzeug','schilderungen','blutprobe','vermisst','massnahmen','psychkg','haftbefehl','anzeige'];
   ORDER.forEach(function(key) {
     var def = SECTION_DEFS[key];
     var isOn = selectedSections.indexOf(key) !== -1;
@@ -914,6 +921,9 @@ function render() {
   if (slides[current] === 'slide-0') renderStreifenwagen();
   if (slides[current] === 'slide-blutprobe-anordnung') renderBlutprobeAnordnung();
   if (slides[current] === 'slide-blutprobe-entnahme') renderBlutprobeEntnahme();
+  if (slides[current] === 'slide-vermisst-1') renderVermisst1();
+  if (slides[current] === 'slide-vermisst-2') renderVermisst2();
+  if (slides[current] === 'slide-vermisst-3') renderVermisst3();
   if (slides[current] === 'slide-anzeige-intro') renderAnzeigeIntro();
   if (slides[current] === 'slide-anzeige-was') renderAnzeigeWas();
   if (slides[current] === 'slide-anzeige-schild') {
@@ -4659,6 +4669,275 @@ function generateBlutprobeEntnahmeText() {
   return lines.join('\n\n');
 }
 
+// ── Vermisste Person ────────────────────────────────────────
+
+var VM_STATUR    = ['zierlich', 'schlank', 'normal', 'athletisch', 'kräftig', 'korpulent'];
+var VM_HAARFARBE = ['blond', 'dunkelblond', 'braun', 'dunkelbraun', 'schwarz', 'rot', 'grau', 'weiß', 'grau meliert', 'kein Haar / Glatze'];
+var VM_HAARLAENGE = ['kein Haar / Glatze', 'sehr kurz', 'kurz', 'mittellang', 'lang', 'sehr lang'];
+
+var vermisstData = {
+  zuletztDatum: '', zuletztUhrzeit: '',
+  richtung: '', fortbewegung: '',
+  pkwZugriff: '', pkwBeschreibung: '', pkwKennzeichen: '', pkwVorOrt: '',
+  andFzZugriff: '', andFzBeschreibung: '', andFzKennzeichen: '', andFzVorOrt: '',
+  krankheiten: '', krankheitenWelche: '',
+  suizidGeaeussert: '', suizidWann: '', suizidWelche: '', suizidBehandlung: '', suizidAktuell: '',
+  statur: '', groesse: '', haarfarbe: '', haarlaenge: '', auffaelligkeiten: '', bekleidung: '',
+  handy: '', handyNummer: '',
+  aufenthaltsorte: [], freunde: [],
+  fotos: '', bereitsVermisst: '', bereitsWo: '', vergleichsmaterial: ''
+};
+
+var VM_JN  = [{ v: 'ja', label: 'Ja' }, { v: 'nein', label: 'Nein' }];
+var VM_JNU = [{ v: 'ja', label: 'Ja' }, { v: 'nein', label: 'Nein' }, { v: 'unbekannt', label: 'Unbekannt' }];
+
+function vmField(labelText, el) {
+  var wrap = document.createElement('div'); wrap.style.marginBottom = '16px';
+  var lbl = document.createElement('div'); lbl.className = 'input-label'; lbl.style.marginBottom = '6px';
+  lbl.textContent = labelText;
+  wrap.appendChild(lbl); wrap.appendChild(el); return wrap;
+}
+function vmChips(opts, get, set, rerender) {
+  var row = document.createElement('div'); row.className = 'suggestions';
+  opts.forEach(function(o) {
+    var b = document.createElement('button'); b.type = 'button'; b.textContent = o.label;
+    b.className = 'btn-suggestion' + (get() === o.v ? ' active' : '');
+    b.addEventListener('click', function() {
+      set(get() === o.v ? '' : o.v);
+      if (rerender) { rerender(); return; }
+      row.querySelectorAll('.btn-suggestion').forEach(function(x) { x.classList.remove('active'); });
+      if (get() === o.v) b.classList.add('active');
+    });
+    row.appendChild(b);
+  });
+  return row;
+}
+function vmInput(ph, val, set, type) {
+  var inp = document.createElement('input');
+  inp.type = type || 'text'; inp.className = 'field-input'; inp.placeholder = ph; inp.value = val || '';
+  inp.addEventListener('input', function() { set(this.value); });
+  return inp;
+}
+function vmArea(ph, val, set) {
+  var ta = document.createElement('textarea'); ta.className = 'field-input field-textarea';
+  ta.placeholder = ph; ta.value = val || '';
+  ta.addEventListener('input', function() { set(this.value); });
+  return ta;
+}
+function vmSelect(opts, get, set) {
+  var sel = document.createElement('select'); sel.className = 'field-input';
+  var o0 = document.createElement('option'); o0.value = ''; o0.textContent = '– bitte wählen –'; sel.appendChild(o0);
+  opts.forEach(function(v) {
+    var o = document.createElement('option'); o.value = v; o.textContent = v;
+    if (get() === v) o.selected = true; sel.appendChild(o);
+  });
+  sel.addEventListener('change', function() { set(this.value); });
+  return sel;
+}
+function vmTwoCol(l1, e1, l2, e2) {
+  var row = document.createElement('div'); row.className = 'besch-az-row'; row.style.marginBottom = '16px';
+  [[l1, e1], [l2, e2]].forEach(function(p) {
+    var w = document.createElement('div'); w.className = 'besch-az-field';
+    var lb = document.createElement('label'); lb.textContent = p[0];
+    w.appendChild(lb); w.appendChild(p[1]); row.appendChild(w);
+  });
+  return row;
+}
+function vmAddableList(arr, placeholder, rerender, addLabel) {
+  var wrap = document.createElement('div');
+  if (!arr.length) arr.push('');
+  arr.forEach(function(val, idx) {
+    var row = document.createElement('div'); row.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:8px';
+    var inp = document.createElement('input'); inp.type = 'text'; inp.className = 'field-input'; inp.style.flex = '1';
+    inp.placeholder = placeholder; inp.value = val;
+    inp.addEventListener('input', function() { arr[idx] = this.value; });
+    row.appendChild(inp);
+    if (arr.length > 1) {
+      var del = document.createElement('button'); del.type = 'button'; del.className = 'btn-add-custom'; del.textContent = '−';
+      del.addEventListener('click', function() { arr.splice(idx, 1); rerender(); });
+      row.appendChild(del);
+    }
+    wrap.appendChild(row);
+  });
+  var add = document.createElement('button'); add.type = 'button'; add.className = 'btn-add';
+  add.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> ' + addLabel;
+  add.addEventListener('click', function() { arr.push(''); rerender(); });
+  wrap.appendChild(add);
+  return wrap;
+}
+function vmSep(text) {
+  var s = document.createElement('div'); s.className = 'input-label';
+  s.style.cssText = 'margin:6px 0 10px;opacity:.8;font-weight:600'; s.textContent = text;
+  return s;
+}
+
+function renderVermisst1() {
+  var cont = document.getElementById('vermisst1Content'); if (!cont) return;
+  cont.innerHTML = ''; var d = vermisstData;
+
+  cont.appendChild(vmTwoCol(
+    'Zuletzt gesehen – Datum', vmInput('', d.zuletztDatum, function(v) { d.zuletztDatum = v; }, 'date'),
+    'Uhrzeit', vmInput('', d.zuletztUhrzeit, function(v) { d.zuletztUhrzeit = v; }, 'time')
+  ));
+
+  cont.appendChild(vmField('Entfernte sich in Richtung', vmInput('z.B. Innenstadt / Bahnhof', d.richtung, function(v) { d.richtung = v; })));
+  cont.appendChild(vmField('Fortbewegung (womit?)', vmChips(
+    [{ v: 'zu Fuß', label: 'zu Fuß' }, { v: 'mit dem Fahrrad', label: 'Fahrrad' }, { v: 'mit dem Pkw', label: 'Pkw' },
+     { v: 'mit öffentlichen Verkehrsmitteln', label: 'ÖPNV' }, { v: 'unbekannt', label: 'unbekannt' }],
+    function() { return d.fortbewegung; }, function(v) { d.fortbewegung = v; }
+  )));
+
+  cont.appendChild(vmSep('Zugriff auf Pkw'));
+  cont.appendChild(vmField('Zugriff auf einen Pkw?', vmChips(VM_JN,
+    function() { return d.pkwZugriff; }, function(v) { d.pkwZugriff = v; }, renderVermisst1)));
+  if (d.pkwZugriff === 'ja') {
+    cont.appendChild(vmField('Pkw-Beschreibung', vmInput('z.B. VW Golf, schwarz', d.pkwBeschreibung, function(v) { d.pkwBeschreibung = v; })));
+    cont.appendChild(vmField('Kennzeichen', vmInput('z.B. GT-AB 123', d.pkwKennzeichen, function(v) { d.pkwKennzeichen = v; })));
+    cont.appendChild(vmField('Fahrzeug noch vor Ort?', vmChips(VM_JNU,
+      function() { return d.pkwVorOrt; }, function(v) { d.pkwVorOrt = v; })));
+  }
+
+  cont.appendChild(vmSep('Zugriff auf andere Fahrzeuge'));
+  cont.appendChild(vmField('Zugriff auf andere Fahrzeuge?', vmChips(VM_JN,
+    function() { return d.andFzZugriff; }, function(v) { d.andFzZugriff = v; }, renderVermisst1)));
+  if (d.andFzZugriff === 'ja') {
+    cont.appendChild(vmField('Beschreibung', vmInput('z.B. Motorrad, rot', d.andFzBeschreibung, function(v) { d.andFzBeschreibung = v; })));
+    cont.appendChild(vmField('Kennzeichen', vmInput('z.B. GT-CD 456', d.andFzKennzeichen, function(v) { d.andFzKennzeichen = v; })));
+    cont.appendChild(vmField('Fahrzeug noch vor Ort?', vmChips(VM_JNU,
+      function() { return d.andFzVorOrt; }, function(v) { d.andFzVorOrt = v; })));
+  }
+}
+
+function renderVermisst2() {
+  var cont = document.getElementById('vermisst2Content'); if (!cont) return;
+  cont.innerHTML = ''; var d = vermisstData;
+
+  cont.appendChild(vmField('Krankheiten bekannt?', vmChips(VM_JNU,
+    function() { return d.krankheiten; }, function(v) { d.krankheiten = v; }, renderVermisst2)));
+  if (d.krankheiten === 'ja') {
+    cont.appendChild(vmField('Welche Krankheiten?', vmInput('z.B. Diabetes, Epilepsie', d.krankheitenWelche, function(v) { d.krankheitenWelche = v; })));
+  }
+
+  cont.appendChild(vmSep('Suizidalität'));
+  cont.appendChild(vmField('Suizidale Gedanken geäußert?', vmChips(VM_JN,
+    function() { return d.suizidGeaeussert; }, function(v) { d.suizidGeaeussert = v; }, renderVermisst2)));
+  if (d.suizidGeaeussert === 'ja') {
+    cont.appendChild(vmField('Wann geäußert?', vmInput('z.B. vor 2 Wochen', d.suizidWann, function(v) { d.suizidWann = v; })));
+    cont.appendChild(vmField('Welche Äußerungen / Art?', vmInput('kurze Beschreibung', d.suizidWelche, function(v) { d.suizidWelche = v; })));
+    cont.appendChild(vmField('In Behandlung?', vmChips(VM_JN, function() { return d.suizidBehandlung; }, function(v) { d.suizidBehandlung = v; })));
+    cont.appendChild(vmField('Aktuell geäußert?', vmChips(VM_JN, function() { return d.suizidAktuell; }, function(v) { d.suizidAktuell = v; })));
+  }
+
+  cont.appendChild(vmSep('Erscheinungsbild'));
+  cont.appendChild(vmField('Statur', vmSelect(VM_STATUR, function() { return d.statur; }, function(v) { d.statur = v; })));
+  cont.appendChild(vmField('Größe (cm)', vmInput('z.B. 180', d.groesse, function(v) { d.groesse = v; }, 'number')));
+  cont.appendChild(vmField('Haarfarbe', vmSelect(VM_HAARFARBE, function() { return d.haarfarbe; }, function(v) { d.haarfarbe = v; })));
+  cont.appendChild(vmField('Haarlänge', vmSelect(VM_HAARLAENGE, function() { return d.haarlaenge; }, function(v) { d.haarlaenge = v; })));
+  cont.appendChild(vmField('Auffälligkeiten (Narben, Gesichtsbehaarung, Brille …)', vmArea('freie Beschreibung', d.auffaelligkeiten, function(v) { d.auffaelligkeiten = v; })));
+  cont.appendChild(vmField('Bekleidung', vmArea('freie Beschreibung', d.bekleidung, function(v) { d.bekleidung = v; })));
+}
+
+function renderVermisst3() {
+  var cont = document.getElementById('vermisst3Content'); if (!cont) return;
+  cont.innerHTML = ''; var d = vermisstData;
+
+  cont.appendChild(vmField('Handy mitgeführt?', vmChips(VM_JN,
+    function() { return d.handy; }, function(v) { d.handy = v; }, renderVermisst3)));
+  if (d.handy === 'ja') {
+    cont.appendChild(vmField('Telefonnummer', vmInput('z.B. 0151 …', d.handyNummer, function(v) { d.handyNummer = v; })));
+  }
+
+  cont.appendChild(vmField('Bekannte Aufenthaltsorte (Stichpunkte)', vmAddableList(d.aufenthaltsorte, 'z.B. Stammkneipe „…“', renderVermisst3, 'Aufenthaltsort hinzufügen')));
+  cont.appendChild(vmField('Freunde als Anlaufadressen', vmAddableList(d.freunde, 'Name / Anschrift', renderVermisst3, 'Anlaufadresse hinzufügen')));
+
+  cont.appendChild(vmSep('Sonstiges'));
+  var fotosWrap = document.createElement('div'); fotosWrap.style.marginBottom = '16px';
+  var fLbl = document.createElement('div'); fLbl.className = 'input-label'; fLbl.style.marginBottom = '6px'; fLbl.textContent = 'Fotos verfügbar?';
+  fotosWrap.appendChild(fLbl);
+  fotosWrap.appendChild(vmChips(VM_JN, function() { return d.fotos; }, function(v) { d.fotos = v; }, renderVermisst3));
+  if (d.fotos === 'ja') {
+    var hint = document.createElement('div'); hint.className = 'hb-ort-hint'; hint.style.marginTop = '8px';
+    hint.textContent = 'ℹ️ Fotos bitte in Teamwire einstellen (wird im Text vermerkt).';
+    fotosWrap.appendChild(hint);
+  }
+  cont.appendChild(fotosWrap);
+
+  cont.appendChild(vmField('Schon einmal vermisst gewesen?', vmChips(VM_JN,
+    function() { return d.bereitsVermisst; }, function(v) { d.bereitsVermisst = v; }, renderVermisst3)));
+  if (d.bereitsVermisst === 'ja') {
+    cont.appendChild(vmField('Wo damals angetroffen?', vmInput('z.B. bei Freunden in …', d.bereitsWo, function(v) { d.bereitsWo = v; })));
+  }
+
+  cont.appendChild(vmField('Vergleichsmaterial für Suchmaßnahmen (Mantrailer) verfügbar?', vmChips(VM_JN,
+    function() { return d.vergleichsmaterial; }, function(v) { d.vergleichsmaterial = v; })));
+}
+
+function generateVermisstText() {
+  var d = vermisstData;
+  var L = [];
+  function add(label, val) { if (val && String(val).trim()) L.push('• ' + label + ': ' + String(val).trim()); }
+  function jnu(v) { return v === 'ja' ? 'ja' : v === 'nein' ? 'nein' : v === 'unbekannt' ? 'unbekannt' : ''; }
+  function vorOrt(v) { return v === 'ja' ? 'noch vor Ort' : v === 'nein' ? 'nicht mehr vor Ort' : v === 'unbekannt' ? 'Verbleib unbekannt' : ''; }
+
+  var zg = [];
+  if (d.zuletztDatum) zg.push(formatDateDE(d.zuletztDatum));
+  if (d.zuletztUhrzeit) zg.push(d.zuletztUhrzeit + ' Uhr');
+  add('Zuletzt gesehen', zg.join(', '));
+
+  var ri = d.richtung || '';
+  if (d.fortbewegung) ri += (ri ? ' ' : '') + '(' + d.fortbewegung + ')';
+  add('Entfernte sich in Richtung', ri);
+
+  if (d.pkwZugriff === 'ja') {
+    var pk = [d.pkwBeschreibung, d.pkwKennzeichen].filter(Boolean).join(', ');
+    var vo = vorOrt(d.pkwVorOrt);
+    add('Zugriff auf Pkw', 'ja' + (pk ? ' – ' + pk : '') + (vo ? ' (' + vo + ')' : ''));
+  } else if (d.pkwZugriff) { add('Zugriff auf Pkw', jnu(d.pkwZugriff)); }
+
+  if (d.andFzZugriff === 'ja') {
+    var af = [d.andFzBeschreibung, d.andFzKennzeichen].filter(Boolean).join(', ');
+    var avo = vorOrt(d.andFzVorOrt);
+    add('Zugriff auf andere Fahrzeuge', 'ja' + (af ? ' – ' + af : '') + (avo ? ' (' + avo + ')' : ''));
+  } else if (d.andFzZugriff) { add('Zugriff auf andere Fahrzeuge', jnu(d.andFzZugriff)); }
+
+  if (d.krankheiten === 'ja') add('Krankheiten bekannt', 'ja' + (d.krankheitenWelche ? ' – ' + d.krankheitenWelche : ''));
+  else if (d.krankheiten) add('Krankheiten bekannt', jnu(d.krankheiten));
+
+  if (d.suizidGeaeussert === 'ja') {
+    var det = [];
+    if (d.suizidWann) det.push('wann: ' + d.suizidWann);
+    if (d.suizidWelche) det.push('Art: ' + d.suizidWelche);
+    if (d.suizidBehandlung) det.push('in Behandlung: ' + jnu(d.suizidBehandlung));
+    if (d.suizidAktuell) det.push('aktuell geäußert: ' + jnu(d.suizidAktuell));
+    add('Suizidale Äußerungen', 'ja' + (det.length ? ' – ' + det.join('; ') : ''));
+  } else if (d.suizidGeaeussert) { add('Suizidale Äußerungen', jnu(d.suizidGeaeussert)); }
+
+  add('Statur', d.statur);
+  add('Größe', d.groesse ? (/^\d+$/.test(String(d.groesse).trim()) ? d.groesse + ' cm' : d.groesse) : '');
+  add('Haarfarbe', d.haarfarbe);
+  add('Haarlänge', d.haarlaenge);
+  add('Auffälligkeiten', d.auffaelligkeiten);
+  add('Bekleidung', d.bekleidung);
+
+  if (d.handy === 'ja') add('Handy', 'ja' + (d.handyNummer ? ' – ' + d.handyNummer : ''));
+  else if (d.handy) add('Handy', jnu(d.handy));
+
+  var orte = (d.aufenthaltsorte || []).map(function(x) { return (x || '').trim(); }).filter(Boolean);
+  if (orte.length) add('Bekannte Aufenthaltsorte', orte.join('; '));
+  var fr = (d.freunde || []).map(function(x) { return (x || '').trim(); }).filter(Boolean);
+  if (fr.length) add('Freunde / Anlaufadressen', fr.join('; '));
+
+  if (d.fotos === 'ja') add('Fotos verfügbar', 'ja – in Teamwire eingestellt');
+  else if (d.fotos) add('Fotos verfügbar', jnu(d.fotos));
+
+  if (d.bereitsVermisst === 'ja') add('Bereits vermisst gewesen', 'ja' + (d.bereitsWo ? ' – angetroffen: ' + d.bereitsWo : ''));
+  else if (d.bereitsVermisst) add('Bereits vermisst gewesen', jnu(d.bereitsVermisst));
+
+  if (d.vergleichsmaterial) add('Vergleichsmaterial (Mantrailer)', jnu(d.vergleichsmaterial));
+
+  return L.join('\n');
+}
+
 // ── Anzeigenaufnahme auf der Wache ──────────────────────────
 
 function addAnzeigePerson() {
@@ -5084,6 +5363,7 @@ function generateResult() {
     massnahmen:    function() { return generateMassnahmenText(); },
     psychkg:       function() { return generatePsychKGText(); },
     haftbefehl:    function() { return generateHaftbefehlText(); },
+    vermisst:      function() { return generateVermisstText(); },
     anzeige:       function() { return generateAnzeigeText(); }
   };
 
@@ -5097,6 +5377,7 @@ function generateResult() {
     massnahmen:    'Maßnahmen / Sonstiges',
     psychkg:       'Maßnahmen nach dem PsychKG',
     haftbefehl:    'Haftbefehl',
+    vermisst:      'Vermisste Person',
     anzeige:       'Anzeigenaufnahme auf der Wache'
   };
 

@@ -6,8 +6,8 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Polizeibericht v3.46</title>
-  <link rel="stylesheet" href="style.css?v=3.46">
+  <title>Polizeibericht v3.47</title>
+  <link rel="stylesheet" href="style.css?v=3.47">
 </head>
 <body>
 
@@ -863,6 +863,42 @@
       </div>
     </div>
 
+    <!-- Vermisste Person 1: Sichtung & Fahrzeuge -->
+    <div class="slide" id="slide-vermisst-1">
+      <div class="question-number">Vermisste Person &middot; Sichtung</div>
+      <div class="question-text">Sichtung &amp;<br><strong>Fahrzeuge</strong></div>
+      <div id="vermisst1Content"></div>
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;margin-top:16px">
+        <button class="btn-next" id="btnVermisst1">Weiter
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Vermisste Person 2: Gesundheit & Erscheinung -->
+    <div class="slide" id="slide-vermisst-2">
+      <div class="question-number">Vermisste Person &middot; Gesundheit &amp; Erscheinung</div>
+      <div class="question-text">Gesundheit &amp;<br><strong>Erscheinungsbild</strong></div>
+      <div id="vermisst2Content"></div>
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;margin-top:16px">
+        <button class="btn-next" id="btnVermisst2">Weiter
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Vermisste Person 3: Kontakt & Umfeld -->
+    <div class="slide" id="slide-vermisst-3">
+      <div class="question-number">Vermisste Person &middot; Kontakt &amp; Umfeld</div>
+      <div class="question-text">Kontakt &amp;<br><strong>Umfeld</strong></div>
+      <div id="vermisst3Content"></div>
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;margin-top:16px">
+        <button class="btn-next" id="btnVermisst3">Bericht erstellen
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+
     <!-- Ergebnis -->
     <div class="slide" id="slide-result">
       <div class="question-number">Fertig</div>
@@ -885,7 +921,7 @@
   <div style="width:80px"></div>
 </div>
 
-<script src="script.js?v=3.46"></script>
+<script src="script.js?v=3.47"></script>
 <script>if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js').catch(function(){});}</script>
 
 <!-- Bericht-Generierungs-Overlay -->
