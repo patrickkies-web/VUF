@@ -4887,76 +4887,88 @@ function renderVermisst3() {
 
 function generateVermisstText() {
   var d = vermisstData;
-  var L = [];
-  function add(label, val) { if (val && String(val).trim()) L.push('• ' + label + ': ' + String(val).trim()); }
+  var out = [];
   function jnu(v) { return v === 'ja' ? 'ja' : v === 'nein' ? 'nein' : v === 'unbekannt' ? 'unbekannt' : ''; }
   function vorOrt(v) { return v === 'ja' ? 'noch vor Ort' : v === 'nein' ? 'nicht mehr vor Ort' : v === 'unbekannt' ? 'Verbleib unbekannt' : ''; }
+  function group(title, fn) {
+    var lines = [];
+    fn(function(label, val) { if (val && String(val).trim()) lines.push('   -  ' + label + ': ' + String(val).trim()); });
+    if (lines.length) out.push(title.toUpperCase() + '\n' + lines.join('\n'));
+  }
 
-  var zg = [];
-  if (d.zuletztDatum) zg.push(formatDateDE(d.zuletztDatum));
-  if (d.zuletztUhrzeit) zg.push(d.zuletztUhrzeit + ' Uhr');
-  add('Zuletzt gesehen', zg.join(', '));
+  group('Sichtung', function(add) {
+    var zg = [];
+    if (d.zuletztDatum) zg.push(formatDateDE(d.zuletztDatum));
+    if (d.zuletztUhrzeit) zg.push(d.zuletztUhrzeit + ' Uhr');
+    add('Zuletzt gesehen', zg.join(', '));
 
-  var ri = d.richtung || '';
-  if (d.fortbewegung) ri += (ri ? ' ' : '') + '(' + d.fortbewegung + ')';
-  add('Entfernte sich in Richtung', ri);
+    var ri = d.richtung || '';
+    if (d.fortbewegung) ri += (ri ? ' ' : '') + '(' + d.fortbewegung + ')';
+    add('Entfernte sich in Richtung', ri);
 
-  if (d.pkwZugriff === 'ja') {
-    var pk = [d.pkwBeschreibung, d.pkwKennzeichen].filter(Boolean).join(', ');
-    var vo = vorOrt(d.pkwVorOrt);
-    add('Zugriff auf Pkw', 'ja' + (pk ? ' – ' + pk : '') + (vo ? ' (' + vo + ')' : ''));
-  } else if (d.pkwZugriff) { add('Zugriff auf Pkw', jnu(d.pkwZugriff)); }
+    if (d.pkwZugriff === 'ja') {
+      var pk = [d.pkwBeschreibung, d.pkwKennzeichen].filter(Boolean).join(', ');
+      var vo = vorOrt(d.pkwVorOrt);
+      add('Zugriff auf Pkw', 'ja' + (pk ? ' – ' + pk : '') + (vo ? ' (' + vo + ')' : ''));
+    } else if (d.pkwZugriff) { add('Zugriff auf Pkw', jnu(d.pkwZugriff)); }
 
-  if (d.andFzZugriff === 'ja') {
-    var af = [d.andFzBeschreibung, d.andFzKennzeichen].filter(Boolean).join(', ');
-    var avo = vorOrt(d.andFzVorOrt);
-    add('Zugriff auf andere Fahrzeuge', 'ja' + (af ? ' – ' + af : '') + (avo ? ' (' + avo + ')' : ''));
-  } else if (d.andFzZugriff) { add('Zugriff auf andere Fahrzeuge', jnu(d.andFzZugriff)); }
+    if (d.andFzZugriff === 'ja') {
+      var af = [d.andFzBeschreibung, d.andFzKennzeichen].filter(Boolean).join(', ');
+      var avo = vorOrt(d.andFzVorOrt);
+      add('Zugriff auf andere Fahrzeuge', 'ja' + (af ? ' – ' + af : '') + (avo ? ' (' + avo + ')' : ''));
+    } else if (d.andFzZugriff) { add('Zugriff auf andere Fahrzeuge', jnu(d.andFzZugriff)); }
+  });
 
-  if (d.krankheiten === 'ja') add('Krankheiten bekannt', 'ja' + (d.krankheitenWelche ? ' – ' + d.krankheitenWelche : ''));
-  else if (d.krankheiten) add('Krankheiten bekannt', jnu(d.krankheiten));
+  group('Gesundheit', function(add) {
+    if (d.krankheiten === 'ja') add('Krankheiten bekannt', 'ja' + (d.krankheitenWelche ? ' – ' + d.krankheitenWelche : ''));
+    else if (d.krankheiten) add('Krankheiten bekannt', jnu(d.krankheiten));
 
-  if (d.medikamente === 'ja') {
-    var mdet = [];
-    if (d.medikamenteLebenswichtig) mdet.push(d.medikamenteLebenswichtig === 'ja' ? 'lebenswichtig' : 'nicht lebenswichtig');
-    if (d.medikamenteWelche) mdet.push('Art: ' + d.medikamenteWelche);
-    if (d.medikamenteEingenommen) mdet.push('heute: ' + d.medikamenteEingenommen);
-    add('Auf Medikamente angewiesen', 'ja' + (mdet.length ? ' – ' + mdet.join('; ') : ''));
-  } else if (d.medikamente) { add('Auf Medikamente angewiesen', jnu(d.medikamente)); }
+    if (d.medikamente === 'ja') {
+      var mdet = [];
+      if (d.medikamenteLebenswichtig) mdet.push(d.medikamenteLebenswichtig === 'ja' ? 'lebenswichtig' : 'nicht lebenswichtig');
+      if (d.medikamenteWelche) mdet.push('Art: ' + d.medikamenteWelche);
+      if (d.medikamenteEingenommen) mdet.push('heute: ' + d.medikamenteEingenommen);
+      add('Auf Medikamente angewiesen', 'ja' + (mdet.length ? ' – ' + mdet.join('; ') : ''));
+    } else if (d.medikamente) { add('Auf Medikamente angewiesen', jnu(d.medikamente)); }
 
-  if (d.suizidGeaeussert === 'ja') {
-    var det = [];
-    if (d.suizidWann) det.push('wann: ' + d.suizidWann);
-    if (d.suizidWelche) det.push('Art: ' + d.suizidWelche);
-    if (d.suizidBehandlung) det.push('in Behandlung: ' + jnu(d.suizidBehandlung));
-    if (d.suizidAktuell) det.push('aktuell geäußert: ' + jnu(d.suizidAktuell));
-    add('Suizidale Äußerungen', 'ja' + (det.length ? ' – ' + det.join('; ') : ''));
-  } else if (d.suizidGeaeussert) { add('Suizidale Äußerungen', jnu(d.suizidGeaeussert)); }
+    if (d.suizidGeaeussert === 'ja') {
+      var det = [];
+      if (d.suizidWann) det.push('wann: ' + d.suizidWann);
+      if (d.suizidWelche) det.push('Art: ' + d.suizidWelche);
+      if (d.suizidBehandlung) det.push('in Behandlung: ' + jnu(d.suizidBehandlung));
+      if (d.suizidAktuell) det.push('aktuell geäußert: ' + jnu(d.suizidAktuell));
+      add('Suizidale Äußerungen', 'ja' + (det.length ? ' – ' + det.join('; ') : ''));
+    } else if (d.suizidGeaeussert) { add('Suizidale Äußerungen', jnu(d.suizidGeaeussert)); }
+  });
 
-  add('Statur', d.statur);
-  add('Größe', d.groesse ? (/^\d+$/.test(String(d.groesse).trim()) ? d.groesse + ' cm' : d.groesse) : '');
-  add('Haarfarbe', d.haarfarbe);
-  add('Haarlänge', d.haarlaenge);
-  add('Auffälligkeiten', d.auffaelligkeiten);
-  add('Bekleidung', d.bekleidung);
+  group('Erscheinungsbild', function(add) {
+    add('Statur', d.statur);
+    add('Größe', d.groesse ? (/^\d+$/.test(String(d.groesse).trim()) ? d.groesse + ' cm' : d.groesse) : '');
+    add('Haarfarbe', d.haarfarbe);
+    add('Haarlänge', d.haarlaenge);
+    add('Auffälligkeiten', d.auffaelligkeiten);
+    add('Bekleidung', d.bekleidung);
+  });
 
-  if (d.handy === 'ja') add('Handy', 'ja' + (d.handyNummer ? ' – ' + d.handyNummer : ''));
-  else if (d.handy) add('Handy', jnu(d.handy));
+  group('Umfeld & Kontakt', function(add) {
+    if (d.handy === 'ja') add('Handy', 'ja' + (d.handyNummer ? ' – ' + d.handyNummer : ''));
+    else if (d.handy) add('Handy', jnu(d.handy));
 
-  var orte = (d.aufenthaltsorte || []).map(function(x) { return (x || '').trim(); }).filter(Boolean);
-  if (orte.length) add('Bekannte Aufenthaltsorte', orte.join('; '));
-  var fr = (d.freunde || []).map(function(x) { return (x || '').trim(); }).filter(Boolean);
-  if (fr.length) add('Freunde / Anlaufadressen', fr.join('; '));
+    var orte = (d.aufenthaltsorte || []).map(function(x) { return (x || '').trim(); }).filter(Boolean);
+    if (orte.length) add('Bekannte Aufenthaltsorte', orte.join('; '));
+    var fr = (d.freunde || []).map(function(x) { return (x || '').trim(); }).filter(Boolean);
+    if (fr.length) add('Freunde / Anlaufadressen', fr.join('; '));
 
-  if (d.fotos === 'ja') add('Fotos verfügbar', 'ja – in Teamwire eingestellt');
-  else if (d.fotos) add('Fotos verfügbar', jnu(d.fotos));
+    if (d.fotos === 'ja') add('Fotos verfügbar', 'ja – in Teamwire eingestellt');
+    else if (d.fotos) add('Fotos verfügbar', jnu(d.fotos));
 
-  if (d.bereitsVermisst === 'ja') add('Bereits vermisst gewesen', 'ja' + (d.bereitsWo ? ' – angetroffen: ' + d.bereitsWo : ''));
-  else if (d.bereitsVermisst) add('Bereits vermisst gewesen', jnu(d.bereitsVermisst));
+    if (d.bereitsVermisst === 'ja') add('Bereits vermisst gewesen', 'ja' + (d.bereitsWo ? ' – angetroffen: ' + d.bereitsWo : ''));
+    else if (d.bereitsVermisst) add('Bereits vermisst gewesen', jnu(d.bereitsVermisst));
 
-  if (d.vergleichsmaterial) add('Vergleichsmaterial (Mantrailer)', jnu(d.vergleichsmaterial));
+    if (d.vergleichsmaterial) add('Vergleichsmaterial (Mantrailer)', jnu(d.vergleichsmaterial));
+  });
 
-  return L.join('\n');
+  return out.join('\n\n');
 }
 
 // ── Anzeigenaufnahme auf der Wache ──────────────────────────
