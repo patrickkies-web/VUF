@@ -4678,7 +4678,7 @@ var VM_HAARLAENGE = ['kein Haar / Glatze', 'sehr kurz', 'kurz', 'mittellang', 'l
 var vermisstData = {
   melderName: '', melderGeburtsdatum: '', melderErreichbarkeit: '', melderRolle: '',
   zuletztDatum: '', zuletztUhrzeit: '',
-  richtung: '', fortbewegung: '',
+  richtung: '', fortbewegung: '', fortbewegungZuFuss: '',
   pkwZugriff: '', pkwBeschreibung: '', pkwKennzeichen: '', pkwVorOrt: '',
   andFzZugriff: '', andFzBeschreibung: '', andFzKennzeichen: '', andFzVorOrt: '',
   krankheiten: '', krankheitenWelche: '',
@@ -4795,8 +4795,14 @@ function renderVermisst1() {
   cont.appendChild(vmField('Fortbewegung (womit?)', vmChips(
     [{ v: 'zu Fuß', label: 'zu Fuß' }, { v: 'mit dem Fahrrad', label: 'Fahrrad' }, { v: 'mit dem Pkw', label: 'Pkw' },
      { v: 'mit öffentlichen Verkehrsmitteln', label: 'ÖPNV' }, { v: 'unbekannt', label: 'unbekannt' }],
-    function() { return d.fortbewegung; }, function(v) { d.fortbewegung = v; }
+    function() { return d.fortbewegung; }, function(v) { d.fortbewegung = v; }, renderVermisst1
   )));
+  if (d.fortbewegung === 'zu Fuß') {
+    cont.appendChild(vmField('Zu Fuß – Mobilität?', vmChips(
+      [{ v: 'gut zu Fuß', label: 'gut zu Fuß' }, { v: 'normal', label: 'normal' }, { v: 'nicht gut zu Fuß', label: 'nicht gut zu Fuß' }],
+      function() { return d.fortbewegungZuFuss; }, function(v) { d.fortbewegungZuFuss = v; }
+    )));
+  }
 
   cont.appendChild(vmSep('Zugriff auf Pkw'));
   cont.appendChild(vmField('Zugriff auf einen Pkw?', vmChips(VM_JN,
@@ -4921,7 +4927,11 @@ function generateVermisstText() {
     add('Zuletzt gesehen', zg.join(', '));
 
     var ri = d.richtung || '';
-    if (d.fortbewegung) ri += (ri ? ' ' : '') + '(' + d.fortbewegung + ')';
+    if (d.fortbewegung) {
+      var fb = d.fortbewegung;
+      if (d.fortbewegung === 'zu Fuß' && d.fortbewegungZuFuss) fb += ', ' + d.fortbewegungZuFuss;
+      ri += (ri ? ' ' : '') + '(' + fb + ')';
+    }
     add('Entfernte sich in Richtung', ri);
 
     if (d.pkwZugriff === 'ja') {
