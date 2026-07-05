@@ -4676,6 +4676,7 @@ var VM_HAARFARBE = ['blond', 'dunkelblond', 'braun', 'dunkelbraun', 'schwarz', '
 var VM_HAARLAENGE = ['kein Haar / Glatze', 'sehr kurz', 'kurz', 'mittellang', 'lang', 'sehr lang'];
 
 var vermisstData = {
+  melderName: '', melderGeburtsdatum: '', melderErreichbarkeit: '', melderRolle: '',
   zuletztDatum: '', zuletztUhrzeit: '',
   richtung: '', fortbewegung: '',
   pkwZugriff: '', pkwBeschreibung: '', pkwKennzeichen: '', pkwVorOrt: '',
@@ -4776,6 +4777,15 @@ function renderVermisst1() {
   var cont = document.getElementById('vermisst1Content'); if (!cont) return;
   cont.innerHTML = ''; var d = vermisstData;
 
+  cont.appendChild(vmSep('Anzeigenerstatter'));
+  cont.appendChild(vmField('Name', vmInput('Vor- und Nachname', d.melderName, function(v) { d.melderName = v; })));
+  cont.appendChild(vmField('Rolle zur vermissten Person', vmInput('z.B. Mutter, Ehemann, Freund', d.melderRolle, function(v) { d.melderRolle = v; })));
+  cont.appendChild(vmTwoCol(
+    'Geburtsdatum', vmInput('', d.melderGeburtsdatum, function(v) { d.melderGeburtsdatum = v; }, 'date'),
+    'Erreichbarkeit / Tel.', vmInput('z.B. 0151 …', d.melderErreichbarkeit, function(v) { d.melderErreichbarkeit = v; })
+  ));
+
+  cont.appendChild(vmSep('Sichtung'));
   cont.appendChild(vmTwoCol(
     'Zuletzt gesehen – Datum', vmInput('', d.zuletztDatum, function(v) { d.zuletztDatum = v; }, 'date'),
     'Uhrzeit', vmInput('', d.zuletztUhrzeit, function(v) { d.zuletztUhrzeit = v; }, 'time')
@@ -4895,6 +4905,14 @@ function generateVermisstText() {
     fn(function(label, val) { if (val && String(val).trim()) lines.push('   -  ' + label + ': ' + String(val).trim()); });
     if (lines.length) out.push(title.toUpperCase() + '\n' + lines.join('\n'));
   }
+
+  group('Anzeigenerstatter', function(add) {
+    var nm = d.melderName || '';
+    if (d.melderRolle) nm += (nm ? ' ' : '') + '(' + d.melderRolle + ')';
+    add('Name', nm);
+    add('Geburtsdatum', d.melderGeburtsdatum ? formatDateDE(d.melderGeburtsdatum) : '');
+    add('Erreichbarkeit', d.melderErreichbarkeit);
+  });
 
   group('Sichtung', function(add) {
     var zg = [];
