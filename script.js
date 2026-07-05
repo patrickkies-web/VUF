@@ -2298,6 +2298,7 @@ function addSchilderung() {
     abstelltDatum: document.getElementById('datum').value || '',
     abstelltUhrzeit: '',
     abstelltOrt: getUnfallOrtVorfill(),
+    rueckDatum: '',
     rueckUhrzeit: '',
     zwischenzeit: null,
     zwischenzeitText: '',
@@ -2467,7 +2468,9 @@ function buildAngabenBody(s) {
     var uzeit = s.abstelltUhrzeit || '[Uhrzeit]';
     var ort   = s.abstelltOrt || '[Ort]';
     var rueck = s.rueckUhrzeit || '[Uhrzeit]';
-    var body = rm.er + ' habe ' + rm.sein + ' Fahrzeug am ' + datum + ' gegen ' + uzeit + ' Uhr ' + ort + ' abgestellt. Bei ' + rm.seiner + ' Rückkehr gegen ' + rueck + ' Uhr habe ' + rm.erLow + ' ' + rm.sein + ' Fahrzeug beschädigt vorgefunden.\n' + dispCap + ' geht davon aus, dass es in diesem Zeitraum zu einem Verkehrsunfall gekommen ist, bei welchem ' + rm.sein + ' Fahrzeug beschädigt wurde.';
+    var rueckDat = s.rueckDatum ? formatDateDE(s.rueckDatum) : '';
+    var rueckZeit = (rueckDat ? 'am ' + rueckDat + ' gegen ' + rueck + ' Uhr' : 'gegen ' + rueck + ' Uhr');
+    var body = rm.er + ' habe ' + rm.sein + ' Fahrzeug am ' + datum + ' gegen ' + uzeit + ' Uhr ' + ort + ' abgestellt. Bei ' + rm.seiner + ' Rückkehr ' + rueckZeit + ' habe ' + rm.erLow + ' ' + rm.sein + ' Fahrzeug beschädigt vorgefunden.\n' + dispCap + ' geht davon aus, dass es in diesem Zeitraum zu einem Verkehrsunfall gekommen ist, bei welchem ' + rm.sein + ' Fahrzeug beschädigt wurde.';
     if (s.zwischenzeit === 'ja' && s.zwischenzeitText) {
       body += ' In der Zwischenzeit habe ' + rm.erLow + ' folgendes festgestellt: ' + s.zwischenzeitText;
     } else {
@@ -2571,6 +2574,7 @@ function renderSchilderungenAngaben() {
   vufWrap.appendChild(addField('Datum abgestellt', 'TT.MM.JJJJ', s.abstelltDatum, function(v) { s.abstelltDatum = v; }, 'date'));
   vufWrap.appendChild(addField('Uhrzeit abgestellt', 'z. B. 20:30', s.abstelltUhrzeit, function(v) { s.abstelltUhrzeit = v; }));
   vufWrap.appendChild(addField('Ort abgestellt', 'z. B. in der Hauptstraße', s.abstelltOrt, function(v) { s.abstelltOrt = v; }));
+  vufWrap.appendChild(addField('Rückkehr-/Feststell-Datum', 'TT.MM.JJJJ', s.rueckDatum, function(v) { s.rueckDatum = v; }, 'date'));
   vufWrap.appendChild(addField('Rückkehr-Uhrzeit', 'z. B. 22:00', s.rueckUhrzeit, function(v) { s.rueckUhrzeit = v; }));
 
   var zwLbl = document.createElement('div'); zwLbl.className = 'input-label';
@@ -5552,8 +5556,13 @@ function generateVerkehrsText() {
   if (tempo) {
     var tempoGrundVal = getChipValue('tempo-grund');
     var tempoSatz = 'Die zulässige Höchstgeschwindigkeit auf diesem Abschnitt der Straße beträgt ' + tempo + ' km/h';
-    if (tempoGrundVal && tempoGrundVal !== 'none') {
-      tempoSatz += ', ' + (tempoGrundVal === 'vz274' ? 'vorgegeben durch das VZ. 274' : 'welche sich aus der Lage innerhalb geschlossener Ortschaft ergibt');
+    var tempoGrundMap = {
+      vz274:     'vorgegeben durch das VZ. 274',
+      zone:      'vorgegeben durch die Beschilderung als Tempo-' + tempo + '-Zone (Zeichen 274.1)',
+      ortschaft: 'welche sich aus der Lage innerhalb geschlossener Ortschaft ergibt'
+    };
+    if (tempoGrundVal && tempoGrundVal !== 'none' && tempoGrundMap[tempoGrundVal]) {
+      tempoSatz += ', ' + tempoGrundMap[tempoGrundVal];
     }
     lines.push(tempoSatz + '.');
   }
@@ -5610,8 +5619,7 @@ function generateAbschnitt2() {
 // ── Kopieren ────────────────────────────────────────────────
 
 function copyText() {
-  var headings = document.querySelectorAll('#reportDoc .report-heading');
-  var bodies   = document.querySelectorAll('#reportDoc .report-body');
+  var nodes = document.querySelectorAll('#reportDoc > *');
 
   function esc(s) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -5624,21 +5632,30 @@ function copyText() {
     }).join('');
   }
 
-  var plainParts = [];
-  var htmlSections = [];
-  headings.forEach(function(h, i) {
-    var head = h.textContent;
-    var body = bodies[i] ? bodies[i].textContent : '';
-    plainParts.push(head + '\n' + body);
-    htmlSections.push(
-      '<p style="' + P + 'font-weight:bold;">' + esc(head) + '</p>' +
-      paraHtml(body)
-    );
+  // In DOM-Reihenfolge sammeln: Überschriften (ohne "Bearbeiten"-Button) und Bodys;
+  // eine Überschrift beginnt einen neuen Abschnitt, ein Body wird angehängt.
+  var segsPlain = [], segsHtml = [];
+  var curPlain = null, curHtml = null;
+  function flush() { if (curPlain !== null) { segsPlain.push(curPlain); segsHtml.push(curHtml); } curPlain = null; curHtml = null; }
+  nodes.forEach(function(node) {
+    if (node.classList.contains('report-heading')) {
+      flush();
+      var titleEl = node.querySelector('span');
+      var head = titleEl ? titleEl.textContent : node.textContent;
+      curPlain = head;
+      curHtml = '<p style="' + P + 'font-weight:bold;">' + esc(head) + '</p>';
+    } else if (node.classList.contains('report-body')) {
+      var body = node.textContent;
+      if (curPlain === null) { curPlain = ''; curHtml = ''; }
+      curPlain += (curPlain ? '\n' : '') + body;
+      curHtml += paraHtml(body);
+    }
   });
+  flush();
 
-  var plain = plainParts.join('\n\n');
+  var plain = segsPlain.join('\n\n');
   var html  = '<!DOCTYPE html><html><body style="font-family:Calibri,sans-serif;font-size:11pt;">' +
-    htmlSections.join('<p style="' + P + '">&nbsp;</p>') +
+    segsHtml.join('<p style="' + P + '">&nbsp;</p>') +
     '</body></html>';
 
   function showCopied() {
