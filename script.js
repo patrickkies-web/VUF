@@ -2017,14 +2017,24 @@ function renderFahrzeugSpuren_REMOVED() {
   });
 }
 
+function fahrzeugSpurenList() {
+  return fahrzeugSpuren.map(function(fz) {
+    return { ref: 'Spuren an ' + (fz.zugehoerigkeit || 'Fahrzeug'), text: buildFahrzeugBlock(fz) };
+  });
+}
+
 function generateFahrzeugText() {
-  if (!fahrzeugSpuren.length) return '';
+  return fahrzeugSpurenList().map(function(p) { return p.text; })
+    .filter(function(t) { return t && t.trim(); }).join('\n\n');
+}
+
+function buildFahrzeugBlock(fz) {
   var verlaufMap = {
     'punktuell': 'punktuelle Beschädigung',
     'horizontal': 'horizontaler Verlauf',
     'vertikal': 'vertikaler Verlauf'
   };
-  return fahrzeugSpuren.map(function (fz) {
+  {
     var zu = fz.zugehoerigkeit || '[Zugehörigkeit]';
     var lines = [];
     lines.push('Am Fahrzeug ' + zu + ' zeigten sich folgende unfallbedingte Beschädigungen/Spuren an folgenden Fahrzeugteilen:');
@@ -2066,7 +2076,7 @@ function generateFahrzeugText() {
     }
 
     return lines.join('\n');
-  }).join('\n\n');
+  }
 }
 
 // ── Bericht generieren ──────────────────────────────────────
@@ -2379,6 +2389,10 @@ function renderSchilderungen() {
     btn.className = 'btn-suggestion' + (s.gegenueber === name ? ' active' : '');
     gegChips.appendChild(btn);
   });
+  var gegColl = document.createElement('button');
+  gegColl.type = 'button'; gegColl.dataset.v = 'den eingesetzten Beamten'; gegColl.textContent = 'eingesetzte Beamte (Kollektiv)';
+  gegColl.className = 'btn-suggestion' + (s.gegenueber === 'den eingesetzten Beamten' ? ' active' : '');
+  gegChips.appendChild(gegColl);
   gegWrap.appendChild(gegChips);
   card.appendChild(gegWrap);
 
@@ -2994,12 +3008,40 @@ function rolleRef(rolle, name) {
   return name && name.trim() ? k + ' ' + name.trim() : k;
 }
 
+// Namen der beteiligten Personen datenschutzkonform abkürzen (Anfangsbuchstabe + Punkt),
+// bei gleichem Nachnamen-Anfangsbuchstaben zusätzlich mit dem Vornamen-Initial.
+function nameParts(name) {
+  name = (name || '').trim();
+  if (!name) return { nach: '', vor: '' };
+  if (name.indexOf(',') !== -1) {
+    var pc = name.split(',');
+    return { nach: (pc[0] || '').trim(), vor: (pc[1] || '').trim() };
+  }
+  var toks = name.split(/\s+/);
+  if (toks.length >= 2) return { nach: toks[0], vor: toks.slice(1).join(' ') };
+  return { nach: toks[0], vor: '' };
+}
+function nameInitial(s) { return s ? s.charAt(0).toUpperCase() + '.' : ''; }
+function abbrevName(name) { return nameInitial(nameParts(name).nach); }
+function abbrevNames(names) {
+  var parts = names.map(nameParts);
+  var counts = {};
+  parts.forEach(function(p) { var k = nameInitial(p.nach); if (k) counts[k] = (counts[k] || 0) + 1; });
+  return parts.map(function(p) {
+    var base = nameInitial(p.nach);
+    if (!base) return '';
+    if (counts[base] > 1 && p.vor) base += ' ' + nameInitial(p.vor);
+    return base;
+  });
+}
+
 function schilderungenPersonList() {
-  return schilderungen.map(function (s) {
+  var abbr = abbrevNames(schilderungen.map(function(s) { return s.name; }));
+  return schilderungen.map(function (s, i) {
     var rm = ROLLEN_MAP[s.rolle];
     if (!rm) return null;
     var text = buildSchilderungBlock(s, rm);
-    return { ref: rolleRef(s.rolle, s.name), text: text };
+    return { ref: rolleRef(s.rolle, abbr[i]), text: text };
   }).filter(Boolean);
 }
 
@@ -5016,7 +5058,8 @@ function buildAnzeigeEinleitungSatz(was) {
   var datum = d.datum ? formatDateDE(d.datum) : '[Datum]';
   var uhr   = d.uhrzeit || '[Uhrzeit]';
   var rm    = ROLLEN_MAP[d.rolle];
-  var werStr = rm ? (rm.disp + (d.name ? ' ' + d.name : '')) : (d.name || '[erschienene Person]');
+  var nm    = abbrevName(d.name);
+  var werStr = rm ? (rm.disp + (nm ? ' ' + nm : '')) : (nm || '[erschienene Person]');
   return 'Am ' + datum + ', um ' + uhr + ' Uhr, erschien ' + werStr + ' auf der Polizeiwache Gütersloh und zeigte folgenden Sachverhalt an: ' + (was || '[Sachverhalt]') + '.';
 }
 
@@ -5175,6 +5218,10 @@ function renderAnzeigeSchild() {
     btn.className = 'btn-suggestion' + (s.gegenueber === name ? ' active' : '');
     gegChips.appendChild(btn);
   });
+  var gegColl = document.createElement('button');
+  gegColl.type = 'button'; gegColl.dataset.v = 'den eingesetzten Beamten'; gegColl.textContent = 'eingesetzte Beamte (Kollektiv)';
+  gegColl.className = 'btn-suggestion' + (s.gegenueber === 'den eingesetzten Beamten' ? ' active' : '');
+  gegChips.appendChild(gegColl);
   gegWrap.appendChild(gegChips);
   card.appendChild(gegWrap);
 
@@ -5309,14 +5356,16 @@ function generateAnzeigeText() {
 }
 
 function anzeigeSchilderungenPersonList() {
-  return anzeigePersonen.map(function(s) {
+  var abbr = abbrevNames(anzeigePersonen.map(function(s) { return s.name; }));
+  return anzeigePersonen.map(function(s, idx) {
     var rm = ROLLEN_MAP[s.rolle];
     if (!rm) return null;
     var bel = s.belehrender || '[Beamter/Beamtin]';
     var geg = s.gegenueber  || '[Beamter/Beamtin]';
     var belTyp = rm.btyp === 'besch' ? 'Beschuldigtenbelehrung' : 'zeugenschaftlicher Belehrung';
     var nomCap = rm.disp.charAt(0).toUpperCase() + rm.disp.slice(1);
-    var nameStr = s.name ? ' ' + s.name : '';
+    var nm = abbr[idx];
+    var nameStr = nm ? ' ' + nm : '';
     var personBlock = [];
     if (s.ausweisdokument) {
       var dokStr = s.ausweisdokument === 'bpa' ? 'einem Bundespersonalausweis' : 'einem gültigen Ausweisdokument';
@@ -5331,7 +5380,7 @@ function anzeigeSchilderungenPersonList() {
       angaben += '\n\n' + nomCap + ' stellt keinen Strafantrag.';
     }
     personBlock.push(introSatz + '\n\n' + angaben);
-    return { ref: rolleRef(s.rolle, s.name), text: personBlock.join('\n\n') };
+    return { ref: rolleRef(s.rolle, nm), text: personBlock.join('\n\n') };
   }).filter(Boolean);
 }
 
@@ -5394,16 +5443,16 @@ function generateResult() {
     sectionNum++;
   }
 
-  function appendSchilderungen(key, list) {
+  function appendGrouped(key, mainTitle, singleTitle, list) {
     list = (list || []).filter(function(p) { return p.text && p.text.trim(); });
     if (!list.length) return;
     if (list.length === 1) {
-      renderBlock(String(sectionNum), 'Schilderungen (' + list[0].ref + ')', list[0].text, key, false);
+      renderBlock(String(sectionNum), singleTitle(list[0].ref), list[0].text, key, false);
       sectionNum++;
       return;
     }
     var main = sectionNum;
-    renderBlock(String(main), 'Schilderungen', '', key, false);
+    renderBlock(String(main), mainTitle, '', key, false);
     list.forEach(function(p, i) {
       renderBlock(main + '.' + (i + 1), p.ref, p.text, key, true);
     });
@@ -5454,11 +5503,15 @@ function generateResult() {
     }
     if (key === 'anzeige') {
       appendSection('Anzeigenaufnahme auf der Wache', generateAnzeigeText(), 'anzeige');
-      appendSchilderungen('anzeige', anzeigeSchilderungenPersonList());
+      appendGrouped('anzeige', 'Schilderungen', function(ref) { return 'Schilderungen (' + ref + ')'; }, anzeigeSchilderungenPersonList());
       return;
     }
     if (key === 'schilderungen') {
-      appendSchilderungen('schilderungen', schilderungenPersonList());
+      appendGrouped('schilderungen', 'Schilderungen', function(ref) { return 'Schilderungen (' + ref + ')'; }, schilderungenPersonList());
+      return;
+    }
+    if (key === 'fahrzeug') {
+      appendGrouped('fahrzeug', 'Spuren an den Fahrzeugen', function() { return 'Spuren an den Fahrzeugen'; }, fahrzeugSpurenList());
       return;
     }
     if (generators[key]) appendSection(titles[key], generators[key](), key);
