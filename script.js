@@ -375,6 +375,7 @@ var massnahmenData = {
   kunoSperrung: false,
   sachfahndung: false,
   lichtbilder: false,
+  luftbildskizze: false,
   dokumente: false, dokumenteRollen: [], dokumenteBeamterGender: 'm',
   bescheinigungAusgehaendigt: [],
   weiterfahrtUntersagt: [],
@@ -3244,6 +3245,9 @@ function generateMassnahmenText() {
   if (massnahmenData.lichtbilder) {
     parts.push('Sachdienliche Lichtbilder wurden gefertigt und liegen dem Vorgang digital bei.');
   }
+  if (massnahmenData.luftbildskizze) {
+    parts.push('Es wurde eine Luftbildskizze erstellt, welche dem Vorgang digital beigefügt wurde.');
+  }
   massnahmenData.dokumenteRollen.forEach(function(rolleKey) {
     var rm = ROLLEN_MAP[rolleKey]; if (!rm) return;
     var nomCap = rm.disp.charAt(0).toUpperCase() + rm.disp.slice(1);
@@ -3645,6 +3649,19 @@ function renderMassnahmen() {
     lichtBtn.classList.toggle('active', massnahmenData.lichtbilder);
   };
   cont.appendChild(lichtBtn);
+
+  // ── Luftbildskizze ───────────────────────────────────────────
+  var luftBtn = document.createElement('button');
+  luftBtn.type = 'button';
+  luftBtn.className = 'massnahme-btn' + (massnahmenData.luftbildskizze ? ' active' : '');
+  luftBtn.innerHTML =
+    '<span class="mb-check"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>' +
+    '<span class="mb-label">Luftbildskizze erstellt (digital beigefügt)</span>';
+  luftBtn.onclick = function() {
+    massnahmenData.luftbildskizze = !massnahmenData.luftbildskizze;
+    luftBtn.classList.toggle('active', massnahmenData.luftbildskizze);
+  };
+  cont.appendChild(luftBtn);
 
   // ── Dokumente ausgehändigt ───────────────────────────────────
   var dokWrap = document.createElement('div');
