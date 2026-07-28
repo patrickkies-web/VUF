@@ -6,8 +6,8 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Polizeibericht v3.54</title>
-  <link rel="stylesheet" href="style.css?v=3.54">
+  <title>Polizeibericht v3.55</title>
+  <link rel="stylesheet" href="style.css?v=3.55">
 </head>
 <body>
 
@@ -32,6 +32,11 @@
     <div class="lib-group-label">Oder einzeln w&auml;hlen</div>
     <div class="lib-bausteins" id="libraryBausteins"></div>
     <button class="btn-start" id="btnStart" disabled>Aufnahme starten</button>
+    <div class="lib-group-label" style="margin-top:22px">Werkzeuge</div>
+    <button class="btn-tool" id="btnOpenWaffg">
+      <span class="btn-tool-name">&#9878;&#65039; WaffG-Pr&uuml;fstand</span>
+      <span class="btn-tool-sub">Straftat oder Ordnungswidrigkeit? &middot; Waffenrecht</span>
+    </button>
     <div class="start-disclaimer">
       <div class="disclaimer-row">
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -87,6 +92,27 @@
 
       </div>
     </details>
+  </div>
+</div>
+
+<!-- WaffG-Prüfstand (eigener Bereich) -->
+<div id="screen-waffg">
+  <div class="waffg-topbar">
+    <button class="waffg-back" id="btnWaffgBack">&larr; Zur&uuml;ck</button>
+    <div class="waffg-topbar-title">WaffG &middot; Pr&uuml;fstand</div>
+    <div class="waffg-topbar-note">Stand: Reform 2024/2025</div>
+  </div>
+  <div class="waffg-wrap">
+    <div class="waffg-hero">
+      <div class="waffg-eyebrow">WAFFENRECHT &middot; ORIENTIERUNGSHILFE</div>
+      <div class="waffg-title">Straftat oder<br><strong>Ordnungswidrigkeit?</strong></div>
+      <div class="waffg-sub">Gegenstand einstufen, Handlung und Ort angeben &mdash; der Pr&uuml;fstand ordnet nach dem Waffengesetz ein und zeigt den Pr&uuml;fpfad. <strong>Keine Rechtsberatung.</strong></div>
+    </div>
+    <div id="waffgForm"></div>
+    <div id="waffgResult"></div>
+    <div class="waffg-footer">
+      <strong>Keine Rechtsberatung &mdash; Orientierungshilfe.</strong> Deckt Standard-Konstellationen nach dem WaffG (Stand 2024/2025) ab, nicht jeden Sonderfall (BKA-Feststellungsbescheide, Erb-/Bestandsschutz, Gewerbe, Landesrecht der Verbotszonen). Im Zweifel: Fachanwalt f&uuml;r Waffenrecht oder Waffenbeh&ouml;rde.
+    </div>
   </div>
 </div>
 
@@ -922,7 +948,7 @@
   <div style="width:80px"></div>
 </div>
 
-<script src="script.js?v=3.54"></script>
+<script src="script.js?v=3.55"></script>
 <script>if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js').catch(function(){});}</script>
 
 <!-- Bericht-Generierungs-Overlay -->
