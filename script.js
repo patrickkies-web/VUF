@@ -5911,9 +5911,10 @@ function waffgDescribe(s) {
   if (s.objektart === 'anschein') return 'eine Anscheinswaffe (täuschend echte Nachbildung einer Schusswaffe)';
   if (s.objektart === 'kriegswaffe') return 'eine Kriegswaffe im Sinne des Kriegswaffenkontrollgesetzes';
   return {
-    schlagstock: 'einen Schlagstock (Hieb-/Stoßwaffe)', teleskop: 'einen ausziehbaren, härtbaren Teleskopschlagstock',
+    schlagstock: 'einen Schlagstock (Hieb-/Stoßwaffe)', teleskop: 'einen ausziehbaren Teleskopschlagstock (Hieb-/Stoßwaffe)',
     schlagring: 'einen Schlagring bzw. Totschläger / eine Stahlrute', wurfstern: 'einen Wurfstern bzw. ein Wurfmesser',
     elektro: 'ein Elektroimpulsgerät ohne amtliche Zulassung', armbrust: 'eine Armbrust',
+    nunchaku: 'ein Nunchaku (Würgeholz)', praezschleuder: 'eine Präzisionsschleuder (Zwille mit Armstütze)',
     pfefferPtb: 'ein Reizstoffsprühgerät mit PTB-Zulassung (Tierabwehr)', pfefferOhne: 'ein Reizstoffsprühgerät ohne PTB-Zulassung bzw. zur Menschenabwehr'
   }[s.sonstigeItem];
 }
@@ -6001,13 +6002,12 @@ function waffgCore(s) {
         else if (!s.berechtigt) { verboten = true; verbotGrund = 'Seit 2024 ist selbst das kleine seitliche Springmesser nur mit berechtigtem Interesse / beruflichem Bezug erlaubt.'; }
       }
     }
-    if (verboten) { step('Einstufung: verbotene Waffe'); return R('straftat', 'Verbotene Waffe', 'Anlage 2 Abschn. 1 Nr. 1.4.1 i.V.m. § 52 Abs. 3 Nr. 1 WaffG', 'Freiheitsstrafe bis 3 Jahre oder Geldstrafe', verbotGrund + ' Schon der Besitz ist strafbar.'); }
+    var verbMsgNr = { spring: 'Nr. 1.4.1', fall: 'Nr. 1.4.2', faust: 'Nr. 1.4.3', butterfly: 'Nr. 1.4.4' }[b] || 'Nr. 1.4';
+    if (verboten) { step('Einstufung: verbotene Waffe'); return R('straftat', 'Verbotene Waffe', 'Anlage 2 Abschn. 1 ' + verbMsgNr + ' i.V.m. § 52 Abs. 3 Nr. 1 WaffG', 'Freiheitsstrafe bis 3 Jahre oder Geldstrafe', verbotGrund + ' Schon der Besitz ist strafbar.'); }
 
-    var istWaffe = ['einhand', 'feststehend', 'spring'].indexOf(b) !== -1;
-    step('Einstufung: erlaubtes Messer' + (istWaffe ? ' (Waffe, ab 18)' : ' (freies Werkzeug)'));
+    step('Einstufung: erlaubtes Messer (kein verbotener Gegenstand)');
     if (H === 'besitz' || H === 'transport') {
-      if (!s.volljaehrig && istWaffe) return minorFree();
-      return R('erlaubt', H === 'transport' ? 'Transport erlaubt' : 'Besitz erlaubt', '§ 2 Abs. 1 / § 12 WaffG', 'Kein Verstoß', H === 'transport' ? 'Nicht zugriffsbereit verpackt (mehr als drei Handgriffe) darf jedes erlaubte Messer transportiert werden.' : 'Besitz zuhause ist ab 18 erlaubt.');
+      return R('erlaubt', H === 'transport' ? 'Transport erlaubt' : 'Besitz erlaubt', '§ 42a / § 12 WaffG', 'Kein Verstoß', H === 'transport' ? 'Nicht zugriffsbereit verpackt (mehr als drei Handgriffe) darf jedes erlaubte Messer transportiert werden.' : 'Erlaubte Messer sind keine Waffen i.S.d. § 1 Abs. 2 WaffG, sondern tragbare Gegenstände nach § 42a — für Erwerb und Besitz besteht keine waffenrechtliche Altersgrenze; nur das Führen ist beschränkt.');
     }
     var ro = restrictedOrt();
     var fuehrungsverbot = b === 'einhand' || b === 'spring' || (b === 'feststehend' && (L > 12 || s.dolch));
@@ -6054,7 +6054,7 @@ function waffgCore(s) {
     step('PTB-Zeichen vorhanden');
     if (H === 'besitz' || H === 'transport') { if (!s.volljaehrig) return minorFree(); return R('erlaubt', H === 'transport' ? 'Transport erlaubt (§ 12)' : 'Besitz erlaubt (ab 18)', 'Anlage 2 Abschn. 2 / § 12 WaffG', 'Kein Verstoß', H === 'transport' ? 'Ungeladen, nicht zugriffsbereit zu legitimem Zweck darf die PTB-Waffe ohne kleinen Waffenschein transportiert werden.' : 'PTB-geprüfte SRS-Waffen dürfen ab 18 ohne WBK erworben und besessen werden.'); }
     var ro3 = restrictedOrt();
-    if (!s.kwSchein) { step('Führen ohne kleinen Waffenschein → OWi'); return R('owi', 'Führen ohne kleinen Waffenschein', '§ 53 Abs. 1 WaffG', 'Bußgeld bis 10.000 €', 'Das zugriffsbereite Führen einer SRS-Waffe erfordert einen kleinen Waffenschein.'); }
+    if (!s.kwSchein) { step('Führen ohne kleinen Waffenschein → Straftat'); return R('straftat', 'Führen ohne kleinen Waffenschein', '§ 52 Abs. 3 Nr. 2a WaffG', 'Freiheitsstrafe bis 3 Jahre oder Geldstrafe', 'Das zugriffsbereite Führen einer SRS-Waffe erfordert einen kleinen Waffenschein (§ 10 Abs. 4 S. 4 WaffG). Fehlt er, wird eine Schusswaffe ohne Erlaubnis geführt — das ist strafbar, keine bloße Ordnungswidrigkeit (vgl. OLG Frankfurt a. M., 1 Ss 336/03).', ['Statt Führen ist der nicht zugriffsbereite Transport nach § 12 Abs. 3 erlaubnisfrei möglich.']); }
     if (ro3) { step('trotz kl. Waffenschein am Ort verboten'); return ro3; }
     step('Führen mit kleinem Waffenschein → erlaubt');
     return R('erlaubt', 'Führen mit kleinem Waffenschein', '§ 10 Abs. 4 Satz 4 WaffG', 'Kein Verstoß', 'Mit gültigem kleinen Waffenschein zulässig (nicht bei Veranstaltungen/ÖPNV).');
@@ -6064,7 +6064,7 @@ function waffgCore(s) {
     if (s.druckEnergie === 'spielzeug') { step('< 0,5 J → keine Waffe'); return R('erlaubt', 'Spielzeug (unter 0,5 Joule)', 'keine Waffe i.S.d. WaffG', 'Kein Verstoß', 'Softair unter 0,5 Joule gilt nicht als Waffe im Sinne des Waffengesetzes.'); }
     if (s.druckEnergie === 'ueber75') { step('> 7,5 J → erlaubnispflichtig wie scharfe Waffe'); return R('straftat', 'Erlaubnispflichtig — Umgang ohne Erlaubnis', '§ 52 Abs. 3 Nr. 2a WaffG', 'Freiheitsstrafe bis 3 Jahre oder Geldstrafe', 'Druckluftwaffen über 7,5 Joule sind erlaubnispflichtig; ohne Erlaubnis ist der Umgang strafbar.'); }
     step('bis 7,5 J mit F-Zeichen → erlaubnisfrei ab 18');
-    if (H === 'besitz' || H === 'transport') { if (!s.volljaehrig) return minorFree(); return R('erlaubt', H === 'transport' ? 'Transport erlaubt' : 'Besitz erlaubt (ab 18)', 'Anlage 2 Abschn. 3 WaffG', 'Kein Verstoß', 'Druckluftwaffen bis 7,5 Joule mit F-im-Fünfeck sind ab 18 erlaubnisfrei.', ['Seit 2025 gilt für bestimmte Druckluftwaffen eine neue Erlaubnispflicht — Kennzeichnung prüfen.']); }
+    if (H === 'besitz' || H === 'transport') { if (!s.volljaehrig) return minorFree(); return R('erlaubt', H === 'transport' ? 'Transport erlaubt' : 'Besitz erlaubt (ab 18)', 'Anlage 2 Abschn. 3 WaffG', 'Kein Verstoß', 'Druckluftwaffen bis 7,5 Joule mit F-im-Fünfeck sind ab 18 erlaubnisfrei.'); }
     var ro4 = restrictedOrt(); if (ro4) return ro4;
     step('Führen: Schießen nur auf zugelassener Anlage');
     return R('hinweis', 'Führen eingeschränkt', '§ 12 Abs. 3, § 42a WaffG', 'Einzelfall prüfen', 'Ungeladenes, verpacktes Mitführen ist unkritisch; Schießen nur auf zugelassenen Anlagen oder befriedetem Besitztum.');
@@ -6078,8 +6078,25 @@ function waffgCore(s) {
 
   if (s.objektart === 'sonstige') {
     var item = s.sonstigeItem;
-    if (['schlagring', 'wurfstern', 'elektro'].indexOf(item) !== -1) { step('verbotener Gegenstand'); return R('straftat', 'Verbotene Waffe', 'Anlage 2 Abschn. 1 i.V.m. § 52 Abs. 3 Nr. 1 WaffG', 'Freiheitsstrafe bis 3 Jahre oder Geldstrafe', 'Schlagring/Totschläger/Stahlrute, Wurfstern/-messer und Elektroimpulsgeräte ohne PTB sind verbotene Gegenstände — schon der Besitz ist strafbar.'); }
-    if (item === 'teleskop') { step('Teleskopschlagstock (härtbar) → verboten'); return R('straftat', 'Verbotene Waffe (härtbar)', 'Anlage 2 Abschn. 1 i.V.m. § 52 Abs. 3 Nr. 1 WaffG', 'Freiheitsstrafe bis 3 Jahre oder Geldstrafe', 'Ausziehbare, härtbare Teleskopschlagstöcke gelten als verbotene Gegenstände.', ['Nicht härtbare Varianten unterliegen ggf. „nur“ dem Führungsverbot — Bauart prüfen.']); }
+    if (['schlagring', 'wurfstern', 'elektro', 'nunchaku', 'praezschleuder'].indexOf(item) !== -1) {
+      step('verbotener Gegenstand');
+      var verbNr = { nunchaku: ' Nr. 1.3.8', praezschleuder: ' Nr. 1.3.7' }[item] || '';
+      var verbTxt = {
+        schlagring: 'Schlagring, Totschläger und Stahlrute sind verbotene Gegenstände — schon der Besitz ist strafbar.',
+        wurfstern: 'Wurfsterne und Wurfmesser sind verbotene Gegenstände — schon der Besitz ist strafbar.',
+        elektro: 'Elektroimpulsgeräte ohne amtliche PTB-Zulassung sind verbotene Gegenstände — schon der Besitz ist strafbar.',
+        nunchaku: 'Nunchakus (Würgehölzer) sind verbotene Gegenstände — schon der Besitz ist strafbar.',
+        praezschleuder: 'Präzisionsschleudern (Zwillen mit Armstütze) sind verbotene Gegenstände — schon der Besitz ist strafbar.'
+      }[item];
+      return R('straftat', 'Verbotene Waffe', 'Anlage 2 Abschn. 1' + verbNr + ' i.V.m. § 52 Abs. 3 Nr. 1 WaffG', 'Freiheitsstrafe bis 3 Jahre oder Geldstrafe', verbTxt);
+    }
+    if (item === 'teleskop') {
+      step('Teleskopschlagstock → Hieb-/Stoßwaffe (BGH 3 StR 81/22)');
+      if (H === 'besitz' || H === 'transport') { return R('erlaubt', H === 'transport' ? 'Transport erlaubt' : 'Besitz erlaubt (ab 18)', 'Anlage 1 Abschn. 1 UA 2 Nr. 1.1 WaffG', 'Kein Verstoß', 'Der Teleskopschlagstock ist eine Hieb-/Stoßwaffe, kein verbotener Gegenstand (BGH, Beschl. v. 21.04.2022 – 3 StR 81/22). Besitz und nicht zugriffsbereiter Transport sind ab 18 erlaubnisfrei.', ['Ein echter Totschläger/eine Stahlrute (biegsam bzw. gegliedert) wäre dagegen eine verbotene Waffe.']); }
+      var roT = restrictedOrt(); if (roT) return roT;
+      if (s.berechtigt) { step('berechtigtes Interesse → §42a Abs. 3'); return R('erlaubt', 'Führen mit berechtigtem Interesse', '§ 42a Abs. 3 WaffG', 'Kein Verstoß', 'Mit nachweisbarem berechtigten Interesse ist das Führen zulässig.'); }
+      step('Hieb-/Stoßwaffe → Führungsverbot (OWi)');
+      return R('owi', 'Führungsverbot', '§ 42a Abs. 1 Nr. 2 i.V.m. § 53 Abs. 1 Nr. 21a WaffG', 'Bußgeld bis 10.000 €', 'Der Teleskopschlagstock ist eine Hieb-/Stoßwaffe; sein zugriffsbereites Führen in der Öffentlichkeit ist nach § 42a verboten — dies ist jedoch nur eine Ordnungswidrigkeit, keine Straftat (BGH, Beschl. v. 21.04.2022 – 3 StR 81/22).', ['Der Besitz bleibt erlaubt; strafbar wäre nur ein echter Totschläger/Schlagring.']); }
     if (item === 'armbrust') { step('Armbrust → frei ab 18'); if (H === 'besitz' || H === 'transport') { if (!s.volljaehrig) return minorFree(); return R('erlaubt', 'Erlaubnisfrei (ab 18)', '§ 2 Abs. 1, Anlage 2 WaffG', 'Kein Verstoß', 'Armbrüste sind ab 18 erlaubnisfrei zu erwerben und zu besitzen.'); } return R('hinweis', 'Führen im Einzelfall', 'Landesrecht / § 42 WaffG', 'Einzelfall', 'Ein allgemeines Führungsverbot nach § 42a besteht nicht; bei Veranstaltungen/Zonen kann Landesrecht greifen.'); }
     if (item === 'pfefferPtb') return R('erlaubt', 'Reizstoffsprühgerät mit PTB (Tierabwehr)', 'Anlage 2 Abschn. 2 WaffG', 'Kein Verstoß', 'Reizstoffsprühgeräte mit PTB-Zeichen (Tierabwehr) dürfen ab 18 erworben, besessen und geführt werden.');
     if (item === 'pfefferOhne') { step('Reizstoff ohne PTB / Menschenabwehr'); return R('hinweis', 'Reizstoff zur Menschenabwehr', '§ 2 Abs. 2, Anlage 2 WaffG', 'Einzelfall prüfen', 'Reizstoffsprühgeräte ohne PTB-Zeichen bzw. zur Menschenabwehr sind erlaubnispflichtig oder verboten — Kennzeichnung und Reizstoff entscheiden.'); }
@@ -6087,7 +6104,7 @@ function waffgCore(s) {
     var ro5 = restrictedOrt(); if (ro5) return ro5;
     if (s.berechtigt) { step('berechtigtes Interesse → §42a Abs. 3'); return R('erlaubt', 'Führen mit berechtigtem Interesse', '§ 42a Abs. 3 WaffG', 'Kein Verstoß', 'Mit nachweisbarem berechtigten Interesse ist das Führen zulässig.'); }
     step('Hieb-/Stoßwaffe → Führungsverbot');
-    return R('owi', 'Führungsverbot', '§ 42a Abs. 1 i.V.m. § 53 WaffG', 'Bußgeld bis 10.000 €', 'Hieb- und Stoßwaffen dürfen in der Öffentlichkeit nicht geführt werden.');
+    return R('owi', 'Führungsverbot', '§ 42a Abs. 1 Nr. 2 i.V.m. § 53 Abs. 1 Nr. 21a WaffG', 'Bußgeld bis 10.000 €', 'Hieb- und Stoßwaffen dürfen in der Öffentlichkeit nicht zugriffsbereit geführt werden.');
   }
 
   return R('hinweis', 'Bitte Objektart wählen', '—', '—', 'Wähle oben eine Objektart aus.');
@@ -6256,9 +6273,11 @@ function renderWaffg() {
   if (s.objektart === 'sonstige') {
     card.appendChild(wafSection('02', 'Gegenstand', [wafChoice([
       { value: 'schlagstock', label: 'Schlagstock (klassisch)', desc: 'Hieb-/Stoßwaffe' },
-      { value: 'teleskop', label: 'Teleskopschlagstock', desc: 'härtbar' },
+      { value: 'teleskop', label: 'Teleskopschlagstock', desc: 'Hieb-/Stoßwaffe (BGH 3 StR 81/22)' },
       { value: 'schlagring', label: 'Schlagring / Totschläger / Stahlrute' },
       { value: 'wurfstern', label: 'Wurfstern / Wurfmesser' },
+      { value: 'nunchaku', label: 'Nunchaku / Würgeholz' },
+      { value: 'praezschleuder', label: 'Präzisionsschleuder (Zwille)' },
       { value: 'elektro', label: 'Elektroimpulsgerät (ohne PTB)' },
       { value: 'armbrust', label: 'Armbrust' },
       { value: 'pfefferPtb', label: 'Pfefferspray mit PTB (Tierabwehr)' },
