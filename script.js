@@ -382,7 +382,7 @@ var massnahmenData = {
   entsorgungVerzicht: [], entsorgungGegenstaende: '',
   gefaehrderanspracheRolle: 'beschm', gefaehrderanspracheKomp: [], gefaehrderanspracheHg: false
 };
-var psychkgData = { verhaltensText: '', personRolle: '', anlass: '', orgTyp: '', mitGender: 'm', mitName: '', arztGender: 'm', arztName: '', transport: '', begleitung: null };
+var psychkgData = { verhaltensText: '', personRolle: '', anlass: '', orgTyp: '', mitGender: 'm', mitName: '', arztGender: 'm', arztHerkunft: 'spd', arztName: '', transport: '', begleitung: null };
 var haftbefehlData = {
   personRolle: 'betroffm',
   hbForm: 'Strafbefehl',
@@ -3930,6 +3930,28 @@ var PSYCHKG_ORGS = {
   spd:         { nom: 'den Sozialpsychiatrischen Dienst',  gen: 'Sozialpsychiatrischen Dienstes', art: 'des' }
 };
 
+// Herkunft/Dienst der ärztlichen Fachkraft. klammer = Zusatz in Klammern hinter der Anrede.
+var PSYCHKG_ARZT_HERKUNFT = {
+  rettung: { m: 'Notarzt',           w: 'Notärztin',           klammer: ''                            },
+  spd:     { m: 'Arzt',              w: 'Ärztin',              klammer: 'Sozialpsychiatrischer Dienst' },
+  notauf:  { m: 'Arzt',              w: 'Ärztin',              klammer: 'Notaufnahme'                  },
+  bereit:  { m: 'Bereitschaftsarzt', w: 'Bereitschaftsärztin', klammer: ''                            }
+};
+
+// Baut Anrede/Genitiv/Klammer der ärztlichen Fachkraft aus Herkunft + Geschlecht.
+function psychkgArztForms(herkunftKey, gender) {
+  var h = PSYCHKG_ARZT_HERKUNFT[herkunftKey] || PSYCHKG_ARZT_HERKUNFT.spd;
+  var w = (gender === 'w' || gender === 'bw');
+  var noun = w ? h.w : h.m;
+  var nounGen = w ? noun : noun + 'es';       // Arzt→Arztes, Notarzt→Notarztes; feminine unverändert
+  return {
+    anrede:  (w ? 'die ' : 'den ') + noun,    // z.B. "den Arzt", "die Notärztin"
+    durch:   (w ? 'die ' : 'den ') + noun,
+    nameLbl: (w ? 'der ' : 'des ') + nounGen, // z.B. "des Arztes", "der Ärztin"
+    klammer: h.klammer ? ' (' + h.klammer + ')' : ''
+  };
+}
+
 function generatePsychKGText() {
   var p = psychkgData;
   var pm  = PSYCHKG_PERSON_MAP[p.personRolle] || { nom: '[Person]', gen: '[Person (Genitiv)]', dat: '[Person (Dativ)]' };
@@ -3940,16 +3962,10 @@ function generatePsychKGText() {
   var mitName   = p.mitName  || '[Name]';
   var mitLabel  = mitAnrede + ' ' + mitName + ' (' + mitRolle + (org ? ' ' + org.art + ' ' + org.gen : '') + ')';
   var anlass    = p.anlass   || '[Gefährdungssituation]';
-  var ARZT_FORMS = {
-    m:  { anrede: 'den Arzt',                durch: 'den Arzt',                nameLbl: 'des Arztes'                },
-    w:  { anrede: 'die Ärztin',              durch: 'die Ärztin',              nameLbl: 'der Ärztin'                },
-    bm: { anrede: 'den Bereitschaftsarzt',   durch: 'den Bereitschaftsarzt',   nameLbl: 'des Bereitschaftsarztes'   },
-    bw: { anrede: 'die Bereitschaftsärztin', durch: 'die Bereitschaftsärztin', nameLbl: 'der Bereitschaftsärztin'   }
-  };
-  var af = ARZT_FORMS[p.arztGender] || ARZT_FORMS.m;
+  var af = psychkgArztForms(p.arztHerkunft, p.arztGender);
   var arztAnrede = af.anrede;
   var arztDurch  = af.durch;
-  var arztName  = p.arztName  || '[Name Sozialpsychiatrischer Dienst]';
+  var arztName  = p.arztName  || '[Name Arzt/Ärztin]';
   var transport = p.transport || '[KTW/RTW]';
 
   var lines = [];
@@ -3958,7 +3974,7 @@ function generatePsychKGText() {
     'Aufgrund der benannten Verhaltensweise ' + pm.gen + ', welche augenscheinlich krankheitsbedingt ist, ist auszugehen, dass ein schadenstiftendes Ereignis unmittelbar bevorsteht bzw. sein Eintritt jederzeit zu erwarten ist (hier: ' + anlass + '). Dabei handelt es sich um bedeutende Rechtsgüter.'
   );
   lines.push(
-    'Aus diesem Grund wurde ' + orgNom + ' hinzugezogen. ' + mitLabel + ' bestellte ' + arztAnrede + ' (Sozialpsychiatrischer Dienst) ' + arztName + '. Beide machten sich ein umfangreiches Bild von ' + pm.dat + ', woraufhin durch ' + arztDurch + ' ein entsprechendes ärztliches Zeugnis erstellt wurde.'
+    'Aus diesem Grund wurde ' + orgNom + ' hinzugezogen. ' + mitLabel + ' bestellte ' + arztAnrede + af.klammer + ' ' + arztName + '. Beide machten sich ein umfangreiches Bild von ' + pm.dat + ', woraufhin durch ' + arztDurch + ' ein entsprechendes ärztliches Zeugnis erstellt wurde.'
   );
   lines.push(mitAnrede + ' ' + mitName + ' stellte einen Antrag auf eine zwangsweise Unterbringung in ein psychiatrisches Fachkrankenhaus.');
   lines.push(pm.nom + ' wurde daraufhin mit einem ' + transport + ' in die psychiatrische Abteilung des LWL-Klinikums transportiert.');
@@ -4106,24 +4122,40 @@ function renderPsychKGSpd() {
   var hr = document.createElement('hr'); hr.className = 'psychkg-divider';
   cont.appendChild(hr);
 
-  // ── Ärztliche Fachkraft (Sozialpsychiatrischer Dienst) ────
-  cont.appendChild(lbl('Ärztliche Fachkraft (Sozialpsychiatrischer Dienst)'));
-  var ARZT_FORMS_UI = {
-    m:  'des Arztes', w: 'der Ärztin', bm: 'des Bereitschaftsarztes', bw: 'der Bereitschaftsärztin'
-  };
+  // ── Ärztliche Fachkraft ────────────────────────────────────
+  cont.appendChild(lbl('Ärztliche Fachkraft'));
+
+  var arztNameLbl = lbl('Name ' + psychkgArztForms(p.arztHerkunft, p.arztGender).nameLbl, '10px');
+  function updateArztNameLbl() {
+    arztNameLbl.textContent = 'Name ' + psychkgArztForms(p.arztHerkunft, p.arztGender).nameLbl;
+  }
+
+  // Herkunft / Dienst
+  cont.appendChild(lbl('Herkunft / Dienst', '4px'));
+  var arztHerkRow = chipRow(
+    [
+      { v: 'rettung', label: 'Rettungsdienst (Notarzt)'      },
+      { v: 'spd',     label: 'Sozialpsychiatrischer Dienst'  },
+      { v: 'notauf',  label: 'Notaufnahme'                   },
+      { v: 'bereit',  label: 'Bereitschaftsarzt'             }
+    ],
+    function() { return p.arztHerkunft; },
+    function(v) { p.arztHerkunft = v; updateArztNameLbl(); }
+  );
+  cont.appendChild(arztHerkRow);
+
+  // Geschlecht
+  cont.appendChild(lbl('Geschlecht', '10px'));
   var arztRow = chipRow(
     [
-      { v: 'm',  label: 'Arzt (m)'               },
-      { v: 'w',  label: 'Ärztin (f)'              },
-      { v: 'bm', label: 'Bereitschaftsarzt (m)'   },
-      { v: 'bw', label: 'Bereitschaftsärztin (f)' }
+      { v: 'm', label: 'männlich' },
+      { v: 'w', label: 'weiblich' }
     ],
-    function() { return p.arztGender; },
-    function(v) { p.arztGender = v; arztNameLbl.textContent = 'Name ' + (ARZT_FORMS_UI[v] || 'des Arztes'); }
+    function() { return (p.arztGender === 'w' || p.arztGender === 'bw') ? 'w' : 'm'; },
+    function(v) { p.arztGender = v; updateArztNameLbl(); }
   );
   cont.appendChild(arztRow);
 
-  var arztNameLbl = lbl('Name ' + (ARZT_FORMS_UI[p.arztGender] || 'des Arztes'), '4px');
   cont.appendChild(arztNameLbl);
   cont.appendChild(bigInp('z.B. Dr. Mustermann', p.arztName, function(v) { p.arztName = v; }));
 }
@@ -5800,7 +5832,7 @@ function resetAll() {
   schildCounter = 0;
   schildCurrentIdx = null;
   massnahmenData = { unfallmitteilungen: false, bescheinigungen: [], bescheinigungenUhrzeit: '', bescheinigungenNwKennung: '' };
-  psychkgData = { personRolle: '', anlass: '', arztGender: 'm', arztName: '', transport: '', begleitung: null };
+  psychkgData = { personRolle: '', anlass: '', arztGender: 'm', arztHerkunft: 'spd', arztName: '', transport: '', begleitung: null };
   haftbefehlData = { personRolle: 'betroffm', hbForm: 'Strafbefehl', gericht: 'Amtsgerichts Gütersloh', hbDatum: '', hbAz: '', rkSeit: '', tagessaetze: '', tagessatzBetrag: '', ersatzTage: '', useEventTime: true, kontrolleUhrzeit: '', zielort: 'ZPG Gütersloh' };
   addStreifenwagen();
   // Show library screen again
