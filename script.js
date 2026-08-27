@@ -6447,7 +6447,9 @@ function persParseDate(str) {
 function persExtractAddresses(text) {
   var out = [];
   var reOrt = /(?:^|\|)\s*Ortsbezeichnung\s*:\s*([^|\r\n]*)/gim;
-  var reAend = /(?:^|\|)\s*Änderungsdatum\s*:\s*([^|\r\n]*)/gim;
+  // Auch "Letztes Änderungsdatum:" erfassen (steht bei manchen Datensätzen statt
+  // "Änderungsdatum:" einige Zeilen vor der Ortsbezeichnung).
+  var reAend = /(?:^|\|)\s*(?:Letztes\s+)?Änderungsdatum\s*:\s*([^|\r\n]*)/gim;
   var m;
   while ((m = reOrt.exec(text)) !== null) {
     var addr = (m[1] || '').trim();
