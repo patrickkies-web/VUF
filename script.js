@@ -6678,7 +6678,12 @@ function kfzBuildSteckbrief() {
   var row = function(label, val) { L.push(label + ': ' + (val && val.length ? val : '—')); };
   L.push('HALTERAUSKUNFT');
   L.push('');
+  L.push('FAHRZEUG');
   row('Kennzeichen', d.kennzeichen);
+  row('Fahrzeugart', d.fahrzeugart);
+  row('Hersteller', d.hersteller);
+  row('Typ', d.typ);
+  row('Farbe', d.farbe);
   L.push('');
   L.push('HALTER');
   row('Name', persUpper(d.halterName));
@@ -6688,12 +6693,6 @@ function kfzBuildSteckbrief() {
   row('Geschlecht', d.geschlecht);
   row('Nation', d.nation);
   row('Anschrift', kfzBuildAnschrift(d));
-  L.push('');
-  L.push('FAHRZEUG');
-  row('Fahrzeugart', d.fahrzeugart);
-  row('Hersteller', d.hersteller);
-  row('Typ', d.typ);
-  row('Farbe', d.farbe);
   return L.join('\n');
 }
 
@@ -6732,18 +6731,36 @@ function renderKfzResult() {
 
   var card = wafEl('div', 'waffg-card');
 
-  // Kennzeichen + Halter
+  // Fahrzeug (inkl. Kennzeichen) zuerst
+  var fsec = wafEl('div', 'waffg-sec');
+  var fhead = wafEl('div', 'waffg-sec-head');
+  fhead.appendChild(wafEl('span', 'waffg-sec-n', '02'));
+  fhead.appendChild(wafEl('h3', 'waffg-sec-title', 'Fahrzeug'));
+  fsec.appendChild(fhead);
+  var fgrid = wafEl('div', 'pers-fields');
+  var addF = function(label, val) {
+    fgrid.appendChild(wafEl('div', 'pers-flabel', label));
+    fgrid.appendChild(wafEl('div', 'pers-fval' + (val ? '' : ' empty'), val || 'nicht gefunden'));
+  };
+  addF('Kennzeichen', d.kennzeichen);
+  addF('Fahrzeugart', d.fahrzeugart);
+  addF('Hersteller', d.hersteller);
+  addF('Typ', d.typ);
+  addF('Farbe', d.farbe);
+  fsec.appendChild(fgrid);
+  card.appendChild(fsec);
+
+  // Halter
   var sec = wafEl('div', 'waffg-sec');
   var head = wafEl('div', 'waffg-sec-head');
-  head.appendChild(wafEl('span', 'waffg-sec-n', '02'));
-  head.appendChild(wafEl('h3', 'waffg-sec-title', 'Kennzeichen & Halter'));
+  head.appendChild(wafEl('span', 'waffg-sec-n', '03'));
+  head.appendChild(wafEl('h3', 'waffg-sec-title', 'Halter'));
   sec.appendChild(head);
   var grid = wafEl('div', 'pers-fields');
   var addRow = function(label, val) {
     grid.appendChild(wafEl('div', 'pers-flabel', label));
     grid.appendChild(wafEl('div', 'pers-fval' + (val ? '' : ' empty'), val || 'nicht gefunden'));
   };
-  addRow('Kennzeichen', d.kennzeichen);
   addRow('Name', persUpper(d.halterName));
   addRow('Vorname', persTitle(d.halterVorname));
   addRow('Geburtsdatum', d.geburtsdatum);
@@ -6753,24 +6770,6 @@ function renderKfzResult() {
   addRow('Anschrift', kfzBuildAnschrift(d));
   sec.appendChild(grid);
   card.appendChild(sec);
-
-  // Fahrzeug
-  var fsec = wafEl('div', 'waffg-sec');
-  var fhead = wafEl('div', 'waffg-sec-head');
-  fhead.appendChild(wafEl('span', 'waffg-sec-n', '03'));
-  fhead.appendChild(wafEl('h3', 'waffg-sec-title', 'Fahrzeug'));
-  fsec.appendChild(fhead);
-  var fgrid = wafEl('div', 'pers-fields');
-  var addF = function(label, val) {
-    fgrid.appendChild(wafEl('div', 'pers-flabel', label));
-    fgrid.appendChild(wafEl('div', 'pers-fval' + (val ? '' : ' empty'), val || 'nicht gefunden'));
-  };
-  addF('Fahrzeugart', d.fahrzeugart);
-  addF('Hersteller', d.hersteller);
-  addF('Typ', d.typ);
-  addF('Farbe', d.farbe);
-  fsec.appendChild(fgrid);
-  card.appendChild(fsec);
   box.appendChild(card);
 
   // Kopierbare Halterauskunft
