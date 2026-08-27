@@ -6513,6 +6513,7 @@ function persBuildSteckbrief() {
   row('Vorname', persTitle(f.vorname));
   row('Geburtsdatum', f.geburtsdatum);
   row('Geburtsort', persTitle(f.geburtsort));
+  if (f.geburtsland) row('Geburtsland', persTitle(f.geburtsland));
   row('Geschlecht', f.geschlecht);
   row('Staatsangehörigkeit', f.staat);
   if (persEDAnlaesse.length) {
@@ -6560,6 +6561,7 @@ function persParse(text) {
     geschlecht:   persMatchField(text, ['Geschlecht']),
     staat:        persMatchField(text, ['Staatsangehörigkeit', 'Staatsangehoerigkeit', 'Nation']),
     geburtsort:   persMatchField(text, ['Geburtsort']),
+    geburtsland:  persMatchField(text, ['Geburtsland']),
     hausnr:       persMatchField(text, ['Hausnr.', 'Hausnr', 'Hausnummer']),
     plz:          persMatchField(text, ['PLZ']),
     ort:          persMatchField(text, ['Ort'])
@@ -6592,6 +6594,7 @@ function persBuildCard(onSel) {
     addRow('Vorname', persTitle(f.vorname));
     addRow('Geburtsdatum', f.geburtsdatum);
     addRow('Geburtsort', persTitle(f.geburtsort));
+    if (f.geburtsland) addRow('Geburtsland', persTitle(f.geburtsland));
     addRow('Geschlecht', f.geschlecht);
     addRow('Staatsangehörigkeit', f.staat);
     if (persEDAnlaesse.length) addRow('ED-Behandelt aufgrund von', persEDAnlaesse.join(' · '));
