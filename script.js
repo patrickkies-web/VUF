@@ -6421,10 +6421,21 @@ function persMatchEDAnlaesse(text) {
 // Wert nach "Label:" bis zum nächsten | oder Zeilenumbruch. labels = mögliche Schreibweisen.
 // Das Label muss am Feldanfang stehen (nach "|", Zeilenanfang oder Textanfang), damit z. B.
 // "Art der Ortsbezeichnung:" NICHT als "Ortsbezeichnung:" und "Name:" nicht in "Vorname:" trifft.
+// Label → Regex-Muster, das Leerzeichen um Trennzeichen (z. B. "Familien -/ Ehename"
+// statt "Familien-/Ehename") toleriert. Buchstaben/Ziffern bleiben unverändert.
+function persLabelPattern(label) {
+  var out = '';
+  for (var i = 0; i < label.length; i++) {
+    var ch = label[i];
+    if (/[0-9A-Za-zÀ-ÿ]/.test(ch)) { out += ch; continue; }
+    if (/\s/.test(ch)) { out += '\\s*'; continue; }
+    out += '\\s*' + ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*';
+  }
+  return out;
+}
 function persMatchField(text, labels) {
   for (var i = 0; i < labels.length; i++) {
-    var esc = labels[i].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    var re = new RegExp('(?:^|\\|)\\s*' + esc + '\\s*:\\s*([^|\\r\\n]*)', 'im');
+    var re = new RegExp('(?:^|\\|)\\s*' + persLabelPattern(labels[i]) + '\\s*:\\s*([^|\\r\\n]*)', 'im');
     var m = text.match(re);
     if (m && m[1] != null && m[1].trim() !== '') return m[1].trim();
   }
@@ -6545,7 +6556,7 @@ function persNameFromTitel(titel) {
 
 // Personendaten aus dem Text parsen (füllt persFields/persEDAnlaesse/persAddresses).
 function persParse(text) {
-  var familienname = persMatchField(text, ['Familienname', 'Nachname', 'Ehename', 'Name']);
+  var familienname = persMatchField(text, ['Familienname', 'Familien-/Ehename', 'Nachname', 'Ehename', 'Name']);
   var vorname = persMatchField(text, ['Vornamen', 'Vorname']);
   // Fallback: fehlt der Familienname, aus "Titel:Nachname, Vorname" holen.
   if (!familienname) {
@@ -6700,7 +6711,7 @@ function kfzParse(text) {
   kz = kz.toUpperCase().replace(/\s{2,}/g, ' ').trim();
   kfzData = {
     kennzeichen:   kz,
-    halterName:    kfzMatchField(text, ['Familienname', 'Nachname', 'Ehename', 'Name']),
+    halterName:    kfzMatchField(text, ['Familienname', 'Familien-/Ehename', 'Nachname', 'Ehename', 'Name']),
     halterVorname: kfzMatchField(text, ['Vornamen', 'Vorname']),
     geburtsdatum:  kfzMatchField(text, ['Geburtsdatum']),
     geburtsort:    kfzMatchField(text, ['Geburtsort']),
