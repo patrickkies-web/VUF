@@ -6517,45 +6517,34 @@ function persBuildSteckbrief() {
   return L.join('\n');
 }
 
-function persExtract() {
-  var el = document.getElementById('persInput');
-  var text = el ? (el.value || '') : '';
+// Personendaten aus dem Text parsen (füllt persFields/persEDAnlaesse/persAddresses).
+function persParse(text) {
   persFields = {
     vorname:      persMatchField(text, ['Vornamen', 'Vorname']),
-    familienname: persMatchField(text, ['Familienname', 'Nachname', 'Name']),
+    familienname: persMatchField(text, ['Familienname', 'Nachname', 'Ehename', 'Name']),
     geburtsname:  persMatchField(text, ['Geburtsname']),
     geburtsdatum: persMatchField(text, ['Geburtsdatum']),
     geschlecht:   persMatchField(text, ['Geschlecht']),
-    staat:        persMatchField(text, ['Staatsangehörigkeit', 'Staatsangehoerigkeit']),
+    staat:        persMatchField(text, ['Staatsangehörigkeit', 'Staatsangehoerigkeit', 'Nation']),
     geburtsort:   persMatchField(text, ['Geburtsort'])
   };
   persEDAnlaesse = persMatchEDAnlaesse(text);
   persAddresses = persExtractAddresses(text);
-  // Liste ist neueste-zuerst sortiert → die aktuellste Anschrift ist vorausgewählt.
   persSelected = 0;
-  persExtracted = true;
-  renderPersResult();
 }
 
-function renderPersResult() {
-  var box = document.getElementById('persResult');
-  if (!box) return;
-  box.innerHTML = '';
-  if (!persExtracted) return;
-
+// Baut die Personalien-Karte (Felder + Anschriften-Auswahl). onSel wird bei Adresswechsel aufgerufen.
+function persBuildCard(onSel) {
   var f = persFields;
   var anyField = f.vorname || f.familienname || f.geburtsname || f.geburtsdatum || f.geschlecht || f.staat || f.geburtsort;
-
-  // Karte: erkannte Personendaten
   var card = wafEl('div', 'waffg-card');
   var sec = wafEl('div', 'waffg-sec');
   var head = wafEl('div', 'waffg-sec-head');
-  head.appendChild(wafEl('span', 'waffg-sec-n', '02'));
-  head.appendChild(wafEl('h3', 'waffg-sec-title', 'Erkannte Personendaten'));
+  head.appendChild(wafEl('span', 'waffg-sec-n', '01'));
+  head.appendChild(wafEl('h3', 'waffg-sec-title', 'Personalien'));
   sec.appendChild(head);
-
   if (!anyField && !persAddresses.length) {
-    sec.appendChild(wafEl('p', 'pers-empty-hint', 'Keine Felder erkannt. Erwartet werden Angaben im Format „Label:Wert|“, z. B. „Vornamen:Max|Familienname:Mustermann|“.'));
+    sec.appendChild(wafEl('p', 'pers-empty-hint', 'Keine Personendaten erkannt.'));
   } else {
     var grid = wafEl('div', 'pers-fields');
     var addRow = function(label, val) {
@@ -6574,14 +6563,12 @@ function renderPersResult() {
   }
   card.appendChild(sec);
 
-  // Sektion: Anschriften-Auswahl
   if (persAddresses.length) {
     var asec = wafEl('div', 'waffg-sec');
     var ahead = wafEl('div', 'waffg-sec-head');
-    ahead.appendChild(wafEl('span', 'waffg-sec-n', '03'));
+    ahead.appendChild(wafEl('span', 'waffg-sec-n', '02'));
     ahead.appendChild(wafEl('h3', 'waffg-sec-title', persAddresses.length > 1 ? 'Anschrift wählen (' + persAddresses.length + ' gefunden)' : 'Aktuelle Anschrift'));
     asec.appendChild(ahead);
-
     var choice = wafEl('div', 'waffg-choice');
     persAddresses.forEach(function(a, i) {
       var btn = wafEl('button', 'waffg-opt' + (i === persSelected ? ' active' : ''));
@@ -6593,45 +6580,17 @@ function renderPersResult() {
       txt.appendChild(lbl);
       txt.appendChild(wafEl('span', 'waffg-opt-desc', a.datum ? 'eingepflegt am ' + a.datum : 'ohne Änderungsdatum'));
       btn.appendChild(txt);
-      btn.addEventListener('click', function() { persSelected = i; renderPersResult(); window.scrollTo(0, document.body.scrollHeight); });
+      btn.addEventListener('click', function() { persSelected = i; if (onSel) onSel(); });
       choice.appendChild(btn);
     });
     asec.appendChild(choice);
     card.appendChild(asec);
   }
-  box.appendChild(card);
-
-  // Steckbrief (kopierbar)
-  persSteckbrief = persBuildSteckbrief();
-  var az = wafEl('div', 'waffg-anzeige');
-  var azHead = wafEl('div', 'waffg-anzeige-head');
-  azHead.appendChild(wafEl('span', 'waffg-anzeige-label', 'STECKBRIEF – KOPIERBAR'));
-  var copyBtn = wafEl('button', 'waffg-copy-btn', 'Kopieren'); copyBtn.type = 'button';
-  copyBtn.addEventListener('click', function() {
-    var t = persSteckbrief;
-    function done() { copyBtn.textContent = '✓ Kopiert'; copyBtn.classList.add('done'); setTimeout(function() { copyBtn.textContent = 'Kopieren'; copyBtn.classList.remove('done'); }, 1600); }
-    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done).catch(function() { done(); });
-    else done();
-  });
-  azHead.appendChild(copyBtn);
-  az.appendChild(azHead);
-  var ta = document.createElement('textarea'); ta.spellcheck = false; ta.value = persSteckbrief;
-  ta.addEventListener('input', function() { persSteckbrief = this.value; });
-  az.appendChild(ta);
-  az.appendChild(wafEl('p', 'waffg-anzeige-note', 'Frei editierbar. Bei Auswahl einer anderen Anschrift wird der Steckbrief neu erzeugt.'));
-  box.appendChild(az);
+  return card;
 }
 
 function openPers() { document.getElementById('screen-pers').classList.add('open'); window.scrollTo(0, 0); }
 function closePers() { document.getElementById('screen-pers').classList.remove('open'); }
-(function() {
-  var ob = document.getElementById('btnOpenPers');
-  if (ob) ob.addEventListener('click', openPers);
-  var bb = document.getElementById('btnPersBack');
-  if (bb) bb.addEventListener('click', closePers);
-  var ex = document.getElementById('btnPersExtract');
-  if (ex) ex.addEventListener('click', persExtract);
-})();
 
 // ── Kennzeichen-Extraktor ───────────────────────────────────
 var kfzData = {}, kfzExtracted = false, kfzSteckbrief = '';
@@ -6696,9 +6655,8 @@ function kfzBuildSteckbrief() {
   return L.join('\n');
 }
 
-function kfzExtract() {
-  var el = document.getElementById('kfzInput');
-  var text = kfzNormalize(el ? (el.value || '') : '');
+// Kennzeichen-/Fahrzeug-/Halterdaten aus dem (normalisierten) Text parsen.
+function kfzParse(text) {
   var kz = kfzMatchField(text, ['Kennzeichen', 'Kfz-Kennzeichen', 'amtliches Kennzeichen']);
   kz = kz.toUpperCase().replace(/\s{2,}/g, ' ').trim();
   kfzData = {
@@ -6718,23 +6676,15 @@ function kfzExtract() {
     typ:           kfzMatchField(text, ['Handelsbezeichnung/ Typ', 'Handelsbezeichnung / Typ', 'Handelsbezeichnung/Typ', 'Handelsbezeichnung', 'Typ']),
     farbe:         kfzMatchField(text, ['Farbe'])
   };
-  kfzExtracted = true;
-  renderKfzResult();
 }
 
-function renderKfzResult() {
-  var box = document.getElementById('kfzResult');
-  if (!box) return;
-  box.innerHTML = '';
-  if (!kfzExtracted) return;
+// Baut die Fahrzeug- + Halter-Karte.
+function kfzBuildCard() {
   var d = kfzData;
-
   var card = wafEl('div', 'waffg-card');
-
-  // Fahrzeug (inkl. Kennzeichen) zuerst
   var fsec = wafEl('div', 'waffg-sec');
   var fhead = wafEl('div', 'waffg-sec-head');
-  fhead.appendChild(wafEl('span', 'waffg-sec-n', '02'));
+  fhead.appendChild(wafEl('span', 'waffg-sec-n', '01'));
   fhead.appendChild(wafEl('h3', 'waffg-sec-title', 'Fahrzeug'));
   fsec.appendChild(fhead);
   var fgrid = wafEl('div', 'pers-fields');
@@ -6750,10 +6700,9 @@ function renderKfzResult() {
   fsec.appendChild(fgrid);
   card.appendChild(fsec);
 
-  // Halter
   var sec = wafEl('div', 'waffg-sec');
   var head = wafEl('div', 'waffg-sec-head');
-  head.appendChild(wafEl('span', 'waffg-sec-n', '03'));
+  head.appendChild(wafEl('span', 'waffg-sec-n', '02'));
   head.appendChild(wafEl('h3', 'waffg-sec-title', 'Halter'));
   sec.appendChild(head);
   var grid = wafEl('div', 'pers-fields');
@@ -6770,36 +6719,80 @@ function renderKfzResult() {
   addRow('Anschrift', kfzBuildAnschrift(d));
   sec.appendChild(grid);
   card.appendChild(sec);
-  box.appendChild(card);
+  return card;
+}
 
-  // Kopierbare Halterauskunft
-  kfzSteckbrief = kfzBuildSteckbrief();
+// ── Kombinierter Extraktor (Personalien + Kennzeichen in einer Maske) ──
+var dsExtracted = false, dsHasPers = false, dsHasKfz = false, dsText = '';
+
+function dsExtract() {
+  var el = document.getElementById('persInput');
+  var raw = el ? (el.value || '') : '';
+  var norm = kfzNormalize(raw);
+  // Kennzeichen-/Fahrzeugdaten erkannt?
+  dsHasKfz = !!(kfzMatchField(norm, ['Kennzeichen']) || kfzMatchField(norm, ['Fahrzeugart']) ||
+    kfzMatchField(norm, ['Hersteller']) || kfzMatchField(norm, ['Handelsbezeichnung/ Typ', 'Handelsbezeichnung']));
+  // Personalien-Datensatz erkannt? (Merkmale, die im reinen Kfz-Text NICHT vorkommen)
+  dsHasPers = !!(persMatchField(raw, ['Staatsangehörigkeit', 'Staatsangehoerigkeit']) ||
+    persMatchField(raw, ['Familienname']) || persMatchField(raw, ['Geburtsname']) ||
+    persMatchEDAnlaesse(raw).length || /(?:^|\|)\s*(?:Letztes\s+)?Änderungsdatum\s*:/im.test(raw));
+  // Wenn nichts eindeutig: als Personalien behandeln (Best effort).
+  if (!dsHasKfz && !dsHasPers) dsHasPers = true;
+  if (dsHasPers) persParse(raw);
+  if (dsHasKfz) kfzParse(norm);
+  dsExtracted = true;
+  renderDs();
+}
+
+function dsBuildText() {
+  var parts = [];
+  if (dsHasKfz) parts.push(kfzBuildSteckbrief());
+  if (dsHasPers) parts.push(persBuildSteckbrief());
+  return parts.join('\n\n\n');
+}
+
+function renderDs() {
+  var box = document.getElementById('persResult');
+  if (!box) return;
+  box.innerHTML = '';
+  if (!dsExtracted) return;
+
+  if (!dsHasPers && !dsHasKfz) {
+    box.appendChild(wafEl('p', 'pers-empty-hint', 'Keine Daten erkannt. Erwartet wird ein Personen- oder Kennzeichen-Datensatz im Format „Label:Wert|“.'));
+    return;
+  }
+
+  if (dsHasKfz) box.appendChild(kfzBuildCard());
+  if (dsHasPers) box.appendChild(persBuildCard(renderDs));
+
+  // Ein kopierbares Feld für alles
+  dsText = dsBuildText();
   var az = wafEl('div', 'waffg-anzeige');
   var azHead = wafEl('div', 'waffg-anzeige-head');
-  azHead.appendChild(wafEl('span', 'waffg-anzeige-label', 'HALTERAUSKUNFT – KOPIERBAR'));
+  var label = dsHasKfz && dsHasPers ? 'HALTERAUSKUNFT + PERSONALIEN – KOPIERBAR'
+    : (dsHasKfz ? 'HALTERAUSKUNFT – KOPIERBAR' : 'PERSONALIEN – KOPIERBAR');
+  azHead.appendChild(wafEl('span', 'waffg-anzeige-label', label));
   var copyBtn = wafEl('button', 'waffg-copy-btn', 'Kopieren'); copyBtn.type = 'button';
   copyBtn.addEventListener('click', function() {
-    var t = kfzSteckbrief;
+    var t = dsText;
     function done() { copyBtn.textContent = '✓ Kopiert'; copyBtn.classList.add('done'); setTimeout(function() { copyBtn.textContent = 'Kopieren'; copyBtn.classList.remove('done'); }, 1600); }
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done).catch(function() { done(); });
     else done();
   });
   azHead.appendChild(copyBtn);
   az.appendChild(azHead);
-  var ta = document.createElement('textarea'); ta.spellcheck = false; ta.value = kfzSteckbrief;
-  ta.addEventListener('input', function() { kfzSteckbrief = this.value; });
+  var ta = document.createElement('textarea'); ta.spellcheck = false; ta.value = dsText;
+  ta.addEventListener('input', function() { dsText = this.value; });
   az.appendChild(ta);
-  az.appendChild(wafEl('p', 'waffg-anzeige-note', 'Frei editierbar. Bei stark umbrochenen Exporten einzelne Felder kurz prüfen.'));
+  az.appendChild(wafEl('p', 'waffg-anzeige-note', 'Frei editierbar. Bei Auswahl einer anderen Anschrift wird der Text neu erzeugt.'));
   box.appendChild(az);
 }
 
-function openKfz() { document.getElementById('screen-kfz').classList.add('open'); window.scrollTo(0, 0); }
-function closeKfz() { document.getElementById('screen-kfz').classList.remove('open'); }
 (function() {
-  var ob = document.getElementById('btnOpenKfz');
-  if (ob) ob.addEventListener('click', openKfz);
-  var bb = document.getElementById('btnKfzBack');
-  if (bb) bb.addEventListener('click', closeKfz);
-  var ex = document.getElementById('btnKfzExtract');
-  if (ex) ex.addEventListener('click', kfzExtract);
+  var ob = document.getElementById('btnOpenPers');
+  if (ob) ob.addEventListener('click', openPers);
+  var bb = document.getElementById('btnPersBack');
+  if (bb) bb.addEventListener('click', closePers);
+  var ex = document.getElementById('btnPersExtract');
+  if (ex) ex.addEventListener('click', dsExtract);
 })();

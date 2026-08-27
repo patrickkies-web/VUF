@@ -6,8 +6,8 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Polizeibericht v3.66</title>
-  <link rel="stylesheet" href="style.css?v=3.66">
+  <title>Polizeibericht v3.67</title>
+  <link rel="stylesheet" href="style.css?v=3.67">
 </head>
 <body>
 
@@ -38,12 +38,8 @@
       <span class="btn-tool-sub">Straftat oder Ordnungswidrigkeit? &middot; Waffenrecht</span>
     </button>
     <button class="btn-tool" id="btnOpenPers">
-      <span class="btn-tool-name">&#128100; Personalien-Extraktor</span>
-      <span class="btn-tool-sub">Datensatz einf&uuml;gen &rarr; Steckbrief mit aktueller Anschrift</span>
-    </button>
-    <button class="btn-tool" id="btnOpenKfz">
-      <span class="btn-tool-name">&#128663; Kennzeichen-Extraktor</span>
-      <span class="btn-tool-sub">Datensatz einf&uuml;gen &rarr; Halterauskunft mit Fahrzeugdaten</span>
+      <span class="btn-tool-name">&#128100;&#128663; Datensatz-Extraktor</span>
+      <span class="btn-tool-sub">Personalien und/oder Kennzeichen einf&uuml;gen &rarr; kopierbarer Steckbrief</span>
     </button>
     <div class="start-disclaimer">
       <div class="disclaimer-row">
@@ -128,50 +124,23 @@
 <div id="screen-pers">
   <div class="waffg-topbar">
     <button class="waffg-back" id="btnPersBack">&larr; Zur&uuml;ck</button>
-    <div class="waffg-topbar-title">Personalien &middot; Extraktor</div>
+    <div class="waffg-topbar-title">Datensatz &middot; Extraktor</div>
     <div class="waffg-topbar-note">nur im Browser</div>
   </div>
   <div class="waffg-wrap">
     <div class="waffg-hero">
       <div class="waffg-eyebrow">DATENSATZ &middot; STECKBRIEF</div>
-      <div class="waffg-title">Personalien<br><strong>herausfiltern</strong></div>
-      <div class="waffg-sub">Kompletten Textexport einf&uuml;gen &mdash; Name, Geburtsdaten und die <strong>aktuelle Anschrift</strong> werden automatisch erkannt und als kopierbarer Steckbrief ausgegeben.</div>
+      <div class="waffg-title">Personalien &amp;<br><strong>Kennzeichen</strong></div>
+      <div class="waffg-sub">Personen- oder Kennzeichen-Datensatz (oder beides) einf&uuml;gen &mdash; es wird automatisch erkannt, was vorliegt: <strong>Personalien</strong>, <strong>Halterauskunft mit Fahrzeugdaten</strong> oder beides, ausgegeben als ein kopierbarer Steckbrief.</div>
     </div>
     <div class="waffg-card">
       <div class="waffg-sec">
         <div class="waffg-sec-head"><span class="waffg-sec-n">01</span><h3 class="waffg-sec-title">Datensatz einf&uuml;gen</h3></div>
-        <textarea id="persInput" class="pers-input" placeholder="Kompletten Textexport hier einf&uuml;gen &hellip;"></textarea>
-        <button class="waffg-eval-btn" id="btnPersExtract">Personalien extrahieren</button>
+        <textarea id="persInput" class="pers-input" placeholder="Personen- und/oder Kennzeichen-Datensatz hier einf&uuml;gen &hellip;"></textarea>
+        <button class="waffg-eval-btn" id="btnPersExtract">Extrahieren</button>
       </div>
     </div>
     <div id="persResult"></div>
-    <div class="waffg-footer">
-      Alle Daten bleiben ausschlie&szlig;lich im Arbeitsspeicher des Browsers &mdash; keine &Uuml;bertragung, keine Speicherung. Beim Neuladen sind sie weg.
-    </div>
-  </div>
-</div>
-
-<!-- Kennzeichen-Extraktor (eigener Bereich) -->
-<div id="screen-kfz">
-  <div class="waffg-topbar">
-    <button class="waffg-back" id="btnKfzBack">&larr; Zur&uuml;ck</button>
-    <div class="waffg-topbar-title">Kennzeichen &middot; Extraktor</div>
-    <div class="waffg-topbar-note">nur im Browser</div>
-  </div>
-  <div class="waffg-wrap">
-    <div class="waffg-hero">
-      <div class="waffg-eyebrow">HALTERAUSKUNFT &middot; FAHRZEUG</div>
-      <div class="waffg-title">Kennzeichen &amp;<br><strong>Halterdaten</strong></div>
-      <div class="waffg-sub">Kompletten Textexport einf&uuml;gen &mdash; <strong>Kennzeichen</strong>, Halterdaten und die Fahrzeugdaten (Art, Hersteller, Typ, Farbe) werden erkannt und als kopierbare Halterauskunft ausgegeben.</div>
-    </div>
-    <div class="waffg-card">
-      <div class="waffg-sec">
-        <div class="waffg-sec-head"><span class="waffg-sec-n">01</span><h3 class="waffg-sec-title">Datensatz einf&uuml;gen</h3></div>
-        <textarea id="kfzInput" class="pers-input" placeholder="Kompletten Textexport hier einf&uuml;gen &hellip;"></textarea>
-        <button class="waffg-eval-btn" id="btnKfzExtract">Kennzeichen &amp; Halter extrahieren</button>
-      </div>
-    </div>
-    <div id="kfzResult"></div>
     <div class="waffg-footer">
       Alle Daten bleiben ausschlie&szlig;lich im Arbeitsspeicher des Browsers &mdash; keine &Uuml;bertragung, keine Speicherung. Beim Neuladen sind sie weg.
     </div>
@@ -1010,7 +979,7 @@
   <div style="width:80px"></div>
 </div>
 
-<script src="script.js?v=3.66"></script>
+<script src="script.js?v=3.67"></script>
 <script>if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js').catch(function(){});}</script>
 
 <!-- Bericht-Generierungs-Overlay -->
