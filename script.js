@@ -6686,12 +6686,8 @@ function kfzBuildSteckbrief() {
   var d = kfzData, L = [];
   var row = function(label, val) { L.push(label + ': ' + (val && val.length ? val : '—')); };
   var kz = d.kennzeichen && d.kennzeichen.length ? d.kennzeichen : '—';
-  var rule = '________________________';
-  L.push(rule);
-  L.push('');
   L.push(kz);
-  L.push('');
-  L.push(rule);
+  L.push('________________________');
   row('Fahrzeugart', d.fahrzeugart);
   row('Hersteller', d.hersteller);
   row('Typ', d.typ);
