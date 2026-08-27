@@ -6404,10 +6404,12 @@ function closeWaffg() { document.getElementById('screen-waffg').classList.remove
 var persFields = {}, persAddresses = [], persSelected = 0, persSteckbrief = '', persExtracted = false;
 
 // Wert nach "Label:" bis zum nächsten | oder Zeilenumbruch. labels = mögliche Schreibweisen.
+// Das Label muss am Feldanfang stehen (nach "|", Zeilenanfang oder Textanfang), damit z. B.
+// "Art der Ortsbezeichnung:" NICHT als "Ortsbezeichnung:" und "Name:" nicht in "Vorname:" trifft.
 function persMatchField(text, labels) {
   for (var i = 0; i < labels.length; i++) {
     var esc = labels[i].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    var re = new RegExp(esc + '\\s*:\\s*([^|\\r\\n]*)', 'i');
+    var re = new RegExp('(?:^|\\|)\\s*' + esc + '\\s*:\\s*([^|\\r\\n]*)', 'im');
     var m = text.match(re);
     if (m && m[1] != null && m[1].trim() !== '') return m[1].trim();
   }
@@ -6425,10 +6427,12 @@ function persParseDate(str) {
 }
 
 // Alle Anschriften: hinter "Ortsbezeichnung:" bis |, mit dem letzten "Änderungsdatum:" davor.
+// "Ortsbezeichnung" muss am Feldanfang stehen (nach "|"/Zeilenanfang/Textanfang), damit
+// "Art der Ortsbezeichnung:" NICHT mitgezählt wird.
 function persExtractAddresses(text) {
   var out = [];
-  var reOrt = /Ortsbezeichnung\s*:\s*([^|\r\n]*)/gi;
-  var reAend = /Änderungsdatum\s*:\s*([^|\r\n]*)/gi;
+  var reOrt = /(?:^|\|)\s*Ortsbezeichnung\s*:\s*([^|\r\n]*)/gim;
+  var reAend = /(?:^|\|)\s*Änderungsdatum\s*:\s*([^|\r\n]*)/gim;
   var m;
   while ((m = reOrt.exec(text)) !== null) {
     var addr = (m[1] || '').trim();
@@ -6437,11 +6441,26 @@ function persExtractAddresses(text) {
     var last = '', mm;
     reAend.lastIndex = 0;
     while ((mm = reAend.exec(before)) !== null) { last = (mm[1] || '').trim(); }
-    out.push({ addr: addr, datum: last, sort: persParseDate(last) });
+    out.push({ addr: addr, datum: last, sort: persParseDate(last), i: out.length });
   }
-  // Duplikate (gleiche Adresse + gleiches Datum) entfernen
-  var seen = {}, dedup = [];
-  out.forEach(function(x) { var k = x.addr + '¦' + x.datum; if (!seen[k]) { seen[k] = 1; dedup.push(x); } });
+  // Gleiche Straße nur einmal: pro Adresse den aktuellsten (neuestes Datum) Eintrag behalten.
+  var byAddr = {};
+  out.forEach(function(x) {
+    var key = x.addr.replace(/\s+/g, ' ').toLowerCase();
+    var cur = byAddr[key];
+    if (!cur) { byAddr[key] = x; return; }
+    var xs = isNaN(x.sort) ? -Infinity : x.sort;
+    var cs = isNaN(cur.sort) ? -Infinity : cur.sort;
+    if (xs > cs || (xs === cs && x.i > cur.i)) byAddr[key] = x;
+  });
+  var dedup = Object.keys(byAddr).map(function(k) { return byAddr[k]; });
+  // Neueste zuerst; Einträge ohne erkennbares Datum ans Ende.
+  dedup.sort(function(a, b) {
+    var as = isNaN(a.sort) ? -Infinity : a.sort;
+    var bs = isNaN(b.sort) ? -Infinity : b.sort;
+    if (bs !== as) return bs - as;
+    return a.i - b.i;
+  });
   return dedup;
 }
 
@@ -6456,9 +6475,9 @@ function persBuildSteckbrief() {
   row('Vorname', f.vorname);
   if (f.geburtsname) row('Geburtsname', f.geburtsname);
   row('Geburtsdatum', f.geburtsdatum);
+  row('Geburtsort', f.geburtsort);
   row('Geschlecht', f.geschlecht);
   row('Staatsangehörigkeit', f.staat);
-  row('Geburtsort', f.geburtsort);
   L.push('');
   row('Aktuelle Anschrift', a.addr);
   if (a.datum) L.push('(eingepflegt am ' + a.datum + ')');
@@ -6478,10 +6497,8 @@ function persExtract() {
     geburtsort:   persMatchField(text, ['Geburtsort'])
   };
   persAddresses = persExtractAddresses(text);
-  // Vorauswahl: neueste (größtes Datum); bei Gleichstand/keinem Datum die zuletzt genannte.
+  // Liste ist neueste-zuerst sortiert → die aktuellste Anschrift ist vorausgewählt.
   persSelected = 0;
-  var best = -Infinity;
-  persAddresses.forEach(function(x, i) { var s = isNaN(x.sort) ? -Infinity : x.sort; if (s >= best) { best = s; persSelected = i; } });
   persExtracted = true;
   renderPersResult();
 }
@@ -6515,9 +6532,9 @@ function renderPersResult() {
     addRow('Vorname', f.vorname);
     addRow('Geburtsname', f.geburtsname);
     addRow('Geburtsdatum', f.geburtsdatum);
+    addRow('Geburtsort', f.geburtsort);
     addRow('Geschlecht', f.geschlecht);
     addRow('Staatsangehörigkeit', f.staat);
-    addRow('Geburtsort', f.geburtsort);
     sec.appendChild(grid);
   }
   card.appendChild(sec);
