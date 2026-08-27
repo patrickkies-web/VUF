@@ -6,8 +6,8 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Polizeibericht v3.67</title>
-  <link rel="stylesheet" href="style.css?v=3.67">
+  <title>Polizeibericht v3.68</title>
+  <link rel="stylesheet" href="style.css?v=3.68">
 </head>
 <body>
 
@@ -135,9 +135,10 @@
     </div>
     <div class="waffg-card">
       <div class="waffg-sec">
-        <div class="waffg-sec-head"><span class="waffg-sec-n">01</span><h3 class="waffg-sec-title">Datensatz einf&uuml;gen</h3></div>
-        <textarea id="persInput" class="pers-input" placeholder="Personen- und/oder Kennzeichen-Datensatz hier einf&uuml;gen &hellip;"></textarea>
-        <button class="waffg-eval-btn" id="btnPersExtract">Extrahieren</button>
+        <div class="waffg-sec-head"><span class="waffg-sec-n">01</span><h3 class="waffg-sec-title">Datens&auml;tze einf&uuml;gen</h3></div>
+        <div id="dsFields"></div>
+        <button class="ds-add-btn" id="btnDsAdd" type="button">+ weiteres Datensatzfeld</button>
+        <button class="waffg-eval-btn" id="btnPersExtract">Alle extrahieren</button>
       </div>
     </div>
     <div id="persResult"></div>
@@ -979,7 +980,7 @@
   <div style="width:80px"></div>
 </div>
 
-<script src="script.js?v=3.67"></script>
+<script src="script.js?v=3.68"></script>
 <script>if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js').catch(function(){});}</script>
 
 <!-- Bericht-Generierungs-Overlay -->

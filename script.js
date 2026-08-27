@@ -6722,33 +6722,89 @@ function kfzBuildCard() {
   return card;
 }
 
-// ── Kombinierter Extraktor (Personalien + Kennzeichen in einer Maske) ──
-var dsExtracted = false, dsHasPers = false, dsHasKfz = false, dsText = '';
+// ── Kombinierter Extraktor (mehrere Datensatzfelder, ein Extrahieren-Button) ──
+var dsEntries = [], dsExtracted = false, dsText = '';
 
-function dsExtract() {
-  var el = document.getElementById('persInput');
-  var raw = el ? (el.value || '') : '';
-  var norm = kfzNormalize(raw);
-  // Kennzeichen-/Fahrzeugdaten erkannt?
-  dsHasKfz = !!(kfzMatchField(norm, ['Kennzeichen']) || kfzMatchField(norm, ['Fahrzeugart']) ||
-    kfzMatchField(norm, ['Hersteller']) || kfzMatchField(norm, ['Handelsbezeichnung/ Typ', 'Handelsbezeichnung']));
-  // Personalien-Datensatz erkannt? (Merkmale, die im reinen Kfz-Text NICHT vorkommen)
-  dsHasPers = !!(persMatchField(raw, ['Staatsangehörigkeit', 'Staatsangehoerigkeit']) ||
-    persMatchField(raw, ['Familienname']) || persMatchField(raw, ['Geburtsname']) ||
-    persMatchEDAnlaesse(raw).length || /(?:^|\|)\s*(?:Letztes\s+)?Änderungsdatum\s*:/im.test(raw));
-  // Wenn nichts eindeutig: als Personalien behandeln (Best effort).
-  if (!dsHasKfz && !dsHasPers) dsHasPers = true;
-  if (dsHasPers) persParse(raw);
-  if (dsHasKfz) kfzParse(norm);
-  dsExtracted = true;
-  renderDs();
+// Legt ein zusätzliches Datensatz-Eingabefeld an.
+function dsAddField() {
+  var box = document.getElementById('dsFields');
+  if (!box) return;
+  var wrap = wafEl('div', 'ds-field');
+  var ta = document.createElement('textarea');
+  ta.className = 'pers-input';
+  ta.spellcheck = false;
+  ta.placeholder = 'Personen- und/oder Kennzeichen-Datensatz hier einfügen …';
+  wrap.appendChild(ta);
+  var rm = wafEl('button', 'ds-remove-btn', '×'); rm.type = 'button'; rm.title = 'Feld entfernen';
+  rm.addEventListener('click', function() {
+    var fields = box.querySelectorAll('.ds-field');
+    if (fields.length > 1) wrap.parentNode.removeChild(wrap);
+    else ta.value = '';
+    dsUpdateRemoveButtons();
+  });
+  wrap.appendChild(rm);
+  box.appendChild(wrap);
+  dsUpdateRemoveButtons();
+  return ta;
 }
 
-function dsBuildText() {
+// Entfernen-Buttons nur zeigen, wenn mehr als ein Feld existiert.
+function dsUpdateRemoveButtons() {
+  var box = document.getElementById('dsFields');
+  if (!box) return;
+  var fields = box.querySelectorAll('.ds-field');
+  fields.forEach(function(f) {
+    var rm = f.querySelector('.ds-remove-btn');
+    if (rm) rm.style.display = fields.length > 1 ? 'flex' : 'none';
+  });
+}
+
+// Sorgt für mindestens ein Eingabefeld (beim Öffnen).
+function dsEnsureField() {
+  var box = document.getElementById('dsFields');
+  if (box && box.querySelectorAll('.ds-field').length === 0) dsAddField();
+}
+
+// Aktiviert einen Eintrag in die globalen Bau-Variablen (für die build-Funktionen).
+function dsActivate(e) {
+  persFields = e.persFields; persEDAnlaesse = e.persEDAnlaesse;
+  persAddresses = e.persAddresses; persSelected = e.persSelected; kfzData = e.kfzData;
+}
+
+// Einen einzelnen Datensatz parsen und als Eintrag zurückgeben.
+function dsParseField(raw) {
+  var norm = kfzNormalize(raw);
+  var hasKfz = !!(kfzMatchField(norm, ['Kennzeichen']) || kfzMatchField(norm, ['Fahrzeugart']) ||
+    kfzMatchField(norm, ['Hersteller']) || kfzMatchField(norm, ['Handelsbezeichnung/ Typ', 'Handelsbezeichnung']));
+  var hasPers = !!(persMatchField(raw, ['Staatsangehörigkeit', 'Staatsangehoerigkeit']) ||
+    persMatchField(raw, ['Familienname']) || persMatchField(raw, ['Geburtsname']) ||
+    persMatchEDAnlaesse(raw).length || /(?:^|\|)\s*(?:Letztes\s+)?Änderungsdatum\s*:/im.test(raw));
+  if (!hasKfz && !hasPers) hasPers = true;
+  var e = { hasPers: hasPers, hasKfz: hasKfz, persFields: {}, persEDAnlaesse: [], persAddresses: [], persSelected: 0, kfzData: {} };
+  if (hasPers) { persParse(raw); e.persFields = persFields; e.persEDAnlaesse = persEDAnlaesse; e.persAddresses = persAddresses; e.persSelected = 0; }
+  if (hasKfz) { kfzParse(norm); e.kfzData = kfzData; }
+  return e;
+}
+
+function dsEntryText(e) {
+  dsActivate(e);
   var parts = [];
-  if (dsHasKfz) parts.push(kfzBuildSteckbrief());
-  if (dsHasPers) parts.push(persBuildSteckbrief());
+  if (e.hasKfz) parts.push(kfzBuildSteckbrief());
+  if (e.hasPers) parts.push(persBuildSteckbrief());
   return parts.join('\n\n\n');
+}
+
+function dsBuildTextAll() {
+  return dsEntries.map(dsEntryText).join('\n\n\n──────────\n\n\n');
+}
+
+function dsExtractAll() {
+  var box = document.getElementById('dsFields');
+  var fields = box ? box.querySelectorAll('#dsFields textarea, .ds-field textarea') : [];
+  dsEntries = [];
+  fields.forEach(function(ta) { var t = ta.value || ''; if (t.trim() !== '') dsEntries.push(dsParseField(t)); });
+  dsExtracted = true;
+  renderDs();
 }
 
 function renderDs() {
@@ -6757,21 +6813,24 @@ function renderDs() {
   box.innerHTML = '';
   if (!dsExtracted) return;
 
-  if (!dsHasPers && !dsHasKfz) {
-    box.appendChild(wafEl('p', 'pers-empty-hint', 'Keine Daten erkannt. Erwartet wird ein Personen- oder Kennzeichen-Datensatz im Format „Label:Wert|“.'));
+  if (!dsEntries.length) {
+    box.appendChild(wafEl('p', 'pers-empty-hint', 'Keine Daten erkannt. Bitte mindestens einen Personen- oder Kennzeichen-Datensatz im Format „Label:Wert|“ einfügen.'));
     return;
   }
 
-  if (dsHasKfz) box.appendChild(kfzBuildCard());
-  if (dsHasPers) box.appendChild(persBuildCard(renderDs));
+  var multi = dsEntries.length > 1;
+  dsEntries.forEach(function(e, i) {
+    dsActivate(e);
+    if (multi) box.appendChild(wafEl('div', 'ds-entry-label', 'Datensatz ' + (i + 1)));
+    if (e.hasKfz) box.appendChild(kfzBuildCard());
+    if (e.hasPers) box.appendChild(persBuildCard(function() { e.persSelected = persSelected; renderDs(); }));
+  });
 
-  // Ein kopierbares Feld für alles
-  dsText = dsBuildText();
+  // Ein kopierbares Feld für ALLE Datensätze
+  dsText = dsBuildTextAll();
   var az = wafEl('div', 'waffg-anzeige');
   var azHead = wafEl('div', 'waffg-anzeige-head');
-  var label = dsHasKfz && dsHasPers ? 'HALTERAUSKUNFT + PERSONALIEN – KOPIERBAR'
-    : (dsHasKfz ? 'HALTERAUSKUNFT – KOPIERBAR' : 'PERSONALIEN – KOPIERBAR');
-  azHead.appendChild(wafEl('span', 'waffg-anzeige-label', label));
+  azHead.appendChild(wafEl('span', 'waffg-anzeige-label', multi ? 'ALLE DATENSÄTZE – KOPIERBAR' : 'STECKBRIEF – KOPIERBAR'));
   var copyBtn = wafEl('button', 'waffg-copy-btn', 'Kopieren'); copyBtn.type = 'button';
   copyBtn.addEventListener('click', function() {
     var t = dsText;
@@ -6790,9 +6849,12 @@ function renderDs() {
 
 (function() {
   var ob = document.getElementById('btnOpenPers');
-  if (ob) ob.addEventListener('click', openPers);
+  if (ob) ob.addEventListener('click', function() { dsEnsureField(); openPers(); });
   var bb = document.getElementById('btnPersBack');
   if (bb) bb.addEventListener('click', closePers);
+  var add = document.getElementById('btnDsAdd');
+  if (add) add.addEventListener('click', dsAddField);
   var ex = document.getElementById('btnPersExtract');
-  if (ex) ex.addEventListener('click', dsExtract);
+  if (ex) ex.addEventListener('click', dsExtractAll);
+  dsEnsureField();
 })();

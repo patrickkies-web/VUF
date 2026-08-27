@@ -1961,6 +1961,25 @@ body {
   font-family: 'IBM Plex Mono', ui-monospace, monospace; box-sizing: border-box;
 }
 .pers-input:focus { outline: none; border-color: var(--accent); }
+.ds-field { position: relative; margin-bottom: 10px; }
+.ds-field .pers-input { min-height: 130px; margin: 0; }
+.ds-remove-btn {
+  position: absolute; top: 8px; right: 8px; width: 24px; height: 24px;
+  display: none; align-items: center; justify-content: center;
+  border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+  border-radius: 6px; cursor: pointer; font-size: 16px; line-height: 1;
+}
+.ds-remove-btn:hover { border-color: var(--danger); color: var(--danger); }
+.ds-add-btn {
+  width: 100%; margin: 2px 0 14px; padding: 9px 12px;
+  border: 1.5px dashed var(--border); background: transparent; color: var(--accent);
+  border-radius: 10px; cursor: pointer; font-size: 13.5px; font-weight: 600;
+}
+.ds-add-btn:hover { border-color: var(--accent); background: var(--surface2); }
+.ds-entry-label {
+  font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--accent); font-weight: 700; margin: 6px 0 8px;
+}
 .pers-fields { display: grid; grid-template-columns: auto 1fr; gap: 7px 16px; align-items: baseline; }
 .pers-flabel { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
 .pers-fval { font-size: 14.5px; font-weight: 600; color: var(--text); word-break: break-word; }
