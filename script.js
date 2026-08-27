@@ -6685,10 +6685,8 @@ function kfzBuildAnschrift(d) {
 function kfzBuildSteckbrief() {
   var d = kfzData, L = [];
   var row = function(label, val) { L.push(label + ': ' + (val && val.length ? val : '—')); };
-  L.push('HALTERAUSKUNFT');
-  L.push('');
-  L.push('FAHRZEUG');
-  row('Kennzeichen', d.kennzeichen);
+  var kz = d.kennzeichen && d.kennzeichen.length ? d.kennzeichen : '';
+  L.push('Halterauskunft' + (kz ? ' zu ' + kz : ''));
   row('Fahrzeugart', d.fahrzeugart);
   row('Hersteller', d.hersteller);
   row('Typ', d.typ);
@@ -6735,14 +6733,13 @@ function kfzBuildCard() {
   var fsec = wafEl('div', 'waffg-sec');
   var fhead = wafEl('div', 'waffg-sec-head');
   fhead.appendChild(wafEl('span', 'waffg-sec-n', '01'));
-  fhead.appendChild(wafEl('h3', 'waffg-sec-title', 'Fahrzeug'));
+  fhead.appendChild(wafEl('h3', 'waffg-sec-title', 'Halterauskunft' + (d.kennzeichen ? ' zu ' + d.kennzeichen : '')));
   fsec.appendChild(fhead);
   var fgrid = wafEl('div', 'pers-fields');
   var addF = function(label, val) {
     fgrid.appendChild(wafEl('div', 'pers-flabel', label));
     fgrid.appendChild(wafEl('div', 'pers-fval' + (val ? '' : ' empty'), val || 'nicht gefunden'));
   };
-  addF('Kennzeichen', d.kennzeichen);
   addF('Fahrzeugart', d.fahrzeugart);
   addF('Hersteller', d.hersteller);
   addF('Typ', d.typ);
