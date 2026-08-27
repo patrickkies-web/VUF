@@ -6399,3 +6399,184 @@ function closeWaffg() { document.getElementById('screen-waffg').classList.remove
   var bb = document.getElementById('btnWaffgBack');
   if (bb) bb.addEventListener('click', closeWaffg);
 })();
+
+// ── Personalien-Extraktor ───────────────────────────────────
+var persFields = {}, persAddresses = [], persSelected = 0, persSteckbrief = '', persExtracted = false;
+
+// Wert nach "Label:" bis zum nächsten | oder Zeilenumbruch. labels = mögliche Schreibweisen.
+function persMatchField(text, labels) {
+  for (var i = 0; i < labels.length; i++) {
+    var esc = labels[i].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    var re = new RegExp(esc + '\\s*:\\s*([^|\\r\\n]*)', 'i');
+    var m = text.match(re);
+    if (m && m[1] != null && m[1].trim() !== '') return m[1].trim();
+  }
+  return '';
+}
+
+// Deutsches Datum (TT.MM.JJJJ, optional mit Uhrzeit) → sortierbare Zahl, sonst NaN.
+function persParseDate(str) {
+  if (!str) return NaN;
+  var m = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{2,4})(?:[ T]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (!m) return NaN;
+  var y = +m[3]; if (y < 100) y += 2000;
+  var mo = +m[2], d = +m[1], hh = m[4] ? +m[4] : 0, mi = m[5] ? +m[5] : 0, ss = m[6] ? +m[6] : 0;
+  return ((((y * 100 + mo) * 100 + d) * 100 + hh) * 100 + mi) * 100 + ss;
+}
+
+// Alle Anschriften: hinter "Ortsbezeichnung:" bis |, mit dem letzten "Änderungsdatum:" davor.
+function persExtractAddresses(text) {
+  var out = [];
+  var reOrt = /Ortsbezeichnung\s*:\s*([^|\r\n]*)/gi;
+  var reAend = /Änderungsdatum\s*:\s*([^|\r\n]*)/gi;
+  var m;
+  while ((m = reOrt.exec(text)) !== null) {
+    var addr = (m[1] || '').trim();
+    if (!addr) continue;
+    var before = text.slice(0, m.index);
+    var last = '', mm;
+    reAend.lastIndex = 0;
+    while ((mm = reAend.exec(before)) !== null) { last = (mm[1] || '').trim(); }
+    out.push({ addr: addr, datum: last, sort: persParseDate(last) });
+  }
+  // Duplikate (gleiche Adresse + gleiches Datum) entfernen
+  var seen = {}, dedup = [];
+  out.forEach(function(x) { var k = x.addr + '¦' + x.datum; if (!seen[k]) { seen[k] = 1; dedup.push(x); } });
+  return dedup;
+}
+
+function persBuildSteckbrief() {
+  var f = persFields;
+  var a = persAddresses[persSelected] || { addr: '', datum: '' };
+  var L = [];
+  L.push('PERSONALIEN');
+  L.push('');
+  var row = function(label, val) { L.push(label + ': ' + (val && val.length ? val : '—')); };
+  row('Familienname', f.familienname);
+  row('Vorname', f.vorname);
+  if (f.geburtsname) row('Geburtsname', f.geburtsname);
+  row('Geburtsdatum', f.geburtsdatum);
+  row('Geschlecht', f.geschlecht);
+  row('Staatsangehörigkeit', f.staat);
+  row('Geburtsort', f.geburtsort);
+  L.push('');
+  row('Aktuelle Anschrift', a.addr);
+  if (a.datum) L.push('(eingepflegt am ' + a.datum + ')');
+  return L.join('\n');
+}
+
+function persExtract() {
+  var el = document.getElementById('persInput');
+  var text = el ? (el.value || '') : '';
+  persFields = {
+    vorname:      persMatchField(text, ['Vornamen', 'Vorname']),
+    familienname: persMatchField(text, ['Familienname', 'Nachname', 'Name']),
+    geburtsname:  persMatchField(text, ['Geburtsname']),
+    geburtsdatum: persMatchField(text, ['Geburtsdatum']),
+    geschlecht:   persMatchField(text, ['Geschlecht']),
+    staat:        persMatchField(text, ['Staatsangehörigkeit', 'Staatsangehoerigkeit']),
+    geburtsort:   persMatchField(text, ['Geburtsort'])
+  };
+  persAddresses = persExtractAddresses(text);
+  // Vorauswahl: neueste (größtes Datum); bei Gleichstand/keinem Datum die zuletzt genannte.
+  persSelected = 0;
+  var best = -Infinity;
+  persAddresses.forEach(function(x, i) { var s = isNaN(x.sort) ? -Infinity : x.sort; if (s >= best) { best = s; persSelected = i; } });
+  persExtracted = true;
+  renderPersResult();
+}
+
+function renderPersResult() {
+  var box = document.getElementById('persResult');
+  if (!box) return;
+  box.innerHTML = '';
+  if (!persExtracted) return;
+
+  var f = persFields;
+  var anyField = f.vorname || f.familienname || f.geburtsname || f.geburtsdatum || f.geschlecht || f.staat || f.geburtsort;
+
+  // Karte: erkannte Personendaten
+  var card = wafEl('div', 'waffg-card');
+  var sec = wafEl('div', 'waffg-sec');
+  var head = wafEl('div', 'waffg-sec-head');
+  head.appendChild(wafEl('span', 'waffg-sec-n', '02'));
+  head.appendChild(wafEl('h3', 'waffg-sec-title', 'Erkannte Personendaten'));
+  sec.appendChild(head);
+
+  if (!anyField && !persAddresses.length) {
+    sec.appendChild(wafEl('p', 'pers-empty-hint', 'Keine Felder erkannt. Erwartet werden Angaben im Format „Label:Wert|“, z. B. „Vornamen:Max|Familienname:Mustermann|“.'));
+  } else {
+    var grid = wafEl('div', 'pers-fields');
+    var addRow = function(label, val) {
+      grid.appendChild(wafEl('div', 'pers-flabel', label));
+      grid.appendChild(wafEl('div', 'pers-fval' + (val ? '' : ' empty'), val || 'nicht gefunden'));
+    };
+    addRow('Familienname', f.familienname);
+    addRow('Vorname', f.vorname);
+    addRow('Geburtsname', f.geburtsname);
+    addRow('Geburtsdatum', f.geburtsdatum);
+    addRow('Geschlecht', f.geschlecht);
+    addRow('Staatsangehörigkeit', f.staat);
+    addRow('Geburtsort', f.geburtsort);
+    sec.appendChild(grid);
+  }
+  card.appendChild(sec);
+
+  // Sektion: Anschriften-Auswahl
+  if (persAddresses.length) {
+    var asec = wafEl('div', 'waffg-sec');
+    var ahead = wafEl('div', 'waffg-sec-head');
+    ahead.appendChild(wafEl('span', 'waffg-sec-n', '03'));
+    ahead.appendChild(wafEl('h3', 'waffg-sec-title', persAddresses.length > 1 ? 'Anschrift wählen (' + persAddresses.length + ' gefunden)' : 'Aktuelle Anschrift'));
+    asec.appendChild(ahead);
+
+    var choice = wafEl('div', 'waffg-choice');
+    persAddresses.forEach(function(a, i) {
+      var btn = wafEl('button', 'waffg-opt' + (i === persSelected ? ' active' : ''));
+      btn.type = 'button';
+      btn.appendChild(wafEl('span', 'waffg-opt-dot'));
+      var txt = wafEl('span');
+      var lbl = wafEl('span', 'waffg-opt-label', a.addr);
+      if (i === persSelected) lbl.appendChild(wafEl('span', 'pers-badge', 'aktuell'));
+      txt.appendChild(lbl);
+      txt.appendChild(wafEl('span', 'waffg-opt-desc', a.datum ? 'eingepflegt am ' + a.datum : 'ohne Änderungsdatum'));
+      btn.appendChild(txt);
+      btn.addEventListener('click', function() { persSelected = i; renderPersResult(); window.scrollTo(0, document.body.scrollHeight); });
+      choice.appendChild(btn);
+    });
+    asec.appendChild(choice);
+    card.appendChild(asec);
+  }
+  box.appendChild(card);
+
+  // Steckbrief (kopierbar)
+  persSteckbrief = persBuildSteckbrief();
+  var az = wafEl('div', 'waffg-anzeige');
+  var azHead = wafEl('div', 'waffg-anzeige-head');
+  azHead.appendChild(wafEl('span', 'waffg-anzeige-label', 'STECKBRIEF – KOPIERBAR'));
+  var copyBtn = wafEl('button', 'waffg-copy-btn', 'Kopieren'); copyBtn.type = 'button';
+  copyBtn.addEventListener('click', function() {
+    var t = persSteckbrief;
+    function done() { copyBtn.textContent = '✓ Kopiert'; copyBtn.classList.add('done'); setTimeout(function() { copyBtn.textContent = 'Kopieren'; copyBtn.classList.remove('done'); }, 1600); }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done).catch(function() { done(); });
+    else done();
+  });
+  azHead.appendChild(copyBtn);
+  az.appendChild(azHead);
+  var ta = document.createElement('textarea'); ta.spellcheck = false; ta.value = persSteckbrief;
+  ta.addEventListener('input', function() { persSteckbrief = this.value; });
+  az.appendChild(ta);
+  az.appendChild(wafEl('p', 'waffg-anzeige-note', 'Frei editierbar. Bei Auswahl einer anderen Anschrift wird der Steckbrief neu erzeugt.'));
+  box.appendChild(az);
+}
+
+function openPers() { document.getElementById('screen-pers').classList.add('open'); window.scrollTo(0, 0); }
+function closePers() { document.getElementById('screen-pers').classList.remove('open'); }
+(function() {
+  var ob = document.getElementById('btnOpenPers');
+  if (ob) ob.addEventListener('click', openPers);
+  var bb = document.getElementById('btnPersBack');
+  if (bb) bb.addEventListener('click', closePers);
+  var ex = document.getElementById('btnPersExtract');
+  if (ex) ex.addEventListener('click', persExtract);
+})();

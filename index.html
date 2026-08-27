@@ -6,8 +6,8 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Polizeibericht v3.57</title>
-  <link rel="stylesheet" href="style.css?v=3.57">
+  <title>Polizeibericht v3.58</title>
+  <link rel="stylesheet" href="style.css?v=3.58">
 </head>
 <body>
 
@@ -36,6 +36,10 @@
     <button class="btn-tool" id="btnOpenWaffg">
       <span class="btn-tool-name">&#9878;&#65039; WaffG-Pr&uuml;fstand</span>
       <span class="btn-tool-sub">Straftat oder Ordnungswidrigkeit? &middot; Waffenrecht</span>
+    </button>
+    <button class="btn-tool" id="btnOpenPers">
+      <span class="btn-tool-name">&#128100; Personalien-Extraktor</span>
+      <span class="btn-tool-sub">Datensatz einf&uuml;gen &rarr; Steckbrief mit aktueller Anschrift</span>
     </button>
     <div class="start-disclaimer">
       <div class="disclaimer-row">
@@ -112,6 +116,33 @@
     <div id="waffgResult"></div>
     <div class="waffg-footer">
       <strong>Keine Rechtsberatung &mdash; Orientierungshilfe.</strong> Deckt Standard-Konstellationen nach dem WaffG (Stand 2024/2025) ab, nicht jeden Sonderfall (BKA-Feststellungsbescheide, Erb-/Bestandsschutz, Gewerbe, Landesrecht der Verbotszonen). Im Zweifel: Fachanwalt f&uuml;r Waffenrecht oder Waffenbeh&ouml;rde.
+    </div>
+  </div>
+</div>
+
+<!-- Personalien-Extraktor (eigener Bereich) -->
+<div id="screen-pers">
+  <div class="waffg-topbar">
+    <button class="waffg-back" id="btnPersBack">&larr; Zur&uuml;ck</button>
+    <div class="waffg-topbar-title">Personalien &middot; Extraktor</div>
+    <div class="waffg-topbar-note">nur im Browser</div>
+  </div>
+  <div class="waffg-wrap">
+    <div class="waffg-hero">
+      <div class="waffg-eyebrow">DATENSATZ &middot; STECKBRIEF</div>
+      <div class="waffg-title">Personalien<br><strong>herausfiltern</strong></div>
+      <div class="waffg-sub">Kompletten Textexport einf&uuml;gen &mdash; Name, Geburtsdaten und die <strong>aktuelle Anschrift</strong> werden automatisch erkannt und als kopierbarer Steckbrief ausgegeben.</div>
+    </div>
+    <div class="waffg-card">
+      <div class="waffg-sec">
+        <div class="waffg-sec-head"><span class="waffg-sec-n">01</span><h3 class="waffg-sec-title">Datensatz einf&uuml;gen</h3></div>
+        <textarea id="persInput" class="pers-input" placeholder="Kompletten Textexport hier einf&uuml;gen &hellip;"></textarea>
+        <button class="waffg-eval-btn" id="btnPersExtract">Personalien extrahieren</button>
+      </div>
+    </div>
+    <div id="persResult"></div>
+    <div class="waffg-footer">
+      Alle Daten bleiben ausschlie&szlig;lich im Arbeitsspeicher des Browsers &mdash; keine &Uuml;bertragung, keine Speicherung. Beim Neuladen sind sie weg.
     </div>
   </div>
 </div>
@@ -948,7 +979,7 @@
   <div style="width:80px"></div>
 </div>
 
-<script src="script.js?v=3.57"></script>
+<script src="script.js?v=3.58"></script>
 <script>if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js').catch(function(){});}</script>
 
 <!-- Bericht-Generierungs-Overlay -->

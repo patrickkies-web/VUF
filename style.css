@@ -1946,3 +1946,24 @@ body {
 .waffg-anzeige textarea { width: 100%; min-height: 240px; resize: vertical; background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px; padding: 13px 15px; font-size: 12.5px; line-height: 1.55; color: var(--text); white-space: pre-wrap; font-family: 'IBM Plex Mono', ui-monospace, monospace; }
 .waffg-anzeige-note { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
 .waffg-footer { margin-top: 24px; font-size: 12.5px; line-height: 1.55; color: var(--muted); border-top: 1px solid var(--border); padding-top: 14px; }
+
+/* ── Personalien-Extraktor (nutzt waffg-Design) ─────────────── */
+#screen-pers {
+  display: none;
+  position: fixed; inset: 0; z-index: 10000;
+  background: var(--bg, #f4f5f8); overflow-y: auto;
+}
+#screen-pers.open { display: block; }
+.pers-input {
+  width: 100%; min-height: 200px; resize: vertical;
+  background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px;
+  padding: 13px 15px; font-size: 13px; line-height: 1.5; color: var(--text);
+  font-family: 'IBM Plex Mono', ui-monospace, monospace; box-sizing: border-box;
+}
+.pers-input:focus { outline: none; border-color: var(--accent); }
+.pers-fields { display: grid; grid-template-columns: auto 1fr; gap: 7px 16px; align-items: baseline; }
+.pers-flabel { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.pers-fval { font-size: 14.5px; font-weight: 600; color: var(--text); word-break: break-word; }
+.pers-fval.empty { font-weight: 500; font-style: italic; color: var(--muted); }
+.pers-badge { display: inline-block; margin-left: 8px; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #2f7d53; background: #e8f1eb; border-radius: 6px; padding: 2px 7px; vertical-align: middle; }
+.pers-empty-hint { font-size: 13px; color: var(--muted); line-height: 1.5; }
