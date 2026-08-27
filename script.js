@@ -6489,8 +6489,8 @@ function persBuildSteckbrief() {
   L.push('');
   var row = function(label, val) { L.push(label + ': ' + (val && val.length ? val : '—')); };
   row('Familienname', f.familienname);
-  row('Vorname', f.vorname);
   if (f.geburtsname) row('Geburtsname', f.geburtsname);
+  row('Vorname', f.vorname);
   row('Geburtsdatum', f.geburtsdatum);
   row('Geburtsort', f.geburtsort);
   row('Geschlecht', f.geschlecht);
@@ -6556,8 +6556,8 @@ function renderPersResult() {
       grid.appendChild(wafEl('div', 'pers-fval' + (val ? '' : ' empty'), val || 'nicht gefunden'));
     };
     addRow('Familienname', f.familienname);
-    addRow('Vorname', f.vorname);
     addRow('Geburtsname', f.geburtsname);
+    addRow('Vorname', f.vorname);
     addRow('Geburtsdatum', f.geburtsdatum);
     addRow('Geburtsort', f.geburtsort);
     addRow('Geschlecht', f.geschlecht);
