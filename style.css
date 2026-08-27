@@ -1948,12 +1948,12 @@ body {
 .waffg-footer { margin-top: 24px; font-size: 12.5px; line-height: 1.55; color: var(--muted); border-top: 1px solid var(--border); padding-top: 14px; }
 
 /* ── Personalien-Extraktor (nutzt waffg-Design) ─────────────── */
-#screen-pers {
+#screen-pers, #screen-kfz {
   display: none;
   position: fixed; inset: 0; z-index: 10000;
   background: var(--bg, #f4f5f8); overflow-y: auto;
 }
-#screen-pers.open { display: block; }
+#screen-pers.open, #screen-kfz.open { display: block; }
 .pers-input {
   width: 100%; min-height: 200px; resize: vertical;
   background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px;

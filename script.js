@@ -6632,3 +6632,175 @@ function closePers() { document.getElementById('screen-pers').classList.remove('
   var ex = document.getElementById('btnPersExtract');
   if (ex) ex.addEventListener('click', persExtract);
 })();
+
+// ── Kennzeichen-Extraktor ───────────────────────────────────
+var kfzData = {}, kfzExtracted = false, kfzSteckbrief = '';
+
+// Zeilenumbrüche entfernen — der VIVA/INPOL-Export bricht Labels/Werte am Zeilenende um
+// (z. B. "Kraftstof\nfart" → "Kraftstoffart", "Geburtsor\nt" → "Geburtsort").
+function kfzNormalize(text) { return (text || '').replace(/\r/g, '').replace(/\n/g, ''); }
+
+// Baut ein Label-Muster, das gegen Umbruch-Artefakte tolerant ist: zwischen allen
+// Zeichen darf Whitespace stehen (der Export bricht Labels am Zeilenende um, z. B.
+// "Geburtsor t" statt "Geburtsort"). Ein Leerzeichen im Label = beliebig viel Whitespace.
+function kfzLabelPattern(label) {
+  var out = [];
+  for (var i = 0; i < label.length; i++) {
+    var ch = label.charAt(i);
+    if (ch === ' ') out.push('\\s*');
+    else out.push(ch.replace(/[.*+?^${}()|[\]\\/-]/g, '\\$&') + '\\s?');
+  }
+  return out.join('');
+}
+
+// Wert nach "Label:" bis zum nächsten |. Label muss an einer Feldgrenze stehen
+// (Anfang, "|" oder Leerzeichen davor). Ein evtl. angeklebtes Folgefeld ("…Wort:") wird abgeschnitten.
+function kfzMatchField(text, labels) {
+  for (var i = 0; i < labels.length; i++) {
+    var re = new RegExp('(?:^|[|\\s])\\s*' + kfzLabelPattern(labels[i]) + '\\s*:\\s*([^|]*)', 'i');
+    var m = text.match(re);
+    if (m && m[1] != null) {
+      var v = m[1].replace(/\s*[A-Za-zÄÖÜ][A-Za-zÄÖÜäöüß.\-\/()]*:.*$/, '').replace(/\s{2,}/g, ' ').trim();
+      if (v !== '') return v;
+    }
+  }
+  return '';
+}
+
+function kfzBuildAnschrift(d) {
+  var street = d.strasse ? (d.strasse + (d.hausnr ? ' ' + d.hausnr : '')) : '';
+  var cityLine = [d.plz, d.ort].filter(Boolean).join(' ');
+  return [street, cityLine].filter(Boolean).join(', ');
+}
+
+function kfzBuildSteckbrief() {
+  var d = kfzData, L = [];
+  var row = function(label, val) { L.push(label + ': ' + (val && val.length ? val : '—')); };
+  L.push('HALTERAUSKUNFT');
+  L.push('');
+  row('Kennzeichen', d.kennzeichen);
+  L.push('');
+  L.push('HALTER');
+  row('Name', persUpper(d.halterName));
+  row('Vorname', persTitle(d.halterVorname));
+  row('Geburtsdatum', d.geburtsdatum);
+  row('Geburtsort', persTitle(d.geburtsort));
+  row('Geschlecht', d.geschlecht);
+  row('Nation', d.nation);
+  row('Anschrift', kfzBuildAnschrift(d));
+  L.push('');
+  L.push('FAHRZEUG');
+  row('Fahrzeugart', d.fahrzeugart);
+  row('Hersteller', d.hersteller);
+  row('Typ', d.typ);
+  row('Farbe', d.farbe);
+  return L.join('\n');
+}
+
+function kfzExtract() {
+  var el = document.getElementById('kfzInput');
+  var text = kfzNormalize(el ? (el.value || '') : '');
+  var kz = kfzMatchField(text, ['Kennzeichen', 'Kfz-Kennzeichen', 'amtliches Kennzeichen']);
+  kz = kz.toUpperCase().replace(/\s{2,}/g, ' ').trim();
+  kfzData = {
+    kennzeichen:   kz,
+    halterName:    kfzMatchField(text, ['Familienname', 'Nachname', 'Ehename', 'Name']),
+    halterVorname: kfzMatchField(text, ['Vornamen', 'Vorname']),
+    geburtsdatum:  kfzMatchField(text, ['Geburtsdatum']),
+    geburtsort:    kfzMatchField(text, ['Geburtsort']),
+    geschlecht:    kfzMatchField(text, ['Geschlecht']),
+    nation:        kfzMatchField(text, ['Nation', 'Staatsangehörigkeit', 'Staatsangehoerigkeit']),
+    strasse:       kfzMatchField(text, ['Ortsbezeichnung', 'Straße', 'Strasse']),
+    hausnr:        kfzMatchField(text, ['Hausnr.', 'Hausnr', 'Hausnummer']),
+    plz:           kfzMatchField(text, ['PLZ']),
+    ort:           kfzMatchField(text, ['Ort']),
+    fahrzeugart:   kfzMatchField(text, ['Fahrzeugart']),
+    hersteller:    kfzMatchField(text, ['Hersteller']),
+    typ:           kfzMatchField(text, ['Handelsbezeichnung/ Typ', 'Handelsbezeichnung / Typ', 'Handelsbezeichnung/Typ', 'Handelsbezeichnung', 'Typ']),
+    farbe:         kfzMatchField(text, ['Farbe'])
+  };
+  kfzExtracted = true;
+  renderKfzResult();
+}
+
+function renderKfzResult() {
+  var box = document.getElementById('kfzResult');
+  if (!box) return;
+  box.innerHTML = '';
+  if (!kfzExtracted) return;
+  var d = kfzData;
+
+  var card = wafEl('div', 'waffg-card');
+
+  // Kennzeichen + Halter
+  var sec = wafEl('div', 'waffg-sec');
+  var head = wafEl('div', 'waffg-sec-head');
+  head.appendChild(wafEl('span', 'waffg-sec-n', '02'));
+  head.appendChild(wafEl('h3', 'waffg-sec-title', 'Kennzeichen & Halter'));
+  sec.appendChild(head);
+  var grid = wafEl('div', 'pers-fields');
+  var addRow = function(label, val) {
+    grid.appendChild(wafEl('div', 'pers-flabel', label));
+    grid.appendChild(wafEl('div', 'pers-fval' + (val ? '' : ' empty'), val || 'nicht gefunden'));
+  };
+  addRow('Kennzeichen', d.kennzeichen);
+  addRow('Name', persUpper(d.halterName));
+  addRow('Vorname', persTitle(d.halterVorname));
+  addRow('Geburtsdatum', d.geburtsdatum);
+  addRow('Geburtsort', persTitle(d.geburtsort));
+  addRow('Geschlecht', d.geschlecht);
+  addRow('Nation', d.nation);
+  addRow('Anschrift', kfzBuildAnschrift(d));
+  sec.appendChild(grid);
+  card.appendChild(sec);
+
+  // Fahrzeug
+  var fsec = wafEl('div', 'waffg-sec');
+  var fhead = wafEl('div', 'waffg-sec-head');
+  fhead.appendChild(wafEl('span', 'waffg-sec-n', '03'));
+  fhead.appendChild(wafEl('h3', 'waffg-sec-title', 'Fahrzeug'));
+  fsec.appendChild(fhead);
+  var fgrid = wafEl('div', 'pers-fields');
+  var addF = function(label, val) {
+    fgrid.appendChild(wafEl('div', 'pers-flabel', label));
+    fgrid.appendChild(wafEl('div', 'pers-fval' + (val ? '' : ' empty'), val || 'nicht gefunden'));
+  };
+  addF('Fahrzeugart', d.fahrzeugart);
+  addF('Hersteller', d.hersteller);
+  addF('Typ', d.typ);
+  addF('Farbe', d.farbe);
+  fsec.appendChild(fgrid);
+  card.appendChild(fsec);
+  box.appendChild(card);
+
+  // Kopierbare Halterauskunft
+  kfzSteckbrief = kfzBuildSteckbrief();
+  var az = wafEl('div', 'waffg-anzeige');
+  var azHead = wafEl('div', 'waffg-anzeige-head');
+  azHead.appendChild(wafEl('span', 'waffg-anzeige-label', 'HALTERAUSKUNFT – KOPIERBAR'));
+  var copyBtn = wafEl('button', 'waffg-copy-btn', 'Kopieren'); copyBtn.type = 'button';
+  copyBtn.addEventListener('click', function() {
+    var t = kfzSteckbrief;
+    function done() { copyBtn.textContent = '✓ Kopiert'; copyBtn.classList.add('done'); setTimeout(function() { copyBtn.textContent = 'Kopieren'; copyBtn.classList.remove('done'); }, 1600); }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done).catch(function() { done(); });
+    else done();
+  });
+  azHead.appendChild(copyBtn);
+  az.appendChild(azHead);
+  var ta = document.createElement('textarea'); ta.spellcheck = false; ta.value = kfzSteckbrief;
+  ta.addEventListener('input', function() { kfzSteckbrief = this.value; });
+  az.appendChild(ta);
+  az.appendChild(wafEl('p', 'waffg-anzeige-note', 'Frei editierbar. Bei stark umbrochenen Exporten einzelne Felder kurz prüfen.'));
+  box.appendChild(az);
+}
+
+function openKfz() { document.getElementById('screen-kfz').classList.add('open'); window.scrollTo(0, 0); }
+function closeKfz() { document.getElementById('screen-kfz').classList.remove('open'); }
+(function() {
+  var ob = document.getElementById('btnOpenKfz');
+  if (ob) ob.addEventListener('click', openKfz);
+  var bb = document.getElementById('btnKfzBack');
+  if (bb) bb.addEventListener('click', closeKfz);
+  var ex = document.getElementById('btnKfzExtract');
+  if (ex) ex.addEventListener('click', kfzExtract);
+})();
