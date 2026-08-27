@@ -6534,11 +6534,27 @@ function persBuildSteckbrief() {
   return L.join('\n');
 }
 
+// Aus dem Feld "Titel:Nachname, Vorname" den Namen holen (Nachname kann mehrteilig sein).
+function persNameFromTitel(titel) {
+  if (!titel) return { nach: '', vor: '' };
+  var idx = titel.indexOf(',');
+  if (idx === -1) return { nach: titel.trim(), vor: '' };
+  return { nach: titel.slice(0, idx).trim(), vor: titel.slice(idx + 1).trim() };
+}
+
 // Personendaten aus dem Text parsen (füllt persFields/persEDAnlaesse/persAddresses).
 function persParse(text) {
+  var familienname = persMatchField(text, ['Familienname', 'Nachname', 'Ehename', 'Name']);
+  var vorname = persMatchField(text, ['Vornamen', 'Vorname']);
+  // Fallback: fehlt der Familienname, aus "Titel:Nachname, Vorname" holen.
+  if (!familienname) {
+    var t = persNameFromTitel(persMatchField(text, ['Titel']));
+    familienname = t.nach;
+    if (!vorname) vorname = t.vor;
+  }
   persFields = {
-    vorname:      persMatchField(text, ['Vornamen', 'Vorname']),
-    familienname: persMatchField(text, ['Familienname', 'Nachname', 'Ehename', 'Name']),
+    vorname:      vorname,
+    familienname: familienname,
     geburtsname:  persMatchField(text, ['Geburtsname']),
     geburtsdatum: persMatchField(text, ['Geburtsdatum']),
     geschlecht:   persMatchField(text, ['Geschlecht']),
@@ -6797,7 +6813,7 @@ function dsParseField(raw) {
   var hasKfz = !!(kfzMatchField(norm, ['Kennzeichen']) || kfzMatchField(norm, ['Fahrzeugart']) ||
     kfzMatchField(norm, ['Hersteller']) || kfzMatchField(norm, ['Handelsbezeichnung/ Typ', 'Handelsbezeichnung']));
   var hasPers = !!(persMatchField(raw, ['Staatsangehörigkeit', 'Staatsangehoerigkeit']) ||
-    persMatchField(raw, ['Familienname']) || persMatchField(raw, ['Geburtsname']) ||
+    persMatchField(raw, ['Familienname']) || persMatchField(raw, ['Geburtsname']) || persMatchField(raw, ['Titel']) ||
     persMatchEDAnlaesse(raw).length || /(?:^|\|)\s*(?:Letztes\s+)?Änderungsdatum\s*:/im.test(raw));
   if (!hasKfz && !hasPers) hasPers = true;
   var e = { hasPers: hasPers, hasKfz: hasKfz, persFields: {}, persEDAnlaesse: [], persAddresses: [], persSelected: 0, kfzData: {} };
