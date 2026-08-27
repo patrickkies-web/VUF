@@ -6488,11 +6488,24 @@ function persTitle(s) {
   return s.replace(/\p{L}+/gu, function (w) { return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(); });
 }
 
+// Baut die vollständige Anschrift: Straße (+ Hausnr., falls nicht schon enthalten) + PLZ/Ort.
+function persFullAddress(street) {
+  var f = persFields;
+  var s = (street || '').trim();
+  if (f.hausnr && !/\d\s*$/.test(s)) s += (s ? ' ' : '') + f.hausnr;
+  var city = [f.plz, f.ort].filter(Boolean).join(' ');
+  return [s, city].filter(Boolean).join(', ');
+}
+
 function persBuildSteckbrief() {
   var f = persFields;
   var a = persAddresses[persSelected] || { addr: '', datum: '' };
   var L = [];
-  L.push('Personalien gem. VIVA/INPOL');
+  // Überschrift: "FAMILIENNAME, Vorname gem. VIVA/INPOL" (nur Vorname, wenn kein Familienname).
+  var nameHead = f.familienname
+    ? persUpper(f.familienname) + (f.vorname ? ', ' + persTitle(f.vorname) : '')
+    : persTitle(f.vorname);
+  L.push((nameHead ? nameHead + ' ' : 'Personalien ') + 'gem. VIVA/INPOL');
   L.push('');
   var row = function(label, val) { L.push(label + ': ' + (val && val.length ? val : '—')); };
   row('Familienname', persUpper(f.familienname));
@@ -6511,9 +6524,13 @@ function persBuildSteckbrief() {
       persEDAnlaesse.forEach(function(v) { L.push('- ' + v); });
     }
   }
-  L.push('');
-  row('Aktuelle Anschrift', a.addr);
-  if (a.datum) L.push('(eingepflegt am ' + a.datum + ')');
+  // Aktuelle Anschrift nur, wenn tatsächlich eine vorhanden ist.
+  var full = persFullAddress(a.addr);
+  if (full) {
+    L.push('');
+    L.push('Aktuelle Anschrift: ' + full);
+    if (a.datum) L.push('(eingepflegt am ' + a.datum + ')');
+  }
   return L.join('\n');
 }
 
@@ -6526,7 +6543,10 @@ function persParse(text) {
     geburtsdatum: persMatchField(text, ['Geburtsdatum']),
     geschlecht:   persMatchField(text, ['Geschlecht']),
     staat:        persMatchField(text, ['Staatsangehörigkeit', 'Staatsangehoerigkeit', 'Nation']),
-    geburtsort:   persMatchField(text, ['Geburtsort'])
+    geburtsort:   persMatchField(text, ['Geburtsort']),
+    hausnr:       persMatchField(text, ['Hausnr.', 'Hausnr', 'Hausnummer']),
+    plz:          persMatchField(text, ['PLZ']),
+    ort:          persMatchField(text, ['Ort'])
   };
   persEDAnlaesse = persMatchEDAnlaesse(text);
   persAddresses = persExtractAddresses(text);
