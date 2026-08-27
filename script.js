@@ -6485,7 +6485,7 @@ function persBuildSteckbrief() {
   var f = persFields;
   var a = persAddresses[persSelected] || { addr: '', datum: '' };
   var L = [];
-  L.push('PERSONALIEN');
+  L.push('Personalien gem. VIVA/INPOL');
   L.push('');
   var row = function(label, val) { L.push(label + ': ' + (val && val.length ? val : '—')); };
   row('Familienname', f.familienname);
