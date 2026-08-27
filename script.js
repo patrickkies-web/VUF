@@ -6401,7 +6401,22 @@ function closeWaffg() { document.getElementById('screen-waffg').classList.remove
 })();
 
 // ── Personalien-Extraktor ───────────────────────────────────
-var persFields = {}, persAddresses = [], persSelected = 0, persSteckbrief = '', persExtracted = false;
+var persFields = {}, persAddresses = [], persSelected = 0, persSteckbrief = '', persExtracted = false, persEDAnlaesse = [];
+
+// ED-Anlässe: alle "Ereignisbezeichnung zum Anlass:" — Wert nur bis zum nächsten
+// Komma oder senkrechten Strich. Feld muss am Feldanfang stehen. Nur vorhanden, wenn
+// die Person erkennungsdienstlich behandelt wurde (fehlt bei anderen Datensätzen).
+function persMatchEDAnlaesse(text) {
+  var re = /(?:^|\|)\s*Ereignisbezeichnung zum Anlass\s*:\s*([^,|\r\n]*)/gim;
+  var out = [], m;
+  while ((m = re.exec(text)) !== null) {
+    var v = (m[1] || '').trim();
+    if (v) out.push(v);
+  }
+  var seen = {}, res = [];
+  out.forEach(function(v) { var k = v.toLowerCase(); if (!seen[k]) { seen[k] = 1; res.push(v); } });
+  return res;
+}
 
 // Wert nach "Label:" bis zum nächsten | oder Zeilenumbruch. labels = mögliche Schreibweisen.
 // Das Label muss am Feldanfang stehen (nach "|", Zeilenanfang oder Textanfang), damit z. B.
@@ -6478,6 +6493,15 @@ function persBuildSteckbrief() {
   row('Geburtsort', f.geburtsort);
   row('Geschlecht', f.geschlecht);
   row('Staatsangehörigkeit', f.staat);
+  if (persEDAnlaesse.length) {
+    L.push('');
+    if (persEDAnlaesse.length === 1) {
+      L.push('ED-Behandelt aufgrund von: ' + persEDAnlaesse[0]);
+    } else {
+      L.push('ED-Behandelt aufgrund von:');
+      persEDAnlaesse.forEach(function(v) { L.push('- ' + v); });
+    }
+  }
   L.push('');
   row('Aktuelle Anschrift', a.addr);
   if (a.datum) L.push('(eingepflegt am ' + a.datum + ')');
@@ -6496,6 +6520,7 @@ function persExtract() {
     staat:        persMatchField(text, ['Staatsangehörigkeit', 'Staatsangehoerigkeit']),
     geburtsort:   persMatchField(text, ['Geburtsort'])
   };
+  persEDAnlaesse = persMatchEDAnlaesse(text);
   persAddresses = persExtractAddresses(text);
   // Liste ist neueste-zuerst sortiert → die aktuellste Anschrift ist vorausgewählt.
   persSelected = 0;
@@ -6535,6 +6560,7 @@ function renderPersResult() {
     addRow('Geburtsort', f.geburtsort);
     addRow('Geschlecht', f.geschlecht);
     addRow('Staatsangehörigkeit', f.staat);
+    if (persEDAnlaesse.length) addRow('ED-Behandelt aufgrund von', persEDAnlaesse.join(' · '));
     sec.appendChild(grid);
   }
   card.appendChild(sec);
