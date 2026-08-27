@@ -6685,8 +6685,13 @@ function kfzBuildAnschrift(d) {
 function kfzBuildSteckbrief() {
   var d = kfzData, L = [];
   var row = function(label, val) { L.push(label + ': ' + (val && val.length ? val : '—')); };
-  var kz = d.kennzeichen && d.kennzeichen.length ? d.kennzeichen : '';
-  L.push('Halterauskunft' + (kz ? ' zu ' + kz : ''));
+  var kz = d.kennzeichen && d.kennzeichen.length ? d.kennzeichen : '—';
+  var rule = '________________________';
+  L.push(rule);
+  L.push('');
+  L.push(kz);
+  L.push('');
+  L.push(rule);
   row('Fahrzeugart', d.fahrzeugart);
   row('Hersteller', d.hersteller);
   row('Typ', d.typ);
@@ -6733,7 +6738,7 @@ function kfzBuildCard() {
   var fsec = wafEl('div', 'waffg-sec');
   var fhead = wafEl('div', 'waffg-sec-head');
   fhead.appendChild(wafEl('span', 'waffg-sec-n', '01'));
-  fhead.appendChild(wafEl('h3', 'waffg-sec-title', 'Halterauskunft' + (d.kennzeichen ? ' zu ' + d.kennzeichen : '')));
+  fhead.appendChild(wafEl('h3', 'waffg-sec-title', d.kennzeichen || 'Fahrzeug'));
   fsec.appendChild(fhead);
   var fgrid = wafEl('div', 'pers-fields');
   var addF = function(label, val) {
