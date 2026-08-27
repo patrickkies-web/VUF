@@ -6481,6 +6481,13 @@ function persExtractAddresses(text) {
   return dedup;
 }
 
+// Familienname/Geburtsname → Druckbuchstaben; Vorname/Geburtsort → nur Anfangsbuchstaben groß.
+function persUpper(s) { return s ? s.toUpperCase() : s; }
+function persTitle(s) {
+  if (!s) return s;
+  return s.replace(/\p{L}+/gu, function (w) { return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(); });
+}
+
 function persBuildSteckbrief() {
   var f = persFields;
   var a = persAddresses[persSelected] || { addr: '', datum: '' };
@@ -6488,11 +6495,11 @@ function persBuildSteckbrief() {
   L.push('Personalien gem. VIVA/INPOL');
   L.push('');
   var row = function(label, val) { L.push(label + ': ' + (val && val.length ? val : '—')); };
-  row('Familienname', f.familienname);
-  if (f.geburtsname) row('Geburtsname', f.geburtsname);
-  row('Vorname', f.vorname);
+  row('Familienname', persUpper(f.familienname));
+  if (f.geburtsname) row('Geburtsname', persUpper(f.geburtsname));
+  row('Vorname', persTitle(f.vorname));
   row('Geburtsdatum', f.geburtsdatum);
-  row('Geburtsort', f.geburtsort);
+  row('Geburtsort', persTitle(f.geburtsort));
   row('Geschlecht', f.geschlecht);
   row('Staatsangehörigkeit', f.staat);
   if (persEDAnlaesse.length) {
@@ -6555,11 +6562,11 @@ function renderPersResult() {
       grid.appendChild(wafEl('div', 'pers-flabel', label));
       grid.appendChild(wafEl('div', 'pers-fval' + (val ? '' : ' empty'), val || 'nicht gefunden'));
     };
-    addRow('Familienname', f.familienname);
-    addRow('Geburtsname', f.geburtsname);
-    addRow('Vorname', f.vorname);
+    addRow('Familienname', persUpper(f.familienname));
+    addRow('Geburtsname', persUpper(f.geburtsname));
+    addRow('Vorname', persTitle(f.vorname));
     addRow('Geburtsdatum', f.geburtsdatum);
-    addRow('Geburtsort', f.geburtsort);
+    addRow('Geburtsort', persTitle(f.geburtsort));
     addRow('Geschlecht', f.geschlecht);
     addRow('Staatsangehörigkeit', f.staat);
     if (persEDAnlaesse.length) addRow('ED-Behandelt aufgrund von', persEDAnlaesse.join(' · '));
