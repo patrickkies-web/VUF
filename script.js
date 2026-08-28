@@ -6540,7 +6540,7 @@ function persBuildSteckbrief() {
   var full = persFullAddress(a.addr);
   if (full) {
     L.push('');
-    L.push('Aktuelle Anschrift: ' + full);
+    L.push('Zuletzt eingepflegte Anschrift gem. VIVA: ' + full);
     if (a.datum) L.push('(eingepflegt am ' + a.datum + ')');
   }
   return L.join('\n');
@@ -6617,7 +6617,7 @@ function persBuildCard(onSel) {
     var asec = wafEl('div', 'waffg-sec');
     var ahead = wafEl('div', 'waffg-sec-head');
     ahead.appendChild(wafEl('span', 'waffg-sec-n', '02'));
-    ahead.appendChild(wafEl('h3', 'waffg-sec-title', persAddresses.length > 1 ? 'Anschrift wählen (' + persAddresses.length + ' gefunden)' : 'Aktuelle Anschrift'));
+    ahead.appendChild(wafEl('h3', 'waffg-sec-title', persAddresses.length > 1 ? 'Anschrift wählen (' + persAddresses.length + ' gefunden)' : 'Zuletzt eingepflegte Anschrift gem. VIVA'));
     asec.appendChild(ahead);
     var choice = wafEl('div', 'waffg-choice');
     persAddresses.forEach(function(a, i) {
