@@ -6842,6 +6842,30 @@ function dsEntryText(e) {
   return parts.join('\n\n\n');
 }
 
+// Kurzbezeichnung eines Datensatzes für den Direkt-Kopier-Button:
+// Kennzeichen, sonst Name (FAMILIENNAME, Vorname), sonst Fallback.
+function dsEntryLabel(e, i) {
+  if (e.hasKfz && e.kfzData && e.kfzData.kennzeichen) return e.kfzData.kennzeichen;
+  if (e.hasPers && e.persFields) {
+    var f = e.persFields;
+    var nm = [f.familienname ? persUpper(f.familienname) : '', f.vorname ? persTitle(f.vorname) : '']
+      .filter(Boolean).join(', ');
+    if (nm) return nm;
+  }
+  if (e.hasKfz) return 'Kennzeichen';
+  return 'Datensatz ' + (i + 1);
+}
+
+// Text in die Zwischenablage; Button quittiert kurz mit ✓.
+function dsCopyToClipboard(text, btn, okLabel, normalLabel) {
+  function done() {
+    btn.textContent = okLabel; btn.classList.add('done');
+    setTimeout(function() { btn.textContent = normalLabel; btn.classList.remove('done'); }, 1600);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done).catch(done);
+  else done();
+}
+
 function dsBuildTextAll() {
   return dsEntries.map(dsEntryText).join('\n\n\n──────────\n\n\n');
 }
@@ -6879,15 +6903,24 @@ function renderDs() {
   var az = wafEl('div', 'waffg-anzeige');
   var azHead = wafEl('div', 'waffg-anzeige-head');
   azHead.appendChild(wafEl('span', 'waffg-anzeige-label', multi ? 'ALLE DATENSÄTZE – KOPIERBAR' : 'STECKBRIEF – KOPIERBAR'));
-  var copyBtn = wafEl('button', 'waffg-copy-btn', 'Kopieren'); copyBtn.type = 'button';
+  var copyBtn = wafEl('button', 'waffg-copy-btn', multi ? 'Alle kopieren' : 'Kopieren'); copyBtn.type = 'button';
   copyBtn.addEventListener('click', function() {
-    var t = dsText;
-    function done() { copyBtn.textContent = '✓ Kopiert'; copyBtn.classList.add('done'); setTimeout(function() { copyBtn.textContent = 'Kopieren'; copyBtn.classList.remove('done'); }, 1600); }
-    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done).catch(function() { done(); });
-    else done();
+    dsCopyToClipboard(dsText, copyBtn, '✓ Kopiert', multi ? 'Alle kopieren' : 'Kopieren');
   });
   azHead.appendChild(copyBtn);
   az.appendChild(azHead);
+
+  // Direkt-Kopier-Buttons: pro Datensatz einer (Kennzeichen bzw. Name).
+  var copyRow = wafEl('div', 'ds-copy-row');
+  dsEntries.forEach(function(e, i) {
+    var lbl = dsEntryLabel(e, i);
+    var b = wafEl('button', 'ds-copy-one', lbl); b.type = 'button';
+    b.title = 'Nur diesen Datensatz kopieren';
+    b.addEventListener('click', function() { dsCopyToClipboard(dsEntryText(e), b, '✓ ' + lbl, lbl); });
+    copyRow.appendChild(b);
+  });
+  az.appendChild(copyRow);
+
   var ta = document.createElement('textarea'); ta.spellcheck = false; ta.value = dsText;
   ta.addEventListener('input', function() { dsText = this.value; });
   az.appendChild(ta);

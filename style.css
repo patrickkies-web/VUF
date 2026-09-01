@@ -1980,6 +1980,17 @@ body {
   font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
   color: var(--accent); font-weight: 700; margin: 6px 0 8px;
 }
+.ds-copy-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 10px; }
+.ds-copy-one {
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  padding: 7px 12px; border-radius: 8px; border: 1px solid var(--border, #d7dbe3);
+  background: var(--surface, #fff); color: var(--accent);
+  display: inline-flex; align-items: center; gap: 6px; line-height: 1;
+}
+.ds-copy-one::before { content: "\2398"; font-size: 13px; opacity: .7; }
+.ds-copy-one:hover { border-color: var(--accent); background: var(--surface2, #f4f6fb); }
+.ds-copy-one.done { background: var(--accent); color: #fff; border-color: var(--accent); }
+.ds-copy-one.done::before { content: ""; }
 .pers-fields { display: grid; grid-template-columns: auto 1fr; gap: 7px 16px; align-items: baseline; }
 .pers-flabel { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
 .pers-fval { font-size: 14.5px; font-weight: 600; color: var(--text); word-break: break-word; }
