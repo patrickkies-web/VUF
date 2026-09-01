@@ -6,33 +6,42 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Polizeibericht v3.76</title>
-  <link rel="stylesheet" href="style.css?v=3.71">
+  <title>Tools v3.77</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="theme-color" content="#0f2460">
+  <link rel="icon" href="./icon-192.png">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Tools">
+  <link rel="stylesheet" href="style.css?v=3.77">
 </head>
 <body>
 
 <div id="screen-start">
   <div class="start-hero">
-    <div class="start-badge">BPOL <span>//</span> Bericht</div>
-    <div class="start-title">Verkehrsunfallflucht<br>verschriftlichen</div>
-    <div class="start-sub">in weniger als 3&nbsp;Minuten</div>
+    <div class="start-badge">BPOL <span>//</span> Tools</div>
+    <div class="start-title">Tools</div>
+    <div class="start-sub">Werkzeuge f&uuml;r den Dienst</div>
   </div>
   <div class="start-body">
-    <div class="lib-group-label">Leitfaden laden</div>
-    <div class="lib-presets">
-      <button class="btn-preset" id="btnPresetStrasse">
-        <span class="preset-name">VUF Stra&szlig;e</span>
-        <span class="preset-sub">6&nbsp;Abschnitte</span>
-      </button>
-      <button class="btn-preset" id="btnPresetParkplatz">
-        <span class="preset-name">VUF Parkplatz</span>
-        <span class="preset-sub">5&nbsp;Abschnitte</span>
-      </button>
+    <div id="reportEntry" hidden>
+      <div class="lib-group-label">Leitfaden laden</div>
+      <div class="lib-presets">
+        <button class="btn-preset" id="btnPresetStrasse">
+          <span class="preset-name">VUF Stra&szlig;e</span>
+          <span class="preset-sub">6&nbsp;Abschnitte</span>
+        </button>
+        <button class="btn-preset" id="btnPresetParkplatz">
+          <span class="preset-name">VUF Parkplatz</span>
+          <span class="preset-sub">5&nbsp;Abschnitte</span>
+        </button>
+      </div>
+      <div class="lib-group-label">Oder einzeln w&auml;hlen</div>
+      <div class="lib-bausteins" id="libraryBausteins"></div>
+      <button class="btn-start" id="btnStart" disabled>Aufnahme starten</button>
     </div>
-    <div class="lib-group-label">Oder einzeln w&auml;hlen</div>
-    <div class="lib-bausteins" id="libraryBausteins"></div>
-    <button class="btn-start" id="btnStart" disabled>Aufnahme starten</button>
-    <div class="lib-group-label" style="margin-top:22px">Werkzeuge</div>
     <button class="btn-tool" id="btnOpenWaffg">
       <span class="btn-tool-name">&#9878;&#65039; WaffG-Pr&uuml;fstand</span>
       <span class="btn-tool-sub">Straftat oder Ordnungswidrigkeit? &middot; Waffenrecht</span>
@@ -980,7 +989,7 @@
   <div style="width:80px"></div>
 </div>
 
-<script src="script.js?v=3.71"></script>
+<script src="script.js?v=3.77"></script>
 <script>if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js').catch(function(){});}</script>
 
 <!-- Bericht-Generierungs-Overlay -->
