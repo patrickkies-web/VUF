@@ -2010,11 +2010,18 @@ body {
 .karte-label {
   position: absolute; box-sizing: border-box; padding: .28em .5em;
   background: rgba(255,255,255,.78); color: #0f2033; font-weight: 600;
-  border-radius: .38em; line-height: 1.2; min-width: 26px;
+  border-radius: .38em; line-height: 1.2; min-width: 26px; text-transform: uppercase;
   box-shadow: 0 2px 12px rgba(0,0,0,.28); backdrop-filter: blur(1.5px); -webkit-backdrop-filter: blur(1.5px);
-  cursor: move; -webkit-user-select: none; user-select: none;
+  cursor: grab; -webkit-user-select: none; user-select: none;
   white-space: normal; word-break: break-word; outline: none; touch-action: none;
 }
+.karte-wh {
+  position: absolute; top: 50%; transform: translateY(-50%); width: 12px; height: 20px;
+  border-radius: 4px; background: #fff; border: 2px solid var(--accent); cursor: ew-resize;
+  touch-action: none; box-shadow: 0 1px 4px rgba(0,0,0,.35); opacity: 0; transition: opacity .12s;
+}
+.karte-wh-e { right: -8px; } .karte-wh-w { left: -8px; }
+.karte-label:hover .karte-wh, .karte-label.sel .karte-wh { opacity: 1; }
 .karte-label.sel { box-shadow: 0 0 0 2px var(--accent), 0 2px 12px rgba(0,0,0,.28); }
 .karte-label[contenteditable="true"] {
   cursor: text; -webkit-user-select: text; user-select: text;
@@ -2055,14 +2062,23 @@ body {
   box-shadow: 0 1px 5px rgba(0,0,0,.3);
 }
 .kc-rotate {
-  position: absolute; top: -32px; left: 50%; transform: translateX(-50%);
-  width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 2px solid var(--accent);
-  cursor: grab; touch-action: none; box-shadow: 0 1px 4px rgba(0,0,0,.3);
+  position: absolute; top: -34px; left: 50%; transform: translateX(-50%);
+  width: 24px; height: 24px; border-radius: 50%; background: #fff; border: 2px solid var(--accent);
+  color: var(--accent); cursor: grab; touch-action: none; box-shadow: 0 1px 4px rgba(0,0,0,.3);
+  font-size: 15px; font-weight: 700; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
   opacity: 0; transition: opacity .12s;
 }
 .kc-rotate::after {
-  content: ""; position: absolute; top: 13px; left: 50%; transform: translateX(-50%);
-  width: 2px; height: 18px; background: var(--accent);
+  content: ""; position: absolute; top: 22px; left: 50%; transform: translateX(-50%);
+  width: 2px; height: 12px; background: var(--accent);
+}
+.kg-move {
+  position: absolute; bottom: -34px; left: 50%; transform: translateX(-50%);
+  width: 24px; height: 24px; border-radius: 50%; background: #fff; border: 2px solid var(--accent);
+  cursor: grab; touch-action: none; box-shadow: 0 1px 4px rgba(0,0,0,.3);
+  font-size: 13px; line-height: 1; display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .12s;
 }
 .kg-eye {
   position: absolute; left: -9px; top: -9px; width: 20px; height: 20px; border-radius: 50%;
@@ -2072,9 +2088,22 @@ body {
 }
 .kg-eye.off { color: var(--muted, #889); border-color: var(--muted, #889); }
 .karte-gelaende:hover .kc-rotate, .karte-gelaende.sel .kc-rotate,
+.karte-gelaende:hover .kg-move, .karte-gelaende.sel .kg-move,
 .karte-gelaende:hover .karte-handle, .karte-gelaende.sel .karte-handle,
 .karte-gelaende:hover .kg-eye, .karte-gelaende.sel .kg-eye,
 .karte-gelaende:hover .karte-del, .karte-gelaende.sel .karte-del { opacity: 1; }
+/* Werkzeuge ein-/ausblenden */
+#karteStage.tools-hidden .karte-label,
+#karteStage.tools-hidden .karte-gelaende,
+#karteStage.tools-hidden .kg-num { display: none; }
+/* Toolbar: Ringfarben-Swatches + Mini-Buttons */
+.karte-swatches { display: inline-flex; gap: 4px; align-items: center; padding: 0 2px; }
+.karte-sw {
+  width: 20px; height: 20px; border-radius: 50%; cursor: pointer; padding: 0;
+  border: 2px solid rgba(0,0,0,.2); box-shadow: 0 1px 3px rgba(0,0,0,.25);
+}
+.karte-sw.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.karte-mini { padding: 8px 10px; font-weight: 700; }
 .pers-input {
   width: 100%; min-height: 200px; resize: vertical;
   background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px;

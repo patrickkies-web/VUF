@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Tools v3.85</title>
+  <title>Tools v3.86</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <meta name="theme-color" content="#0f2460">
   <link rel="icon" href="./icon-192.png">
@@ -15,7 +15,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Tools">
-  <link rel="stylesheet" href="style.css?v=3.85">
+  <link rel="stylesheet" href="style.css?v=3.86">
 </head>
 <body>
 
@@ -171,6 +171,15 @@
     <button class="karte-btn karte-toggle" id="btnKarteCrop" type="button" disabled>&#9635; Rahmen ziehen</button>
     <button class="karte-btn" id="btnKarteLabel" type="button" disabled>&#10133; Textfeld</button>
     <button class="karte-btn" id="btnKarteGelaende" type="button" disabled>&#129517; Gel&auml;ndetaufe</button>
+    <span class="karte-swatches" id="karteSwatches" title="Ringfarbe">
+      <button class="karte-sw" type="button" data-color="#1d4ed8" style="background:#1d4ed8"></button>
+      <button class="karte-sw" type="button" data-color="#dc2626" style="background:#dc2626"></button>
+      <button class="karte-sw on" type="button" data-color="#141e32" style="background:#141e32"></button>
+      <button class="karte-sw" type="button" data-color="#ffffff" style="background:#fff"></button>
+    </span>
+    <button class="karte-btn karte-mini" id="btnKarteNumMinus" type="button" title="Zahlen kleiner">A&minus;</button>
+    <button class="karte-btn karte-mini" id="btnKarteNumPlus" type="button" title="Zahlen gr&ouml;&szlig;er">A+</button>
+    <button class="karte-btn karte-toggle on" id="btnKarteTools" type="button" title="Werkzeuge ein-/ausblenden">&#128065; Werkzeuge</button>
     <button class="karte-btn" id="btnKarteExport" type="button" disabled>&#11015;&#65039; Ausschnitt speichern</button>
     <button class="karte-btn karte-btn-ghost" id="btnKarteClear" type="button" disabled>Zur&uuml;cksetzen</button>
   </div>
@@ -1021,7 +1030,7 @@
   <div style="width:80px"></div>
 </div>
 
-<script src="script.js?v=3.85"></script>
+<script src="script.js?v=3.86"></script>
 <script>if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js').catch(function(){});}</script>
 
 <!-- Bericht-Generierungs-Overlay -->
