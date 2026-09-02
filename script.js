@@ -6958,6 +6958,7 @@ function karteEls() {
   return {
     screen:  document.getElementById('screen-karte'),
     stage:   document.getElementById('karteStage'),
+    frame:   document.getElementById('karteFrame'),
     canvas:  document.getElementById('karteCanvas'),
     img:     document.getElementById('karteImg'),
     hint:    document.getElementById('karteHint'),
@@ -7004,7 +7005,7 @@ function karteSetNav(on) {
 }
 function karteFit() {
   var e = karteEls(), v = karteView;
-  var r = e.stage.getBoundingClientRect();
+  var r = e.frame.getBoundingClientRect();
   if (!v.natW || !v.natH) return;
   var s = Math.min(r.width / v.natW, r.height / v.natH) * 0.96;
   v.scale = s;
@@ -7301,8 +7302,8 @@ function karteExport() {
   var e = karteEls(), v = karteView;
   if (!karteHasImg || !v.natW) return;
   var full = karteCompose();
-  // Der sichtbare Rahmen (die Bühne) ist der Ausschnitt → in Bildkoordinaten.
-  var sr = e.stage.getBoundingClientRect();
+  // Der sichtbare Rahmen ist der Ausschnitt → in Bildkoordinaten.
+  var sr = e.frame.getBoundingClientRect();
   var nx = (-v.tx) / v.scale, ny = (-v.ty) / v.scale;
   var nw = sr.width / v.scale, nh = sr.height / v.scale;
   // Ausgabe in Naturauflösung des sichtbaren Ausschnitts.
@@ -7363,25 +7364,25 @@ function karteExport() {
   });
 
   // Zoom per Mausrad (nur im Navigieren-Modus).
-  e.stage.addEventListener('wheel', function(ev) {
+  e.frame.addEventListener('wheel', function(ev) {
     if (!karteNav || !karteHasImg) return;
     ev.preventDefault();
-    var sr = e.stage.getBoundingClientRect();
+    var sr = e.frame.getBoundingClientRect();
     karteZoomAt(ev.clientX - sr.left, ev.clientY - sr.top, ev.deltaY < 0 ? 1.12 : 1 / 1.12);
   }, { passive: false });
 
   // Verschieben per Ziehen (nur Navigieren-Modus); sonst Auswahl aufheben.
-  e.stage.addEventListener('pointerdown', function(ev) {
+  e.frame.addEventListener('pointerdown', function(ev) {
     if (karteNav && karteHasImg) {
       var v = karteView, sx = ev.clientX, sy = ev.clientY, tx0 = v.tx, ty0 = v.ty;
-      e.stage.setPointerCapture(ev.pointerId);
+      e.frame.setPointerCapture(ev.pointerId);
       var move = function(e2) { v.tx = tx0 + (e2.clientX - sx); v.ty = ty0 + (e2.clientY - sy); karteApplyTransform(); };
-      var up = function(e2) { e.stage.releasePointerCapture(e2.pointerId); e.stage.removeEventListener('pointermove', move); e.stage.removeEventListener('pointerup', up); };
-      e.stage.addEventListener('pointermove', move);
-      e.stage.addEventListener('pointerup', up);
+      var up = function(e2) { e.frame.releasePointerCapture(e2.pointerId); e.frame.removeEventListener('pointermove', move); e.frame.removeEventListener('pointerup', up); };
+      e.frame.addEventListener('pointermove', move);
+      e.frame.addEventListener('pointerup', up);
       return;
     }
-    if (ev.target === e.stage || ev.target === e.canvas || ev.target === e.img) karteSelect(null);
+    if (ev.target === e.frame || ev.target === e.canvas || ev.target === e.img) karteSelect(null);
   });
 
   window.addEventListener('resize', function() { if (karteHasImg) karteRelayout(); });
