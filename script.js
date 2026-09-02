@@ -7015,6 +7015,14 @@ function karteSelect(x) {
   if (x && x.el) x.el.classList.add('sel');
 }
 
+// Mitte des aktuell sichtbaren Rahmens in Bild-(Natur-)Bruchteilen + Rahmengröße.
+function karteVisibleCenter() {
+  var e = karteEls(), v = karteView;
+  var fw = e.frame.clientWidth, fh = e.frame.clientHeight;
+  var nx = (fw / 2 - v.tx) / v.scale, ny = (fh / 2 - v.ty) / v.scale;
+  return { fx: nx / v.natW, fy: ny / v.natH, fw: fw, fh: fh };
+}
+
 // ---- Navigation (Zoom / Pan) ----
 function karteSetNav(on) {
   karteNav = on;
@@ -7071,8 +7079,11 @@ function karteResize(l, handle, startEvt) {
   handle.addEventListener('pointerup', up);
 }
 function karteAddLabel(text) {
-  var e = karteEls();
-  var l = { el: null, xF: 0.4, yF: 0.45, wF: 0.2, fsF: 0.035 };
+  var e = karteEls(), v = karteView;
+  var c = karteVisibleCenter();
+  var wF = Math.max(0.04, (0.34 * c.fw / v.scale) / v.natW);   // ~34 % der Rahmenbreite
+  var fsF = Math.max(0.008, (16 / v.scale) / v.natH);          // ~16 px auf dem Bildschirm
+  var l = { el: null, xF: c.fx - wF / 2, yF: c.fy - fsF, wF: wF, fsF: fsF };
   var el = document.createElement('div');
   el.className = 'karte-label';
   el.textContent = text || 'Text';
@@ -7180,8 +7191,12 @@ function karteGelaendeDrag(g, startEvt) {
   g.el.addEventListener('pointerup', up);
 }
 function karteAddGelaende() {
-  var e = karteEls();
-  var g = { el: null, dial: null, nums: [], xF: 0.4, yF: 0.35, dF: 0.24, rot: 0, ringVisible: true };
+  var e = karteEls(), v = karteView;
+  var c = karteVisibleCenter();
+  var screenDiam = 0.45 * Math.min(c.fw, c.fh);               // ~45 % der kleineren Rahmenseite
+  var dF = Math.max(0.05, (screenDiam / v.scale) / v.natW);
+  var halfXF = dF / 2, halfYF = (dF * v.natW / 2) / v.natH;   // el ist quadratisch (dF*natW px)
+  var g = { el: null, dial: null, nums: [], xF: c.fx - halfXF, yF: c.fy - halfYF, dF: dF, rot: 0, ringVisible: true };
   var el = document.createElement('div'); el.className = 'karte-gelaende';
   var dial = document.createElement('div'); dial.className = 'kg-ring'; el.appendChild(dial);
   var rot = document.createElement('div'); rot.className = 'kc-rotate';
