@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Tools v3.78</title>
+  <title>Tools v3.79</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <meta name="theme-color" content="#0f2460">
   <link rel="icon" href="./icon-192.png">
@@ -15,7 +15,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Tools">
-  <link rel="stylesheet" href="style.css?v=3.78">
+  <link rel="stylesheet" href="style.css?v=3.79">
 </head>
 <body>
 
@@ -49,6 +49,10 @@
     <button class="btn-tool" id="btnOpenPers">
       <span class="btn-tool-name">&#128100;&#128663; Datensatz-Extraktor</span>
       <span class="btn-tool-sub">Personalien und/oder Kennzeichen einf&uuml;gen &rarr; kopierbarer Steckbrief</span>
+    </button>
+    <button class="btn-tool" id="btnOpenKarte">
+      <span class="btn-tool-name">&#128506;&#65039; Luftbild-Skizze</span>
+      <span class="btn-tool-sub">Kartenbild einf&uuml;gen &rarr; verschiebbare Textfelder auflegen (z.&nbsp;B. Stra&szlig;ennamen)</span>
     </button>
     <div class="start-disclaimer">
       <div class="disclaimer-row">
@@ -153,6 +157,38 @@
     <div id="persResult"></div>
     <div class="waffg-footer">
       Alle Daten bleiben ausschlie&szlig;lich im Arbeitsspeicher des Browsers &mdash; keine &Uuml;bertragung, keine Speicherung. Beim Neuladen sind sie weg.
+    </div>
+  </div>
+</div>
+
+<!-- Luftbild-/Kartenskizze (eigener Bereich) -->
+<div id="screen-karte">
+  <div class="waffg-topbar">
+    <button class="waffg-back" id="btnKarteBack">&larr; Zur&uuml;ck</button>
+    <div class="waffg-topbar-title">Luftbild &middot; Skizze</div>
+    <div class="waffg-topbar-note">nur im Browser</div>
+  </div>
+  <div class="waffg-wrap">
+    <div class="waffg-hero">
+      <div class="waffg-eyebrow">KARTE &middot; BESCHRIFTEN</div>
+      <div class="waffg-title">Luftbild-<br><strong>Skizze</strong></div>
+      <div class="waffg-sub">Kartenbild einf&uuml;gen (Strg&nbsp;+&nbsp;V, hierher ziehen oder &bdquo;Bild w&auml;hlen&ldquo;), dann per Knopf Textfelder auflegen &mdash; verschiebbar, in der Gr&ouml;&szlig;e ziehbar, halbtransparent. Zum Beispiel Stra&szlig;ennamen &uuml;ber das Bild legen.</div>
+    </div>
+    <div class="karte-toolbar">
+      <button class="karte-btn" id="btnKarteBild" type="button">&#128247; Bild w&auml;hlen</button>
+      <input type="file" id="karteFile" accept="image/*" hidden>
+      <button class="karte-btn" id="btnKarteLabel" type="button" disabled>&#10133; Textfeld</button>
+      <button class="karte-btn" id="btnKarteCompass" type="button" disabled>&#129517; Kompass</button>
+      <button class="karte-btn" id="btnKarteExport" type="button" disabled>&#11015;&#65039; Als Bild speichern</button>
+      <button class="karte-btn karte-btn-ghost" id="btnKarteClear" type="button" disabled>Zur&uuml;cksetzen</button>
+    </div>
+    <div class="karte-hint" id="karteHint">Kartenbild hier <strong>einf&uuml;gen</strong> (Strg&nbsp;+&nbsp;V), hierher ziehen oder &bdquo;Bild w&auml;hlen&ldquo;.</div>
+    <div class="karte-stage" id="karteStage" hidden>
+      <img id="karteImg" alt="Karte">
+    </div>
+    <div class="karte-tip" id="karteTip" hidden>Tipp: Textfeld ziehen zum Verschieben &middot; Doppeltippen zum Bearbeiten &middot; blaue Ecke zieht Gr&ouml;&szlig;e &middot; rotes &times; l&ouml;scht.</div>
+    <div class="waffg-footer">
+      Alles bleibt lokal im Browser &mdash; nichts wird hochgeladen. Beim Neuladen ist die Skizze weg.
     </div>
   </div>
 </div>
@@ -989,7 +1025,7 @@
   <div style="width:80px"></div>
 </div>
 
-<script src="script.js?v=3.78"></script>
+<script src="script.js?v=3.79"></script>
 <script>if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js').catch(function(){});}</script>
 
 <!-- Bericht-Generierungs-Overlay -->

@@ -1948,12 +1948,96 @@ body {
 .waffg-footer { margin-top: 24px; font-size: 12.5px; line-height: 1.55; color: var(--muted); border-top: 1px solid var(--border); padding-top: 14px; }
 
 /* ── Personalien-Extraktor (nutzt waffg-Design) ─────────────── */
-#screen-pers, #screen-kfz {
+#screen-pers, #screen-kfz, #screen-karte {
   display: none;
   position: fixed; inset: 0; z-index: 10000;
   background: var(--bg, #f4f5f8); overflow-y: auto;
 }
-#screen-pers.open, #screen-kfz.open { display: block; }
+#screen-pers.open, #screen-kfz.open, #screen-karte.open { display: block; }
+
+/* Luftbild-/Kartenskizze */
+.karte-toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.karte-btn {
+  font: inherit; font-size: 14px; font-weight: 600; padding: 9px 14px; border-radius: 9px;
+  border: 1px solid var(--border, #d7dbe3); background: var(--surface, #fff);
+  color: var(--accent); cursor: pointer;
+}
+.karte-btn:hover:not(:disabled) { border-color: var(--accent); background: var(--surface2, #f4f6fb); }
+.karte-btn:disabled { opacity: .45; cursor: not-allowed; }
+.karte-btn-ghost { color: var(--muted, #667); }
+.karte-hint {
+  margin: 14px 0; padding: 28px 18px; text-align: center; font-size: 14px;
+  border: 2px dashed var(--border, #cdd3de); border-radius: 12px;
+  color: var(--muted, #667); background: var(--surface, #fff);
+}
+.karte-hint.drag { border-color: var(--accent); background: var(--surface2, #eef2fb); color: var(--accent); }
+.karte-tip { margin: 10px 0 0; font-size: 12.5px; color: var(--muted, #667); }
+.karte-stage {
+  position: relative; display: inline-block; max-width: 100%; margin: 14px 0;
+  touch-action: none; -webkit-user-select: none; user-select: none;
+}
+.karte-stage img { display: block; max-width: 100%; height: auto; border-radius: 10px; }
+.karte-label {
+  position: absolute; box-sizing: border-box; padding: .28em .5em;
+  background: rgba(255,255,255,.78); color: #0f2033; font-weight: 600;
+  border-radius: .38em; line-height: 1.2; min-width: 26px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.28); backdrop-filter: blur(1.5px); -webkit-backdrop-filter: blur(1.5px);
+  cursor: move; -webkit-user-select: none; user-select: none;
+  white-space: normal; word-break: break-word; outline: none; touch-action: none;
+}
+.karte-label.sel { box-shadow: 0 0 0 2px var(--accent), 0 2px 12px rgba(0,0,0,.28); }
+.karte-label[contenteditable="true"] {
+  cursor: text; -webkit-user-select: text; user-select: text;
+  background: rgba(255,255,255,.94);
+  box-shadow: 0 0 0 2px var(--accent), 0 2px 12px rgba(0,0,0,.28);
+}
+.karte-handle {
+  position: absolute; right: -8px; bottom: -8px; width: 17px; height: 17px; border-radius: 50%;
+  background: var(--accent); border: 2px solid #fff; cursor: nwse-resize; touch-action: none;
+  box-shadow: 0 1px 4px rgba(0,0,0,.35); opacity: 0; transition: opacity .12s;
+}
+.karte-del {
+  position: absolute; right: -9px; top: -9px; width: 19px; height: 19px; border-radius: 50%;
+  background: #dc2626; color: #fff; border: 2px solid #fff; font-size: 12px; line-height: 1;
+  display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: none;
+  opacity: 0; transition: opacity .12s;
+}
+.karte-label:hover .karte-handle, .karte-label:hover .karte-del,
+.karte-label.sel .karte-handle, .karte-label.sel .karte-del { opacity: 1; }
+
+/* Kompass */
+.karte-compass {
+  position: absolute; box-sizing: border-box; cursor: move; touch-action: none;
+  -webkit-user-select: none; user-select: none;
+}
+.kc-dial {
+  position: absolute; inset: 0; border-radius: 50%;
+  border: 2.5px solid rgba(29,78,216,.9); background: rgba(255,255,255,.26);
+  box-shadow: 0 2px 12px rgba(0,0,0,.28); backdrop-filter: blur(1px); -webkit-backdrop-filter: blur(1px);
+}
+.kc-dial::before {
+  content: ""; position: absolute; top: -3px; left: 50%; transform: translateX(-50%);
+  border-left: 7px solid transparent; border-right: 7px solid transparent; border-bottom: 13px solid #dc2626;
+}
+.kc-num {
+  position: absolute; transform: translate(-50%, -50%); pointer-events: none;
+  font-weight: 700; color: #0f2033; background: rgba(255,255,255,.82);
+  border-radius: .35em; padding: 0 .3em; line-height: 1.25;
+  box-shadow: 0 1px 5px rgba(0,0,0,.25);
+}
+.kc-rotate {
+  position: absolute; top: -32px; left: 50%; transform: translateX(-50%);
+  width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 2px solid var(--accent);
+  cursor: grab; touch-action: none; box-shadow: 0 1px 4px rgba(0,0,0,.3);
+  opacity: 0; transition: opacity .12s;
+}
+.kc-rotate::after {
+  content: ""; position: absolute; top: 13px; left: 50%; transform: translateX(-50%);
+  width: 2px; height: 18px; background: var(--accent);
+}
+.karte-compass:hover .kc-rotate, .karte-compass.sel .kc-rotate,
+.karte-compass:hover .karte-handle, .karte-compass.sel .karte-handle,
+.karte-compass:hover .karte-del, .karte-compass.sel .karte-del { opacity: 1; }
 .pers-input {
   width: 100%; min-height: 200px; resize: vertical;
   background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px;

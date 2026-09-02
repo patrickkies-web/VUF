@@ -6939,3 +6939,407 @@ function renderDs() {
   if (ex) ex.addEventListener('click', dsExtractAll);
   dsEnsureField();
 })();
+
+// ── Luftbild-/Kartenskizze ──────────────────────────────────
+// Kartenbild einfügen und beschriftbare, verschieb- und skalierbare
+// Textfelder darüberlegen. Alles nur im Browser; Export als PNG.
+var karteLabels = [];          // { el, xF, yF, wF, fsF }
+var karteHasImg = false;
+var karteSel = null;
+
+function karteEls() {
+  return {
+    screen: document.getElementById('screen-karte'),
+    stage:  document.getElementById('karteStage'),
+    img:    document.getElementById('karteImg'),
+    hint:   document.getElementById('karteHint'),
+    tip:    document.getElementById('karteTip'),
+    file:   document.getElementById('karteFile'),
+    bLabel: document.getElementById('btnKarteLabel'),
+    bCompass:document.getElementById('btnKarteCompass'),
+    bExport:document.getElementById('btnKarteExport'),
+    bClear: document.getElementById('btnKarteClear')
+  };
+}
+function openKarte() { document.getElementById('screen-karte').classList.add('open'); window.scrollTo(0, 0); }
+function closeKarte() { document.getElementById('screen-karte').classList.remove('open'); }
+
+// Font-Größen (in px) aus den gespeicherten Bruchteilen neu berechnen.
+function karteRelayout() {
+  var e = karteEls();
+  var r = e.stage.getBoundingClientRect();
+  karteLabels.forEach(function(l) {
+    l.el.style.left = (l.xF * 100) + '%';
+    l.el.style.top = (l.yF * 100) + '%';
+    l.el.style.width = (l.wF * 100) + '%';
+    l.el.style.fontSize = Math.max(9, l.fsF * r.height) + 'px';
+  });
+  karteCompasses.forEach(karteCompassLayout);
+}
+
+function karteSelect(l) {
+  if (karteSel && karteSel.el) karteSel.el.classList.remove('sel');
+  karteSel = l;
+  if (l && l.el) l.el.classList.add('sel');
+}
+
+function karteDrag(l, startEvt) {
+  var e = karteEls();
+  var r = e.stage.getBoundingClientRect();
+  var sx = startEvt.clientX, sy = startEvt.clientY, x0 = l.xF, y0 = l.yF;
+  l.el.setPointerCapture(startEvt.pointerId);
+  function move(ev) {
+    var dx = (ev.clientX - sx) / r.width, dy = (ev.clientY - sy) / r.height;
+    l.xF = Math.min(0.99, Math.max(0, x0 + dx));
+    l.yF = Math.min(0.99, Math.max(0, y0 + dy));
+    l.el.style.left = (l.xF * 100) + '%';
+    l.el.style.top = (l.yF * 100) + '%';
+  }
+  function up(ev) { l.el.releasePointerCapture(ev.pointerId); l.el.removeEventListener('pointermove', move); l.el.removeEventListener('pointerup', up); }
+  l.el.addEventListener('pointermove', move);
+  l.el.addEventListener('pointerup', up);
+}
+
+function karteResize(l, handle, startEvt) {
+  startEvt.stopPropagation();
+  var e = karteEls();
+  var r = e.stage.getBoundingClientRect();
+  var sx = startEvt.clientX, sy = startEvt.clientY, w0 = l.wF, f0 = l.fsF;
+  handle.setPointerCapture(startEvt.pointerId);
+  function move(ev) {
+    var dx = (ev.clientX - sx) / r.width, dy = (ev.clientY - sy) / r.height;
+    l.wF = Math.min(1, Math.max(0.05, w0 + dx));
+    l.fsF = Math.min(0.25, Math.max(0.012, f0 + dy));
+    l.el.style.width = (l.wF * 100) + '%';
+    l.el.style.fontSize = Math.max(9, l.fsF * r.height) + 'px';
+  }
+  function up(ev) { handle.releasePointerCapture(ev.pointerId); handle.removeEventListener('pointermove', move); handle.removeEventListener('pointerup', up); }
+  handle.addEventListener('pointermove', move);
+  handle.addEventListener('pointerup', up);
+}
+
+function karteAddLabel(text) {
+  var e = karteEls();
+  var l = { el: null, xF: 0.36, yF: 0.45, wF: 0.28, fsF: 0.03 };
+  var el = document.createElement('div');
+  el.className = 'karte-label';
+  el.textContent = text || 'Text';
+  el.setAttribute('contenteditable', 'false');
+
+  var handle = document.createElement('div'); handle.className = 'karte-handle';
+  var del = document.createElement('div'); del.className = 'karte-del'; del.textContent = '×';
+  el.appendChild(handle); el.appendChild(del);
+  l.el = el;
+
+  // Verschieben (nicht während des Editierens, nicht auf Handle/Löschen).
+  el.addEventListener('pointerdown', function(ev) {
+    if (el.getAttribute('contenteditable') === 'true') return;
+    if (ev.target === handle || ev.target === del) return;
+    ev.preventDefault();
+    karteSelect(l);
+    karteDrag(l, ev);
+  });
+  // Bearbeiten per Doppelklick/Doppeltipp.
+  el.addEventListener('dblclick', function() {
+    el.setAttribute('contenteditable', 'true');
+    el.focus();
+    var range = document.createRange(); range.selectNodeContents(el);
+    var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+  });
+  el.addEventListener('blur', function() { el.setAttribute('contenteditable', 'false'); });
+  // Verhindert, dass beim Tippen die Handle/Del-Knoten mitgelesen werden:
+  el.addEventListener('keydown', function(ev) { if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); el.blur(); } });
+
+  handle.addEventListener('pointerdown', function(ev) { karteSelect(l); karteResize(l, handle, ev); });
+  del.addEventListener('pointerdown', function(ev) { ev.stopPropagation(); ev.preventDefault(); });
+  del.addEventListener('click', function(ev) {
+    ev.stopPropagation();
+    var i = karteLabels.indexOf(l);
+    if (i >= 0) karteLabels.splice(i, 1);
+    if (karteSel === l) karteSel = null;
+    el.remove();
+  });
+
+  e.stage.appendChild(el);
+  karteLabels.push(l);
+  karteRelayout();
+  karteSelect(l);
+  // gleich in den Bearbeitungsmodus
+  el.setAttribute('contenteditable', 'true'); el.focus();
+  var range = document.createRange(); range.selectNodeContents(el);
+  var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+}
+
+function karteSetImage(src) {
+  var e = karteEls();
+  e.img.onload = function() {
+    karteHasImg = true;
+    e.stage.hidden = false;
+    e.hint.style.display = 'none';
+    e.tip.hidden = false;
+    e.bLabel.disabled = false; e.bExport.disabled = false; e.bClear.disabled = false;
+    if (e.bCompass) e.bCompass.disabled = false;
+    karteRelayout();
+  };
+  e.img.src = src;
+}
+
+function karteReadFile(file) {
+  if (!file || !/^image\//.test(file.type)) return;
+  var fr = new FileReader();
+  fr.onload = function() { karteSetImage(fr.result); };
+  fr.readAsDataURL(file);
+}
+
+function karteClear() {
+  var e = karteEls();
+  karteLabels.forEach(function(l) { l.el.remove(); });
+  karteCompasses.forEach(function(c) { c.el.remove(); });
+  karteLabels = []; karteCompasses = []; karteSel = null; karteHasImg = false;
+  e.img.removeAttribute('src');
+  e.stage.hidden = true; e.tip.hidden = true;
+  e.hint.style.display = '';
+  e.bLabel.disabled = true; e.bExport.disabled = true; e.bClear.disabled = true;
+  if (e.file) e.file.value = '';
+}
+
+// Text in Zeilen umbrechen, die in die Breite passen (für Export).
+function karteWrap(ctx, text, maxW) {
+  var words = (text || '').split(/\s+/), lines = [], line = '';
+  for (var i = 0; i < words.length; i++) {
+    var test = line ? line + ' ' + words[i] : words[i];
+    if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = words[i]; }
+    else line = test;
+  }
+  if (line) lines.push(line);
+  if (!lines.length) lines.push('');
+  return lines;
+}
+function karteRoundRect(ctx, x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+// ── Kompass (drehbarer Ring mit 12/3/6/9, Zahlen bleiben aufrecht) ──
+var karteCompasses = [];   // { el, dial, nums:[], xF, yF, dF, rot }
+var KC_BASE = [0, 90, 180, 270], KC_LABELS = ['12', '3', '6', '9'];
+
+function karteCompassLayout(c) {
+  var e = karteEls();
+  var r = e.stage.getBoundingClientRect();
+  var d = c.dF * r.width;
+  c.el.style.width = d + 'px'; c.el.style.height = d + 'px';
+  c.el.style.left = (c.xF * 100) + '%'; c.el.style.top = (c.yF * 100) + '%';
+  c.dial.style.transform = 'rotate(' + c.rot + 'deg)';
+  karteCompassNums(c, d);
+}
+function karteCompassNums(c, d) {
+  var fs = Math.max(10, d * 0.10);
+  var rad = d / 2 * 0.80;
+  c.nums.forEach(function(n, i) {
+    var ang = (KC_BASE[i] + c.rot) * Math.PI / 180;
+    n.style.left = (d / 2 + rad * Math.sin(ang)) + 'px';
+    n.style.top = (d / 2 - rad * Math.cos(ang)) + 'px';
+    n.style.fontSize = fs + 'px';
+  });
+}
+function karteCompassResize(c, handle, startEvt) {
+  startEvt.stopPropagation();
+  var e = karteEls();
+  var r = e.stage.getBoundingClientRect();
+  var sx = startEvt.clientX, d0 = c.dF;
+  handle.setPointerCapture(startEvt.pointerId);
+  function move(ev) {
+    var dx = (ev.clientX - sx) / r.width;
+    c.dF = Math.min(1.2, Math.max(0.08, d0 + dx));
+    karteCompassLayout(c);
+  }
+  function up(ev) { handle.releasePointerCapture(ev.pointerId); handle.removeEventListener('pointermove', move); handle.removeEventListener('pointerup', up); }
+  handle.addEventListener('pointermove', move);
+  handle.addEventListener('pointerup', up);
+}
+function karteCompassRotate(c, knob, startEvt) {
+  startEvt.stopPropagation();
+  knob.setPointerCapture(startEvt.pointerId);
+  function move(ev) {
+    var rect = c.el.getBoundingClientRect();
+    var cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+    c.rot = Math.atan2(ev.clientX - cx, -(ev.clientY - cy)) * 180 / Math.PI;
+    c.dial.style.transform = 'rotate(' + c.rot + 'deg)';
+    karteCompassNums(c, rect.width);
+  }
+  function up(ev) { knob.releasePointerCapture(ev.pointerId); knob.removeEventListener('pointermove', move); knob.removeEventListener('pointerup', up); }
+  knob.addEventListener('pointermove', move);
+  knob.addEventListener('pointerup', up);
+}
+function karteCompassDrag(c, startEvt) {
+  var e = karteEls();
+  var r = e.stage.getBoundingClientRect();
+  var sx = startEvt.clientX, sy = startEvt.clientY, x0 = c.xF, y0 = c.yF;
+  c.el.setPointerCapture(startEvt.pointerId);
+  function move(ev) {
+    c.xF = Math.min(0.99, Math.max(-0.1, x0 + (ev.clientX - sx) / r.width));
+    c.yF = Math.min(0.99, Math.max(-0.1, y0 + (ev.clientY - sy) / r.height));
+    c.el.style.left = (c.xF * 100) + '%'; c.el.style.top = (c.yF * 100) + '%';
+  }
+  function up(ev) { c.el.releasePointerCapture(ev.pointerId); c.el.removeEventListener('pointermove', move); c.el.removeEventListener('pointerup', up); }
+  c.el.addEventListener('pointermove', move);
+  c.el.addEventListener('pointerup', up);
+}
+function karteAddCompass() {
+  var e = karteEls();
+  var c = { el: null, dial: null, nums: [], xF: 0.38, yF: 0.32, dF: 0.30, rot: 0 };
+  var el = document.createElement('div'); el.className = 'karte-compass';
+  var dial = document.createElement('div'); dial.className = 'kc-dial'; el.appendChild(dial);
+  for (var i = 0; i < 4; i++) {
+    var n = document.createElement('div'); n.className = 'kc-num'; n.textContent = KC_LABELS[i];
+    el.appendChild(n); c.nums.push(n);
+  }
+  var rot = document.createElement('div'); rot.className = 'kc-rotate';
+  var handle = document.createElement('div'); handle.className = 'karte-handle';
+  var del = document.createElement('div'); del.className = 'karte-del'; del.textContent = '×';
+  el.appendChild(rot); el.appendChild(handle); el.appendChild(del);
+  c.el = el; c.dial = dial;
+
+  el.addEventListener('pointerdown', function(ev) {
+    if (ev.target === rot || ev.target === handle || ev.target === del) return;
+    ev.preventDefault(); karteSelect(c); karteCompassDrag(c, ev);
+  });
+  rot.addEventListener('pointerdown', function(ev) { karteSelect(c); karteCompassRotate(c, rot, ev); });
+  handle.addEventListener('pointerdown', function(ev) { karteSelect(c); karteCompassResize(c, handle, ev); });
+  del.addEventListener('pointerdown', function(ev) { ev.stopPropagation(); ev.preventDefault(); });
+  del.addEventListener('click', function(ev) {
+    ev.stopPropagation();
+    var i = karteCompasses.indexOf(c);
+    if (i >= 0) karteCompasses.splice(i, 1);
+    if (karteSel === c) karteSel = null;
+    el.remove();
+  });
+
+  e.stage.appendChild(el);
+  karteCompasses.push(c);
+  karteCompassLayout(c);
+  karteSelect(c);
+}
+
+function karteExport() {
+  var e = karteEls();
+  var img = e.img;
+  if (!img.naturalWidth) return;
+  var W = img.naturalWidth, H = img.naturalHeight;
+  var canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  var ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, W, H);
+  karteLabels.forEach(function(l) {
+    var x = l.xF * W, y = l.yF * H, w = l.wF * W;
+    var fs = l.fsF * H;
+    var padX = fs * 0.42, padY = fs * 0.3;
+    ctx.font = '600 ' + fs + 'px system-ui, "Segoe UI", Arial, sans-serif';
+    var lines = karteWrap(ctx, l.el.textContent, w - 2 * padX);
+    var lineH = fs * 1.2;
+    var h = lines.length * lineH + 2 * padY;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.28)'; ctx.shadowBlur = fs * 0.55; ctx.shadowOffsetY = fs * 0.1;
+    ctx.globalAlpha = 0.82; ctx.fillStyle = '#ffffff';
+    karteRoundRect(ctx, x, y, w, h, fs * 0.38); ctx.fill();
+    ctx.restore();
+    ctx.globalAlpha = 1; ctx.fillStyle = '#0f2033'; ctx.textBaseline = 'top';
+    ctx.font = '600 ' + fs + 'px system-ui, "Segoe UI", Arial, sans-serif';
+    lines.forEach(function(ln, i) { ctx.fillText(ln, x + padX, y + padY + i * lineH); });
+  });
+  karteCompasses.forEach(function(c) {
+    var d = c.dF * W, cx = c.xF * W + d / 2, cy = c.yF * H + d / 2, rad = d / 2;
+    ctx.save();
+    ctx.lineWidth = Math.max(2, d * 0.014); ctx.strokeStyle = 'rgba(29,78,216,.9)';
+    ctx.fillStyle = 'rgba(255,255,255,.26)';
+    ctx.beginPath(); ctx.arc(cx, cy, rad, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+    // Nord-Markierung (dreht mit)
+    var a = c.rot * Math.PI / 180;
+    var tipX = cx + Math.sin(a) * rad, tipY = cy - Math.cos(a) * rad;
+    var mb = d * 0.05;
+    var pX = cx + Math.sin(a) * (rad - mb * 1.6), pY = cy - Math.cos(a) * (rad - mb * 1.6);
+    var perpX = Math.cos(a), perpY = Math.sin(a);
+    ctx.fillStyle = '#dc2626'; ctx.beginPath();
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(pX + perpX * mb, pY + perpY * mb);
+    ctx.lineTo(pX - perpX * mb, pY - perpY * mb);
+    ctx.closePath(); ctx.fill();
+    // Zahlen (immer aufrecht)
+    var fsc = d * 0.10, nrad = rad * 0.80;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (var i = 0; i < 4; i++) {
+      var na = (KC_BASE[i] + c.rot) * Math.PI / 180;
+      var nx = cx + Math.sin(na) * nrad, ny = cy - Math.cos(na) * nrad;
+      ctx.font = '700 ' + fsc + 'px system-ui, "Segoe UI", Arial, sans-serif';
+      var tw = ctx.measureText(KC_LABELS[i]).width;
+      ctx.globalAlpha = 0.82; ctx.fillStyle = '#ffffff';
+      karteRoundRect(ctx, nx - tw / 2 - fsc * 0.3, ny - fsc * 0.62, tw + fsc * 0.6, fsc * 1.24, fsc * 0.3); ctx.fill();
+      ctx.globalAlpha = 1; ctx.fillStyle = '#0f2033';
+      ctx.fillText(KC_LABELS[i], nx, ny);
+    }
+    ctx.restore();
+  });
+  ctx.textAlign = 'start';
+  canvas.toBlob(function(blob) {
+    if (!blob) return;
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'luftbildskizze.png';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function() { URL.revokeObjectURL(url); }, 4000);
+  }, 'image/png');
+}
+
+(function() {
+  var e = karteEls();
+  var ob = document.getElementById('btnOpenKarte');
+  if (ob) ob.addEventListener('click', openKarte);
+  var bb = document.getElementById('btnKarteBack');
+  if (bb) bb.addEventListener('click', closeKarte);
+  if (!e.stage) return;
+
+  document.getElementById('btnKarteBild').addEventListener('click', function() { e.file.click(); });
+  e.file.addEventListener('change', function() { if (this.files && this.files[0]) karteReadFile(this.files[0]); });
+  e.bLabel.addEventListener('click', function() { karteAddLabel('Straßenname'); });
+  if (e.bCompass) e.bCompass.addEventListener('click', karteAddCompass);
+  e.bExport.addEventListener('click', karteExport);
+  e.bClear.addEventListener('click', karteClear);
+
+  // Einfügen aus der Zwischenablage (nur wenn dieser Bereich offen ist).
+  document.addEventListener('paste', function(ev) {
+    if (!e.screen.classList.contains('open')) return;
+    var items = (ev.clipboardData && ev.clipboardData.items) || [];
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].type && items[i].type.indexOf('image') === 0) {
+        var f = items[i].getAsFile();
+        if (f) { karteReadFile(f); ev.preventDefault(); break; }
+      }
+    }
+  });
+
+  // Drag & Drop aufs Hint-Feld / die Bühne.
+  ['dragenter', 'dragover'].forEach(function(t) {
+    e.hint.addEventListener(t, function(ev) { ev.preventDefault(); e.hint.classList.add('drag'); });
+  });
+  ['dragleave', 'drop'].forEach(function(t) {
+    e.hint.addEventListener(t, function(ev) { ev.preventDefault(); e.hint.classList.remove('drag'); });
+  });
+  e.hint.addEventListener('drop', function(ev) {
+    var dt = ev.dataTransfer;
+    if (dt && dt.files && dt.files[0]) karteReadFile(dt.files[0]);
+  });
+
+  // Klick neben ein Label hebt die Auswahl auf.
+  e.stage.addEventListener('pointerdown', function(ev) {
+    if (ev.target === e.stage || ev.target === e.img) karteSelect(null);
+  });
+
+  window.addEventListener('resize', function() { if (karteHasImg) karteRelayout(); });
+})();
