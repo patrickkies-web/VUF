@@ -1976,12 +1976,12 @@ body {
 .karte-btn-ghost { color: var(--muted, #667); }
 .karte-toggle.on { background: var(--accent); color: #fff; border-color: var(--accent); }
 .karte-stage {
-  flex: 1 1 auto; display: flex; padding: 14px; background: #12161c;
+  flex: 1 1 auto; position: relative; overflow: hidden; background: #12161c;
   -webkit-user-select: none; user-select: none;
 }
 /* Sichtbarer Rahmen = aktiver Bearbeitungs-/Export-Bereich (leicht transparenter Rand). */
 .karte-frame {
-  flex: 1 1 auto; position: relative; overflow: hidden;
+  position: absolute; inset: 14px; overflow: hidden;
   background: #0d1117; border: 2px solid rgba(255,255,255,.4); border-radius: 12px;
   box-shadow: 0 0 0 1px rgba(0,0,0,.4), 0 8px 30px rgba(0,0,0,.35);
   touch-action: none;
@@ -1998,7 +1998,15 @@ body {
 .karte-stage.has-img .karte-hint { display: none; }
 .karte-hint.drag { border-color: var(--accent); background: rgba(29,78,216,.18); color: #fff; }
 #karteStage.navigating .karte-label,
-#karteStage.navigating .karte-compass { pointer-events: none; }
+#karteStage.navigating .karte-gelaende { pointer-events: none; }
+/* Rahmen-Ziehen-Overlay */
+.karte-draw { position: absolute; inset: 0; z-index: 5; cursor: crosshair; background: rgba(0,0,0,.25); }
+.karte-draw-rect { position: absolute; display: none; border: 2px dashed #fff; background: rgba(29,78,216,.15); box-shadow: 0 0 0 9999px rgba(0,0,0,.35); }
+.karte-draw-hint {
+  position: absolute; left: 50%; top: 16px; transform: translateX(-50%);
+  background: var(--accent); color: #fff; font-size: 13px; font-weight: 600;
+  padding: 6px 12px; border-radius: 8px; pointer-events: none; white-space: nowrap;
+}
 .karte-label {
   position: absolute; box-sizing: border-box; padding: .28em .5em;
   background: rgba(255,255,255,.78); color: #0f2033; font-weight: 600;
@@ -2027,25 +2035,24 @@ body {
 .karte-label:hover .karte-handle, .karte-label:hover .karte-del,
 .karte-label.sel .karte-handle, .karte-label.sel .karte-del { opacity: 1; }
 
-/* Kompass */
-.karte-compass {
+/* Geländetaufe (transparenter Ring; Zahlen liegen in der Rahmen-Ebene) */
+.karte-gelaende {
   position: absolute; box-sizing: border-box; cursor: move; touch-action: none;
   -webkit-user-select: none; user-select: none;
 }
-.kc-dial {
+.kg-ring {
   position: absolute; inset: 0; border-radius: 50%;
-  border: 2.5px solid rgba(29,78,216,.9); background: rgba(255,255,255,.26);
-  box-shadow: 0 2px 12px rgba(0,0,0,.28); backdrop-filter: blur(1px); -webkit-backdrop-filter: blur(1px);
+  border: 2.5px solid rgba(20,30,50,.9); background: transparent;
 }
-.kc-dial::before {
+.kg-ring::before {
   content: ""; position: absolute; top: -3px; left: 50%; transform: translateX(-50%);
   border-left: 7px solid transparent; border-right: 7px solid transparent; border-bottom: 13px solid #dc2626;
 }
-.kc-num {
-  position: absolute; transform: translate(-50%, -50%); pointer-events: none;
-  font-weight: 700; color: #0f2033; background: rgba(255,255,255,.82);
-  border-radius: .35em; padding: 0 .3em; line-height: 1.25;
-  box-shadow: 0 1px 5px rgba(0,0,0,.25);
+.kg-num {
+  position: absolute; transform: translate(-50%, -50%); pointer-events: none; z-index: 4;
+  font-weight: 700; color: #0f2033; background: rgba(255,255,255,.85);
+  border-radius: .35em; padding: 0 .32em; line-height: 1.3;
+  box-shadow: 0 1px 5px rgba(0,0,0,.3);
 }
 .kc-rotate {
   position: absolute; top: -32px; left: 50%; transform: translateX(-50%);
@@ -2057,9 +2064,17 @@ body {
   content: ""; position: absolute; top: 13px; left: 50%; transform: translateX(-50%);
   width: 2px; height: 18px; background: var(--accent);
 }
-.karte-compass:hover .kc-rotate, .karte-compass.sel .kc-rotate,
-.karte-compass:hover .karte-handle, .karte-compass.sel .karte-handle,
-.karte-compass:hover .karte-del, .karte-compass.sel .karte-del { opacity: 1; }
+.kg-eye {
+  position: absolute; left: -9px; top: -9px; width: 20px; height: 20px; border-radius: 50%;
+  background: #fff; border: 2px solid var(--accent); color: var(--accent); cursor: pointer; touch-action: none;
+  font-size: 12px; line-height: 1; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 1px 4px rgba(0,0,0,.3); opacity: 0; transition: opacity .12s;
+}
+.kg-eye.off { color: var(--muted, #889); border-color: var(--muted, #889); }
+.karte-gelaende:hover .kc-rotate, .karte-gelaende.sel .kc-rotate,
+.karte-gelaende:hover .karte-handle, .karte-gelaende.sel .karte-handle,
+.karte-gelaende:hover .kg-eye, .karte-gelaende.sel .kg-eye,
+.karte-gelaende:hover .karte-del, .karte-gelaende.sel .karte-del { opacity: 1; }
 .pers-input {
   width: 100%; min-height: 200px; resize: vertical;
   background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px;

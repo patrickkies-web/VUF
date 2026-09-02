@@ -6947,11 +6947,13 @@ function renderDs() {
 // Beschriftungen (Textfelder) und Kompasse liegen im Bild-Layer und zoomen mit.
 // Export schneidet auf den Rahmen zu (PNG, volle Auflösung).
 var karteLabels = [];        // { el, xF, yF, wF, fsF }
-var karteCompasses = [];     // { el, dial, nums:[], xF, yF, dF, rot }
+var karteGelaendes = [];     // { el, dial, marker, nums:[], xF, yF, dF, rot, ringVisible }
 var karteSel = null;
 var karteHasImg = false;
 var karteNav = false;        // Navigieren-Toggle (Zoom/Verschieben)
+var karteDrawMode = false;   // Rahmen-Ziehen-Modus
 var karteView = { scale: 1, tx: 0, ty: 0, natW: 0, natH: 0 };
+var karteFrame = { x: 14, y: 14, w: 100, h: 100 };  // Rahmen-Geometrie (Bühnen-Koordinaten)
 var KC_BASE = [0, 90, 180, 270], KC_LABELS = ['12', '3', '6', '9'];
 
 function karteEls() {
@@ -6962,10 +6964,13 @@ function karteEls() {
     canvas:  document.getElementById('karteCanvas'),
     img:     document.getElementById('karteImg'),
     hint:    document.getElementById('karteHint'),
+    draw:    document.getElementById('karteDraw'),
+    drawRect:document.getElementById('karteDrawRect'),
     file:    document.getElementById('karteFile'),
     navBtn:  document.getElementById('btnKarteNav'),
+    bCrop:   document.getElementById('btnKarteCrop'),
     bLabel:  document.getElementById('btnKarteLabel'),
-    bCompass:document.getElementById('btnKarteCompass'),
+    bGelaende:document.getElementById('btnKarteGelaende'),
     bExport: document.getElementById('btnKarteExport'),
     bClear:  document.getElementById('btnKarteClear')
   };
@@ -6976,9 +6981,23 @@ function closeKarte() { document.getElementById('screen-karte').classList.remove
 function karteApplyTransform() {
   var e = karteEls();
   e.canvas.style.transform = 'translate(' + karteView.tx + 'px,' + karteView.ty + 'px) scale(' + karteView.scale + ')';
+  karteGelaendes.forEach(karteGelaendeNums);
+}
+function karteApplyFrameRect() {
+  var e = karteEls();
+  e.frame.style.left = karteFrame.x + 'px';
+  e.frame.style.top = karteFrame.y + 'px';
+  e.frame.style.width = karteFrame.w + 'px';
+  e.frame.style.height = karteFrame.h + 'px';
+}
+function karteFrameFull() {
+  var e = karteEls();
+  var m = 14;
+  karteFrame = { x: m, y: m, w: Math.max(20, e.stage.clientWidth - 2 * m), h: Math.max(20, e.stage.clientHeight - 2 * m) };
+  karteApplyFrameRect();
 }
 
-// Beschriftungs-/Kompass-Geometrie in Bild-(Natur-)Koordinaten setzen.
+// Beschriftungs-/Geländetaufe-Geometrie in Bild-(Natur-)Koordinaten setzen.
 function karteRelayout() {
   var v = karteView;
   karteLabels.forEach(function(l) {
@@ -6987,7 +7006,7 @@ function karteRelayout() {
     l.el.style.width = (l.wF * 100) + '%';
     l.el.style.fontSize = Math.max(6, l.fsF * v.natH) + 'px';
   });
-  karteCompasses.forEach(karteCompassLayout);
+  karteGelaendes.forEach(karteGelaendeLayout);
 }
 
 function karteSelect(x) {
@@ -7094,93 +7113,113 @@ function karteAddLabel(text) {
   var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
 }
 
-// ---- Kompass ----
-function karteCompassLayout(c) {
-  var d = c.dF * karteView.natW;
-  c.el.style.width = d + 'px'; c.el.style.height = d + 'px';
-  c.el.style.left = (c.xF * 100) + '%'; c.el.style.top = (c.yF * 100) + '%';
-  c.dial.style.transform = 'rotate(' + c.rot + 'deg)';
-  karteCompassNums(c, d);
+// ---- Geländetaufe (transparenter Ring mit 12/3/6/9; Zahlen bleiben im Rahmen) ----
+function karteGelaendeLayout(g) {
+  var d = g.dF * karteView.natW;
+  g.el.style.width = d + 'px'; g.el.style.height = d + 'px';
+  g.el.style.left = (g.xF * 100) + '%'; g.el.style.top = (g.yF * 100) + '%';
+  g.dial.style.transform = 'rotate(' + g.rot + 'deg)';
+  g.dial.style.display = g.ringVisible ? '' : 'none';
+  karteGelaendeNums(g);
 }
-function karteCompassNums(c, d) {
-  var fs = Math.max(8, d * 0.10), rad = d / 2 * 0.80;
-  c.nums.forEach(function(n, i) {
-    var ang = (KC_BASE[i] + c.rot) * Math.PI / 180;
-    n.style.left = (d / 2 + rad * Math.sin(ang)) + 'px';
-    n.style.top = (d / 2 - rad * Math.cos(ang)) + 'px';
-    n.style.fontSize = fs + 'px';
+// Zahlen liegen in der Rahmen-Ebene (Bildschirm) und werden IN den Rahmen geklemmt.
+function karteGelaendeNums(g) {
+  var v = karteView, e = karteEls();
+  var fw = e.frame.clientWidth, fh = e.frame.clientHeight;
+  var d = g.dF * v.natW;
+  var cxImg = g.xF * v.natW + d / 2, cyImg = g.yF * v.natH + d / 2;
+  var scx = cxImg * v.scale + v.tx, scy = cyImg * v.scale + v.ty;   // Mittelpunkt (Bildschirm, im Rahmen)
+  var radScreen = (d / 2) * 0.86 * v.scale;
+  var fs = 15, pad = fs + 6;
+  g.nums.forEach(function(n, i) {
+    var ang = (KC_BASE[i] + g.rot) * Math.PI / 180;
+    var x = scx + radScreen * Math.sin(ang);
+    var y = scy - radScreen * Math.cos(ang);
+    x = Math.min(fw - pad, Math.max(pad, x));
+    y = Math.min(fh - pad, Math.max(pad, y));
+    n.style.left = x + 'px'; n.style.top = y + 'px'; n.style.fontSize = fs + 'px';
   });
 }
-function karteCompassResize(c, handle, startEvt) {
+function karteGelaendeResize(g, handle, startEvt) {
   startEvt.stopPropagation();
-  var v = karteView, sx = startEvt.clientX, d0 = c.dF;
+  var v = karteView, sx = startEvt.clientX, d0 = g.dF;
   handle.setPointerCapture(startEvt.pointerId);
   function move(ev) {
-    c.dF = Math.min(2, Math.max(0.05, d0 + (ev.clientX - sx) / v.scale / v.natW));
-    karteCompassLayout(c);
+    g.dF = Math.min(3, Math.max(0.05, d0 + (ev.clientX - sx) / v.scale / v.natW));
+    karteGelaendeLayout(g);
   }
   function up(ev) { handle.releasePointerCapture(ev.pointerId); handle.removeEventListener('pointermove', move); handle.removeEventListener('pointerup', up); }
   handle.addEventListener('pointermove', move);
   handle.addEventListener('pointerup', up);
 }
-function karteCompassRotate(c, knob, startEvt) {
+function karteGelaendeRotate(g, knob, startEvt) {
   startEvt.stopPropagation();
   knob.setPointerCapture(startEvt.pointerId);
   function move(ev) {
-    var rect = c.el.getBoundingClientRect();
+    var rect = g.el.getBoundingClientRect();
     var cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
-    c.rot = Math.atan2(ev.clientX - cx, -(ev.clientY - cy)) * 180 / Math.PI;
-    c.dial.style.transform = 'rotate(' + c.rot + 'deg)';
-    karteCompassNums(c, rect.width / karteView.scale);
+    g.rot = Math.atan2(ev.clientX - cx, -(ev.clientY - cy)) * 180 / Math.PI;
+    g.dial.style.transform = 'rotate(' + g.rot + 'deg)';
+    karteGelaendeNums(g);
   }
   function up(ev) { knob.releasePointerCapture(ev.pointerId); knob.removeEventListener('pointermove', move); knob.removeEventListener('pointerup', up); }
   knob.addEventListener('pointermove', move);
   knob.addEventListener('pointerup', up);
 }
-function karteCompassDrag(c, startEvt) {
-  var v = karteView, sx = startEvt.clientX, sy = startEvt.clientY, x0 = c.xF, y0 = c.yF;
-  c.el.setPointerCapture(startEvt.pointerId);
+function karteGelaendeDrag(g, startEvt) {
+  var v = karteView, sx = startEvt.clientX, sy = startEvt.clientY, x0 = g.xF, y0 = g.yF;
+  g.el.setPointerCapture(startEvt.pointerId);
   function move(ev) {
-    c.xF = Math.min(1, Math.max(-0.2, x0 + (ev.clientX - sx) / v.scale / v.natW));
-    c.yF = Math.min(1, Math.max(-0.2, y0 + (ev.clientY - sy) / v.scale / v.natH));
-    c.el.style.left = (c.xF * 100) + '%'; c.el.style.top = (c.yF * 100) + '%';
+    g.xF = x0 + (ev.clientX - sx) / v.scale / v.natW;
+    g.yF = y0 + (ev.clientY - sy) / v.scale / v.natH;
+    g.el.style.left = (g.xF * 100) + '%'; g.el.style.top = (g.yF * 100) + '%';
+    karteGelaendeNums(g);
   }
-  function up(ev) { c.el.releasePointerCapture(ev.pointerId); c.el.removeEventListener('pointermove', move); c.el.removeEventListener('pointerup', up); }
-  c.el.addEventListener('pointermove', move);
-  c.el.addEventListener('pointerup', up);
+  function up(ev) { g.el.releasePointerCapture(ev.pointerId); g.el.removeEventListener('pointermove', move); g.el.removeEventListener('pointerup', up); }
+  g.el.addEventListener('pointermove', move);
+  g.el.addEventListener('pointerup', up);
 }
-function karteAddCompass() {
+function karteAddGelaende() {
   var e = karteEls();
-  var c = { el: null, dial: null, nums: [], xF: 0.4, yF: 0.35, dF: 0.22, rot: 0 };
-  var el = document.createElement('div'); el.className = 'karte-compass';
-  var dial = document.createElement('div'); dial.className = 'kc-dial'; el.appendChild(dial);
-  for (var i = 0; i < 4; i++) {
-    var n = document.createElement('div'); n.className = 'kc-num'; n.textContent = KC_LABELS[i];
-    el.appendChild(n); c.nums.push(n);
-  }
+  var g = { el: null, dial: null, nums: [], xF: 0.4, yF: 0.35, dF: 0.24, rot: 0, ringVisible: true };
+  var el = document.createElement('div'); el.className = 'karte-gelaende';
+  var dial = document.createElement('div'); dial.className = 'kg-ring'; el.appendChild(dial);
   var rot = document.createElement('div'); rot.className = 'kc-rotate';
   var handle = document.createElement('div'); handle.className = 'karte-handle';
+  var eye = document.createElement('div'); eye.className = 'kg-eye'; eye.title = 'Kreis ein-/ausblenden'; eye.textContent = '◎';
   var del = document.createElement('div'); del.className = 'karte-del'; del.textContent = '×';
-  el.appendChild(rot); el.appendChild(handle); el.appendChild(del);
-  c.el = el; c.dial = dial;
+  el.appendChild(rot); el.appendChild(handle); el.appendChild(eye); el.appendChild(del);
+  g.el = el; g.dial = dial;
+  // Zahlen in der Rahmen-Ebene (bleiben im Rahmen).
+  for (var i = 0; i < 4; i++) {
+    var n = document.createElement('div'); n.className = 'kg-num'; n.textContent = KC_LABELS[i];
+    e.frame.appendChild(n); g.nums.push(n);
+  }
 
   el.addEventListener('pointerdown', function(ev) {
     if (karteNav) return;
-    if (ev.target === rot || ev.target === handle || ev.target === del) return;
-    ev.preventDefault(); ev.stopPropagation(); karteSelect(c); karteCompassDrag(c, ev);
+    if (ev.target === rot || ev.target === handle || ev.target === del || ev.target === eye) return;
+    ev.preventDefault(); ev.stopPropagation(); karteSelect(g); karteGelaendeDrag(g, ev);
   });
-  rot.addEventListener('pointerdown', function(ev) { if (karteNav) return; ev.stopPropagation(); karteSelect(c); karteCompassRotate(c, rot, ev); });
-  handle.addEventListener('pointerdown', function(ev) { if (karteNav) return; ev.stopPropagation(); karteSelect(c); karteCompassResize(c, handle, ev); });
+  rot.addEventListener('pointerdown', function(ev) { if (karteNav) return; ev.stopPropagation(); karteSelect(g); karteGelaendeRotate(g, rot, ev); });
+  handle.addEventListener('pointerdown', function(ev) { if (karteNav) return; ev.stopPropagation(); karteSelect(g); karteGelaendeResize(g, handle, ev); });
+  eye.addEventListener('pointerdown', function(ev) { ev.stopPropagation(); ev.preventDefault(); });
+  eye.addEventListener('click', function(ev) {
+    ev.stopPropagation(); g.ringVisible = !g.ringVisible;
+    g.dial.style.display = g.ringVisible ? '' : 'none';
+    eye.classList.toggle('off', !g.ringVisible);
+  });
   del.addEventListener('pointerdown', function(ev) { ev.stopPropagation(); ev.preventDefault(); });
   del.addEventListener('click', function(ev) {
     ev.stopPropagation();
-    var i = karteCompasses.indexOf(c); if (i >= 0) karteCompasses.splice(i, 1);
-    if (karteSel === c) karteSel = null; el.remove();
+    var i = karteGelaendes.indexOf(g); if (i >= 0) karteGelaendes.splice(i, 1);
+    if (karteSel === g) karteSel = null;
+    el.remove(); g.nums.forEach(function(n) { n.remove(); });
   });
 
   e.canvas.appendChild(el);
-  karteCompasses.push(c);
-  karteCompassLayout(c); karteSelect(c);
+  karteGelaendes.push(g);
+  karteGelaendeLayout(g); karteSelect(g);
 }
 
 // ---- Bild laden ----
@@ -7194,9 +7233,10 @@ function karteSetImage(src) {
     e.stage.classList.add('has-img');
     if (e.hint) e.hint.hidden = true;
     e.bLabel.disabled = false; e.bExport.disabled = false; e.bClear.disabled = false;
-    if (e.bCompass) e.bCompass.disabled = false;
+    if (e.bGelaende) e.bGelaende.disabled = false;
+    if (e.bCrop) e.bCrop.disabled = false;
     if (e.navBtn) e.navBtn.disabled = false;
-    karteFit(); karteRelayout();
+    karteFrameFull(); karteFit(); karteRelayout();
   };
   e.img.src = src;
 }
@@ -7209,17 +7249,45 @@ function karteReadFile(file) {
 function karteClear() {
   var e = karteEls();
   karteLabels.forEach(function(l) { l.el.remove(); });
-  karteCompasses.forEach(function(c) { c.el.remove(); });
-  karteLabels = []; karteCompasses = []; karteSel = null; karteHasImg = false;
+  karteGelaendes.forEach(function(g) { g.el.remove(); g.nums.forEach(function(n) { n.remove(); }); });
+  karteLabels = []; karteGelaendes = []; karteSel = null; karteHasImg = false;
   e.img.removeAttribute('src');
   e.stage.classList.remove('has-img');
   if (e.hint) e.hint.hidden = false;
   e.bLabel.disabled = true; e.bExport.disabled = true; e.bClear.disabled = true;
-  if (e.bCompass) e.bCompass.disabled = true;
+  if (e.bGelaende) e.bGelaende.disabled = true;
+  if (e.bCrop) e.bCrop.disabled = true;
   if (e.navBtn) e.navBtn.disabled = true;
-  karteSetNav(false);
+  karteSetNav(false); karteExitDraw();
   karteView = { scale: 1, tx: 0, ty: 0, natW: 0, natH: 0 };
   if (e.file) e.file.value = '';
+}
+
+// ---- Rahmen ziehen (freies Format) ----
+function karteEnterDraw() {
+  if (!karteHasImg) return;
+  var e = karteEls();
+  karteSetNav(false);
+  karteFrameFull(); karteFit();        // Gesamtansicht
+  karteDrawMode = true;
+  e.draw.hidden = false;
+  e.stage.classList.add('drawing');
+  if (e.bCrop) e.bCrop.classList.add('on');
+}
+function karteExitDraw() {
+  var e = karteEls();
+  karteDrawMode = false;
+  if (e.draw) { e.draw.hidden = true; e.drawRect.style.display = 'none'; }
+  if (e.stage) e.stage.classList.remove('drawing');
+  if (e.bCrop) e.bCrop.classList.remove('on');
+}
+function karteSetFrameFromDraw(rx, ry, rw, rh) {
+  var e = karteEls();
+  // Bild an Ort halten: Transform um die Rahmenverschiebung ausgleichen.
+  var ox = karteFrame.x, oy = karteFrame.y;
+  karteFrame = { x: rx, y: ry, w: rw, h: rh };
+  karteView.tx -= (rx - ox); karteView.ty -= (ry - oy);
+  karteApplyFrameRect(); karteApplyTransform(); karteRelayout();
 }
 
 // ---- Zeichnen / Export ----
@@ -7267,14 +7335,16 @@ function karteCompose() {
     ctx.font = '600 ' + fs + 'px system-ui, "Segoe UI", Arial, sans-serif';
     lines.forEach(function(ln, i) { ctx.fillText(ln, x + padX, y + padY + i * lineH); });
   });
-  karteCompasses.forEach(function(c) {
-    var d = c.dF * W, cx = c.xF * W + d / 2, cy = c.yF * H + d / 2, rad = d / 2;
+  // Geländetaufe: nur der (transparente) Ring + Nord-Markierung im Bild-Layer.
+  // Die Zahlen werden nach dem Zuschnitt in den Ausschnitt gezeichnet (bleiben im Rahmen).
+  karteGelaendes.forEach(function(g) {
+    if (!g.ringVisible) return;
+    var d = g.dF * W, cx = g.xF * W + d / 2, cy = g.yF * H + d / 2, rad = d / 2 * 0.98;
     ctx.save();
-    ctx.lineWidth = Math.max(2, d * 0.014); ctx.strokeStyle = 'rgba(29,78,216,.9)';
-    ctx.fillStyle = 'rgba(255,255,255,.26)';
-    ctx.beginPath(); ctx.arc(cx, cy, rad, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
-    var a = c.rot * Math.PI / 180;
-    var tipX = cx + Math.sin(a) * rad, tipY = cy - Math.cos(a) * rad, mb = d * 0.05;
+    ctx.lineWidth = Math.max(2, d * 0.012); ctx.strokeStyle = 'rgba(20,30,50,.9)';
+    ctx.beginPath(); ctx.arc(cx, cy, rad, 0, 2 * Math.PI); ctx.stroke();
+    var a = g.rot * Math.PI / 180, mb = d * 0.05;
+    var tipX = cx + Math.sin(a) * rad, tipY = cy - Math.cos(a) * rad;
     var pX = cx + Math.sin(a) * (rad - mb * 1.6), pY = cy - Math.cos(a) * (rad - mb * 1.6);
     var perpX = Math.cos(a), perpY = Math.sin(a);
     ctx.fillStyle = '#dc2626'; ctx.beginPath();
@@ -7282,30 +7352,45 @@ function karteCompose() {
     ctx.lineTo(pX + perpX * mb, pY + perpY * mb);
     ctx.lineTo(pX - perpX * mb, pY - perpY * mb);
     ctx.closePath(); ctx.fill();
-    var fsc = d * 0.10, nrad = rad * 0.80;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    for (var i = 0; i < 4; i++) {
-      var na = (KC_BASE[i] + c.rot) * Math.PI / 180;
-      var nx = cx + Math.sin(na) * nrad, ny = cy - Math.cos(na) * nrad;
-      ctx.font = '700 ' + fsc + 'px system-ui, "Segoe UI", Arial, sans-serif';
-      var tw = ctx.measureText(KC_LABELS[i]).width;
-      ctx.globalAlpha = 0.82; ctx.fillStyle = '#ffffff';
-      karteRoundRect(ctx, nx - tw / 2 - fsc * 0.3, ny - fsc * 0.62, tw + fsc * 0.6, fsc * 1.24, fsc * 0.3); ctx.fill();
-      ctx.globalAlpha = 1; ctx.fillStyle = '#0f2033'; ctx.fillText(KC_LABELS[i], nx, ny);
-    }
     ctx.restore();
   });
   ctx.textAlign = 'start';
   return canvas;
+}
+// Geländetaufe-Zahlen in den Ausgabe-Ausschnitt zeichnen (Rahmen-geklemmt, aufrecht).
+function karteDrawGelaendeNums(octx, outW, outH) {
+  var v = karteView, e = karteEls();
+  var fw = e.frame.clientWidth, fh = e.frame.clientHeight;
+  var kx = outW / fw, ky = outH / fh;         // Rahmen-px → Ausgabe-px
+  var fs = 15 * kx, pad = (15 + 6);
+  karteGelaendes.forEach(function(g) {
+    var d = g.dF * v.natW;
+    var cxImg = g.xF * v.natW + d / 2, cyImg = g.yF * v.natH + d / 2;
+    var scx = cxImg * v.scale + v.tx, scy = cyImg * v.scale + v.ty;
+    var radScreen = (d / 2) * 0.86 * v.scale;
+    octx.textAlign = 'center'; octx.textBaseline = 'middle';
+    for (var i = 0; i < 4; i++) {
+      var ang = (KC_BASE[i] + g.rot) * Math.PI / 180;
+      var x = scx + radScreen * Math.sin(ang), y = scy - radScreen * Math.cos(ang);
+      x = Math.min(fw - pad, Math.max(pad, x)); y = Math.min(fh - pad, Math.max(pad, y));
+      var ox = x * kx, oy = y * ky;
+      octx.font = '700 ' + fs + 'px system-ui, "Segoe UI", Arial, sans-serif';
+      var tw = octx.measureText(KC_LABELS[i]).width;
+      octx.globalAlpha = 0.85; octx.fillStyle = '#ffffff';
+      karteRoundRect(octx, ox - tw / 2 - fs * 0.32, oy - fs * 0.64, tw + fs * 0.64, fs * 1.28, fs * 0.32); octx.fill();
+      octx.globalAlpha = 1; octx.fillStyle = '#0f2033'; octx.fillText(KC_LABELS[i], ox, oy);
+    }
+  });
+  octx.textAlign = 'start';
 }
 function karteExport() {
   var e = karteEls(), v = karteView;
   if (!karteHasImg || !v.natW) return;
   var full = karteCompose();
   // Der sichtbare Rahmen ist der Ausschnitt → in Bildkoordinaten.
-  var sr = e.frame.getBoundingClientRect();
+  var fw = e.frame.clientWidth, fh = e.frame.clientHeight;
   var nx = (-v.tx) / v.scale, ny = (-v.ty) / v.scale;
-  var nw = sr.width / v.scale, nh = sr.height / v.scale;
+  var nw = fw / v.scale, nh = fh / v.scale;
   // Ausgabe in Naturauflösung des sichtbaren Ausschnitts.
   var out = document.createElement('canvas');
   out.width = Math.max(1, Math.round(nw));
@@ -7314,6 +7399,7 @@ function karteExport() {
   octx.fillStyle = '#ffffff'; octx.fillRect(0, 0, out.width, out.height);
   // full an die passende Stelle zeichnen (Bildbereiche außerhalb bleiben weiß).
   octx.drawImage(full, -nx, -ny);
+  karteDrawGelaendeNums(octx, out.width, out.height);
   out.toBlob(function(blob) {
     if (!blob) return;
     var url = URL.createObjectURL(blob);
@@ -7335,10 +7421,41 @@ function karteExport() {
   document.getElementById('btnKarteBild').addEventListener('click', function() { e.file.click(); });
   e.file.addEventListener('change', function() { if (this.files && this.files[0]) karteReadFile(this.files[0]); });
   e.bLabel.addEventListener('click', function() { karteAddLabel('Straßenname'); });
-  if (e.bCompass) e.bCompass.addEventListener('click', karteAddCompass);
+  if (e.bGelaende) e.bGelaende.addEventListener('click', karteAddGelaende);
   e.bExport.addEventListener('click', karteExport);
   e.bClear.addEventListener('click', karteClear);
   if (e.navBtn) e.navBtn.addEventListener('click', function() { karteSetNav(!karteNav); });
+  if (e.bCrop) e.bCrop.addEventListener('click', function() { if (karteDrawMode) karteExitDraw(); else karteEnterDraw(); });
+
+  // Rahmen ziehen: Rechteck über der Bühne aufziehen → neuer Rahmen (freies Format).
+  if (e.draw) {
+    e.draw.addEventListener('pointerdown', function(ev) {
+      if (!karteDrawMode) return;
+      ev.preventDefault();
+      var sr = e.stage.getBoundingClientRect();
+      var sx = ev.clientX - sr.left, sy = ev.clientY - sr.top;
+      e.draw.setPointerCapture(ev.pointerId);
+      e.drawRect.style.display = 'block';
+      function move(e2) {
+        var cx = Math.max(0, Math.min(sr.width, e2.clientX - sr.left));
+        var cy = Math.max(0, Math.min(sr.height, e2.clientY - sr.top));
+        var x = Math.min(sx, cx), y = Math.min(sy, cy), w = Math.abs(cx - sx), h = Math.abs(cy - sy);
+        e.drawRect.style.left = x + 'px'; e.drawRect.style.top = y + 'px';
+        e.drawRect.style.width = w + 'px'; e.drawRect.style.height = h + 'px';
+      }
+      function up(e2) {
+        e.draw.releasePointerCapture(e2.pointerId);
+        e.draw.removeEventListener('pointermove', move); e.draw.removeEventListener('pointerup', up);
+        var cx = Math.max(0, Math.min(sr.width, e2.clientX - sr.left));
+        var cy = Math.max(0, Math.min(sr.height, e2.clientY - sr.top));
+        var x = Math.min(sx, cx), y = Math.min(sy, cy), w = Math.abs(cx - sx), h = Math.abs(cy - sy);
+        karteExitDraw();
+        if (w > 24 && h > 24) karteSetFrameFromDraw(x, y, w, h);
+      }
+      e.draw.addEventListener('pointermove', move);
+      e.draw.addEventListener('pointerup', up);
+    });
+  }
 
   // Einfügen aus Zwischenablage (nur wenn Bereich offen).
   document.addEventListener('paste', function(ev) {
