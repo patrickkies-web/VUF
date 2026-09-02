@@ -1953,30 +1953,71 @@ body {
   position: fixed; inset: 0; z-index: 10000;
   background: var(--bg, #f4f5f8); overflow-y: auto;
 }
-#screen-pers.open, #screen-kfz.open, #screen-karte.open { display: block; }
+#screen-pers.open, #screen-kfz.open { display: block; }
+#screen-karte.open { display: flex; }
 
-/* Luftbild-/Kartenskizze */
-.karte-toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+/* Luftbild-/Kartenskizze — Vollbild-Editor */
+#screen-karte {
+  flex-direction: column; overflow: hidden; background: #12161c;
+}
+.karte-bar {
+  flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 7px; align-items: center;
+  padding: 9px 12px; background: var(--surface, #fff);
+  border-bottom: 1px solid var(--border, #d7dbe3); z-index: 3;
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
+}
 .karte-btn {
-  font: inherit; font-size: 14px; font-weight: 600; padding: 9px 14px; border-radius: 9px;
+  font: inherit; font-size: 13.5px; font-weight: 600; padding: 8px 12px; border-radius: 9px;
   border: 1px solid var(--border, #d7dbe3); background: var(--surface, #fff);
-  color: var(--accent); cursor: pointer;
+  color: var(--accent); cursor: pointer; white-space: nowrap;
 }
 .karte-btn:hover:not(:disabled) { border-color: var(--accent); background: var(--surface2, #f4f6fb); }
 .karte-btn:disabled { opacity: .45; cursor: not-allowed; }
 .karte-btn-ghost { color: var(--muted, #667); }
-.karte-hint {
-  margin: 14px 0; padding: 28px 18px; text-align: center; font-size: 14px;
-  border: 2px dashed var(--border, #cdd3de); border-radius: 12px;
-  color: var(--muted, #667); background: var(--surface, #fff);
-}
-.karte-hint.drag { border-color: var(--accent); background: var(--surface2, #eef2fb); color: var(--accent); }
-.karte-tip { margin: 10px 0 0; font-size: 12.5px; color: var(--muted, #667); }
+.karte-toggle.on { background: var(--accent); color: #fff; border-color: var(--accent); }
 .karte-stage {
-  position: relative; display: inline-block; max-width: 100%; margin: 14px 0;
+  flex: 1 1 auto; position: relative; overflow: hidden; background: #12161c;
   touch-action: none; -webkit-user-select: none; user-select: none;
 }
-.karte-stage img { display: block; max-width: 100%; height: auto; border-radius: 10px; }
+.karte-stage.navigating { cursor: grab; }
+.karte-canvas { position: absolute; top: 0; left: 0; transform-origin: 0 0; will-change: transform; }
+.karte-canvas img { display: block; width: 100%; height: auto; }
+.karte-hint {
+  position: absolute; left: 50%; top: 44%; transform: translate(-50%, -50%);
+  max-width: 460px; width: calc(100% - 40px); padding: 26px 20px; text-align: center; font-size: 14px;
+  border: 2px dashed rgba(255,255,255,.35); border-radius: 14px;
+  color: #d7dde6; background: rgba(255,255,255,.06); line-height: 1.55;
+}
+.karte-stage.has-img .karte-hint { display: none; }
+.karte-hint.drag { border-color: var(--accent); background: rgba(29,78,216,.18); color: #fff; }
+/* Zuschnitt-Rahmen (fest im Viewport) */
+.karte-crop {
+  position: absolute; box-sizing: border-box; pointer-events: none;
+  border: 2px dashed #fff; border-radius: 2px; z-index: 2;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,.42);
+}
+.karte-crop-move {
+  position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+  pointer-events: auto; cursor: move; font-size: 12px; font-weight: 700; white-space: nowrap;
+  background: var(--accent); color: #fff; padding: 4px 9px; border-radius: 7px;
+  box-shadow: 0 1px 5px rgba(0,0,0,.35);
+}
+.karte-crop-h {
+  position: absolute; width: 14px; height: 14px; background: #fff; border: 2px solid var(--accent);
+  border-radius: 3px; pointer-events: auto; box-shadow: 0 1px 4px rgba(0,0,0,.35);
+}
+.k-nw { left: -8px; top: -8px; cursor: nwse-resize; }
+.k-n  { left: 50%; top: -8px; transform: translateX(-50%); cursor: ns-resize; }
+.k-ne { right: -8px; top: -8px; cursor: nesw-resize; }
+.k-e  { right: -8px; top: 50%; transform: translateY(-50%); cursor: ew-resize; }
+.k-se { right: -8px; bottom: -8px; cursor: nwse-resize; }
+.k-s  { left: 50%; bottom: -8px; transform: translateX(-50%); cursor: ns-resize; }
+.k-sw { left: -8px; bottom: -8px; cursor: nesw-resize; }
+.k-w  { left: -8px; top: 50%; transform: translateY(-50%); cursor: ew-resize; }
+#karteStage.navigating .karte-crop-move,
+#karteStage.navigating .karte-crop-h,
+#karteStage.navigating .karte-label,
+#karteStage.navigating .karte-compass { pointer-events: none; }
 .karte-label {
   position: absolute; box-sizing: border-box; padding: .28em .5em;
   background: rgba(255,255,255,.78); color: #0f2033; font-weight: 600;
