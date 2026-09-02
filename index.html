@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Tools v3.80</title>
+  <title>Tools v3.81</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <meta name="theme-color" content="#0f2460">
   <link rel="icon" href="./icon-192.png">
@@ -15,7 +15,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Tools">
-  <link rel="stylesheet" href="style.css?v=3.80">
+  <link rel="stylesheet" href="style.css?v=3.81">
 </head>
 <body>
 
@@ -170,15 +170,14 @@
     <button class="karte-btn karte-toggle" id="btnKarteNav" type="button" aria-pressed="false" disabled>&#128269; Navigieren</button>
     <button class="karte-btn" id="btnKarteLabel" type="button" disabled>&#10133; Textfeld</button>
     <button class="karte-btn" id="btnKarteCompass" type="button" disabled>&#129517; Kompass</button>
-    <button class="karte-btn" id="btnKarteExport" type="button" disabled>&#11015;&#65039; Zuschneiden &amp; speichern</button>
+    <button class="karte-btn" id="btnKarteExport" type="button" disabled>&#11015;&#65039; Ausschnitt speichern</button>
     <button class="karte-btn karte-btn-ghost" id="btnKarteClear" type="button" disabled>Zur&uuml;cksetzen</button>
   </div>
   <div class="karte-stage" id="karteStage">
     <div class="karte-canvas" id="karteCanvas"><img id="karteImg" alt="Karte"></div>
-    <div class="karte-crop" id="karteCrop" hidden></div>
     <div class="karte-hint" id="karteHint">
       Kartenbild <strong>einf&uuml;gen</strong> (Strg&nbsp;+&nbsp;V), hierher ziehen oder oben &bdquo;Bild&ldquo; w&auml;hlen.<br>
-      Danach: <strong>Navigieren</strong> antippen zum Zoomen (Mausrad) &amp; Verschieben &middot; Rahmen ziehen zum Zuschneiden &middot; Textfeld/Kompass auflegen.
+      Danach: <strong>Navigieren</strong> antippen &rarr; mit Mausrad zoomen &amp; verschieben, bis der gew&uuml;nschte Ausschnitt das Feld f&uuml;llt &middot; Textfeld/Kompass auflegen &middot; <strong>Ausschnitt speichern</strong>.
     </div>
   </div>
 </div>
@@ -1015,7 +1014,7 @@
   <div style="width:80px"></div>
 </div>
 
-<script src="script.js?v=3.80"></script>
+<script src="script.js?v=3.81"></script>
 <script>if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js').catch(function(){});}</script>
 
 <!-- Bericht-Generierungs-Overlay -->

@@ -6960,7 +6960,6 @@ function karteEls() {
     stage:   document.getElementById('karteStage'),
     canvas:  document.getElementById('karteCanvas'),
     img:     document.getElementById('karteImg'),
-    crop:    document.getElementById('karteCrop'),
     hint:    document.getElementById('karteHint'),
     file:    document.getElementById('karteFile'),
     navBtn:  document.getElementById('btnKarteNav'),
@@ -7022,65 +7021,6 @@ function karteZoomAt(sx, sy, factor) {
   karteApplyTransform();
 }
 
-// ---- Zuschnitt-Rahmen (fest im Viewport) ----
-function karteCropReset() {
-  var e = karteEls();
-  var r = e.stage.getBoundingClientRect();
-  var w = Math.min(r.width, r.height) * 0.6, h = w * 0.7;
-  e.crop.style.left = ((r.width - w) / 2) + 'px';
-  e.crop.style.top = ((r.height - h) / 2) + 'px';
-  e.crop.style.width = w + 'px';
-  e.crop.style.height = h + 'px';
-}
-function karteCropDrag(startEvt) {
-  var e = karteEls();
-  var x0 = parseFloat(e.crop.style.left), y0 = parseFloat(e.crop.style.top);
-  var sx = startEvt.clientX, sy = startEvt.clientY;
-  e.crop.setPointerCapture(startEvt.pointerId);
-  function move(ev) {
-    e.crop.style.left = (x0 + ev.clientX - sx) + 'px';
-    e.crop.style.top = (y0 + ev.clientY - sy) + 'px';
-  }
-  function up(ev) { e.crop.releasePointerCapture(ev.pointerId); e.crop.removeEventListener('pointermove', move); e.crop.removeEventListener('pointerup', up); }
-  e.crop.addEventListener('pointermove', move);
-  e.crop.addEventListener('pointerup', up);
-}
-function karteCropResize(handle, dir, startEvt) {
-  startEvt.stopPropagation();
-  var e = karteEls();
-  var x0 = parseFloat(e.crop.style.left), y0 = parseFloat(e.crop.style.top);
-  var w0 = e.crop.offsetWidth, h0 = e.crop.offsetHeight;
-  var sx = startEvt.clientX, sy = startEvt.clientY;
-  handle.setPointerCapture(startEvt.pointerId);
-  function move(ev) {
-    var dx = ev.clientX - sx, dy = ev.clientY - sy;
-    var x = x0, y = y0, w = w0, h = h0;
-    if (dir.indexOf('e') >= 0) w = Math.max(40, w0 + dx);
-    if (dir.indexOf('s') >= 0) h = Math.max(40, h0 + dy);
-    if (dir.indexOf('w') >= 0) { w = Math.max(40, w0 - dx); x = x0 + (w0 - w); }
-    if (dir.indexOf('n') >= 0) { h = Math.max(40, h0 - dy); y = y0 + (h0 - h); }
-    e.crop.style.left = x + 'px'; e.crop.style.top = y + 'px';
-    e.crop.style.width = w + 'px'; e.crop.style.height = h + 'px';
-  }
-  function up(ev) { handle.releasePointerCapture(ev.pointerId); handle.removeEventListener('pointermove', move); handle.removeEventListener('pointerup', up); }
-  handle.addEventListener('pointermove', move);
-  handle.addEventListener('pointerup', up);
-}
-function karteBuildCrop() {
-  var e = karteEls();
-  e.crop.innerHTML = '';
-  var grip = document.createElement('div');
-  grip.className = 'karte-crop-move'; grip.textContent = '✥ Rahmen';
-  grip.addEventListener('pointerdown', function(ev) { if (karteNav) return; ev.stopPropagation(); karteCropDrag(ev); });
-  e.crop.appendChild(grip);
-  var dirs = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
-  dirs.forEach(function(d) {
-    var h = document.createElement('div');
-    h.className = 'karte-crop-h k-' + d;
-    h.addEventListener('pointerdown', function(ev) { if (karteNav) return; karteCropResize(h, d, ev); });
-    e.crop.appendChild(h);
-  });
-}
 
 // ---- Textfelder ----
 function karteDrag(l, startEvt) {
@@ -7252,11 +7192,10 @@ function karteSetImage(src) {
     karteHasImg = true;
     e.stage.classList.add('has-img');
     if (e.hint) e.hint.hidden = true;
-    e.crop.hidden = false;
     e.bLabel.disabled = false; e.bExport.disabled = false; e.bClear.disabled = false;
     if (e.bCompass) e.bCompass.disabled = false;
     if (e.navBtn) e.navBtn.disabled = false;
-    karteFit(); karteRelayout(); karteCropReset();
+    karteFit(); karteRelayout();
   };
   e.img.src = src;
 }
@@ -7273,7 +7212,6 @@ function karteClear() {
   karteLabels = []; karteCompasses = []; karteSel = null; karteHasImg = false;
   e.img.removeAttribute('src');
   e.stage.classList.remove('has-img');
-  e.crop.hidden = true;
   if (e.hint) e.hint.hidden = false;
   e.bLabel.disabled = true; e.bExport.disabled = true; e.bClear.disabled = true;
   if (e.bCompass) e.bCompass.disabled = true;
@@ -7363,20 +7301,18 @@ function karteExport() {
   var e = karteEls(), v = karteView;
   if (!karteHasImg || !v.natW) return;
   var full = karteCompose();
-  // Zuschnitt-Rahmen (Viewport) → Bildkoordinaten
-  var sr = e.stage.getBoundingClientRect(), cr = e.crop.getBoundingClientRect();
-  var cx = cr.left - sr.left, cy = cr.top - sr.top;
-  var nx = (cx - v.tx) / v.scale, ny = (cy - v.ty) / v.scale;
-  var nw = cr.width / v.scale, nh = cr.height / v.scale;
-  // auf Bildgrenzen begrenzen
-  var sxr = Math.max(0, nx), syr = Math.max(0, ny);
-  var exr = Math.min(v.natW, nx + nw), eyr = Math.min(v.natH, ny + nh);
-  var sw = Math.max(1, exr - sxr), sh = Math.max(1, eyr - syr);
+  // Der sichtbare Rahmen (die Bühne) ist der Ausschnitt → in Bildkoordinaten.
+  var sr = e.stage.getBoundingClientRect();
+  var nx = (-v.tx) / v.scale, ny = (-v.ty) / v.scale;
+  var nw = sr.width / v.scale, nh = sr.height / v.scale;
+  // Ausgabe in Naturauflösung des sichtbaren Ausschnitts.
   var out = document.createElement('canvas');
-  out.width = Math.round(sw); out.height = Math.round(sh);
+  out.width = Math.max(1, Math.round(nw));
+  out.height = Math.max(1, Math.round(nh));
   var octx = out.getContext('2d');
   octx.fillStyle = '#ffffff'; octx.fillRect(0, 0, out.width, out.height);
-  octx.drawImage(full, sxr, syr, sw, sh, 0, 0, out.width, out.height);
+  // full an die passende Stelle zeichnen (Bildbereiche außerhalb bleiben weiß).
+  octx.drawImage(full, -nx, -ny);
   out.toBlob(function(blob) {
     if (!blob) return;
     var url = URL.createObjectURL(blob);
@@ -7394,8 +7330,6 @@ function karteExport() {
   var bb = document.getElementById('btnKarteBack');
   if (bb) bb.addEventListener('click', closeKarte);
   if (!e.stage) return;
-
-  karteBuildCrop();
 
   document.getElementById('btnKarteBild').addEventListener('click', function() { e.file.click(); });
   e.file.addEventListener('change', function() { if (this.files && this.files[0]) karteReadFile(this.files[0]); });
