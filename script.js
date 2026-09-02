@@ -7282,11 +7282,23 @@ function karteExitDraw() {
   if (e.bCrop) e.bCrop.classList.remove('on');
 }
 function karteSetFrameFromDraw(rx, ry, rw, rh) {
-  var e = karteEls();
-  // Bild an Ort halten: Transform um die Rahmenverschiebung ausgleichen.
-  var ox = karteFrame.x, oy = karteFrame.y;
-  karteFrame = { x: rx, y: ry, w: rw, h: rh };
-  karteView.tx -= (rx - ox); karteView.ty -= (ry - oy);
+  var e = karteEls(), v = karteView, B = 2, m = 14;
+  // 1) Ausgewählte Region in Bild-(Natur-)Koordinaten (relativ zur aktuellen Rahmen-Contentbox).
+  var contentX = karteFrame.x + B, contentY = karteFrame.y + B;
+  var nX = ((rx - contentX) - v.tx) / v.scale;
+  var nY = ((ry - contentY) - v.ty) / v.scale;
+  var nW = rw / v.scale, nH = rh / v.scale;
+  if (nW < 1 || nH < 1) return;
+  // 2) Neuer, zentrierter Rahmen in Browsergröße mit dem Seitenverhältnis der Auswahl.
+  var availW = e.stage.clientWidth - 2 * m, availH = e.stage.clientHeight - 2 * m;
+  var aspect = rw / rh, newW, newH;
+  if (availW / availH > aspect) { newH = availH; newW = availH * aspect; }
+  else { newW = availW; newH = availW / aspect; }
+  karteFrame = { x: (e.stage.clientWidth - newW) / 2, y: (e.stage.clientHeight - newH) / 2, w: newW, h: newH };
+  // 3) Transform so, dass die Auswahl den neuen Rahmen exakt füllt.
+  var contentW = newW - 2 * B;
+  var ns = Math.min(40, Math.max(0.02, contentW / nW));
+  v.scale = ns; v.tx = -nX * ns; v.ty = -nY * ns;
   karteApplyFrameRect(); karteApplyTransform(); karteRelayout();
 }
 
