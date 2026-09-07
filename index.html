@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Tools v3.86</title>
+  <title>Tools v3.87</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <meta name="theme-color" content="#0f2460">
   <link rel="icon" href="./icon-192.png">
@@ -15,7 +15,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Tools">
-  <link rel="stylesheet" href="style.css?v=3.86">
+  <link rel="stylesheet" href="style.css?v=3.87">
 </head>
 <body>
 
@@ -180,6 +180,8 @@
     <button class="karte-btn karte-mini" id="btnKarteNumMinus" type="button" title="Zahlen kleiner">A&minus;</button>
     <button class="karte-btn karte-mini" id="btnKarteNumPlus" type="button" title="Zahlen gr&ouml;&szlig;er">A+</button>
     <button class="karte-btn karte-toggle on" id="btnKarteTools" type="button" title="Werkzeuge ein-/ausblenden">&#128065; Werkzeuge</button>
+    <button class="karte-btn" id="btnKarteUndo" type="button" title="Schritt zur&uuml;ck (Strg+Z)" disabled>&#8630; Zur&uuml;ck</button>
+    <button class="karte-btn karte-btn-ghost" id="btnKarteDelete" type="button" title="Auswahl l&ouml;schen (Entf)" disabled>&#128465;&#65039; L&ouml;schen</button>
     <button class="karte-btn" id="btnKarteExport" type="button" disabled>&#11015;&#65039; Ausschnitt speichern</button>
     <button class="karte-btn karte-btn-ghost" id="btnKarteClear" type="button" disabled>Zur&uuml;cksetzen</button>
   </div>
@@ -1030,7 +1032,7 @@
   <div style="width:80px"></div>
 </div>
 
-<script src="script.js?v=3.86"></script>
+<script src="script.js?v=3.87"></script>
 <script>if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js').catch(function(){});}</script>
 
 <!-- Bericht-Generierungs-Overlay -->

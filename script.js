@@ -6975,6 +6975,8 @@ function karteEls() {
     bLabel:  document.getElementById('btnKarteLabel'),
     bGelaende:document.getElementById('btnKarteGelaende'),
     bTools:  document.getElementById('btnKarteTools'),
+    bUndo:   document.getElementById('btnKarteUndo'),
+    bDelete: document.getElementById('btnKarteDelete'),
     bExport: document.getElementById('btnKarteExport'),
     bClear:  document.getElementById('btnKarteClear')
   };
@@ -7047,6 +7049,58 @@ function karteSetToolsVisible(on) {
   var e = karteEls();
   e.stage.classList.toggle('tools-hidden', !on);
   if (e.bTools) e.bTools.classList.toggle('on', on);
+}
+
+// Element (Textfeld oder Geländetaufe) entfernen.
+function karteRemove(x) {
+  var i = karteLabels.indexOf(x);
+  if (i >= 0) { karteLabels.splice(i, 1); x.el.remove(); }
+  else {
+    var j = karteGelaendes.indexOf(x);
+    if (j >= 0) { karteGelaendes.splice(j, 1); x.el.remove(); x.nums.forEach(function(n) { n.remove(); }); }
+  }
+  if (karteSel === x) karteSel = null;
+}
+function karteDeleteSelected() {
+  if (!karteSel) return;
+  kartePushUndo(); karteRemove(karteSel);
+}
+
+// ---- Undo (Schritt zurück) ----
+var karteUndoStack = [];
+function karteSnapshot() {
+  return {
+    labels: karteLabels.map(function(l) { return { text: l.el.textContent, xF: l.xF, yF: l.yF, wF: l.wF, fsF: l.fsF }; }),
+    gelaendes: karteGelaendes.map(function(g) { return { xF: g.xF, yF: g.yF, dF: g.dF, rot: g.rot, ringVisible: g.ringVisible }; }),
+    frame: { x: karteFrame.x, y: karteFrame.y, w: karteFrame.w, h: karteFrame.h },
+    view: { scale: karteView.scale, tx: karteView.tx, ty: karteView.ty, natW: karteView.natW, natH: karteView.natH },
+    ringColor: karteRingColor, numSize: karteNumSize
+  };
+}
+function kartePushUndo() {
+  if (!karteHasImg) return;
+  karteUndoStack.push(karteSnapshot());
+  if (karteUndoStack.length > 40) karteUndoStack.shift();
+  var e = karteEls(); if (e.bUndo) e.bUndo.disabled = false;
+}
+function karteRestore(s) {
+  var e = karteEls();
+  karteLabels.forEach(function(l) { l.el.remove(); });
+  karteGelaendes.forEach(function(g) { g.el.remove(); g.nums.forEach(function(n) { n.remove(); }); });
+  karteLabels = []; karteGelaendes = []; karteSel = null;
+  karteFrame = { x: s.frame.x, y: s.frame.y, w: s.frame.w, h: s.frame.h };
+  karteView = { scale: s.view.scale, tx: s.view.tx, ty: s.view.ty, natW: s.view.natW, natH: s.view.natH };
+  karteNumSize = s.numSize;
+  karteApplyFrameRect(); karteApplyTransform();
+  s.labels.forEach(function(d) { karteBuildLabel(d); });
+  s.gelaendes.forEach(function(d) { karteBuildGelaende(d); });
+  karteSetRingColor(s.ringColor);
+  karteRelayout();
+}
+function karteUndo() {
+  if (!karteUndoStack.length) return;
+  karteRestore(karteUndoStack.pop());
+  var e = karteEls(); if (e.bUndo) e.bUndo.disabled = !karteUndoStack.length;
 }
 
 // ---- Navigation (Zoom / Pan) ----
@@ -7123,15 +7177,12 @@ function karteLabelWidth(l, handle, dir, startEvt) {
   handle.addEventListener('pointermove', move);
   handle.addEventListener('pointerup', up);
 }
-function karteAddLabel(text) {
-  var e = karteEls(), v = karteView;
-  var c = karteVisibleCenter();
-  var wF = Math.max(0.04, (0.34 * c.fw / v.scale) / v.natW);   // ~34 % der Rahmenbreite
-  var fsF = Math.max(0.008, (16 / v.scale) / v.natH);          // ~16 px auf dem Bildschirm
-  var l = { el: null, xF: c.fx - wF / 2, yF: c.fy - fsF, wF: wF, fsF: fsF };
+function karteBuildLabel(d) {
+  var e = karteEls();
+  var l = { el: null, xF: d.xF, yF: d.yF, wF: d.wF, fsF: d.fsF };
   var el = document.createElement('div');
   el.className = 'karte-label';
-  el.textContent = text || 'Text';
+  el.textContent = d.text != null ? d.text : 'Text';
   el.setAttribute('contenteditable', 'false');
   var handle = document.createElement('div'); handle.className = 'karte-handle';
   var hE = document.createElement('div'); hE.className = 'karte-wh karte-wh-e';
@@ -7144,32 +7195,38 @@ function karteAddLabel(text) {
     if (karteNav) return;
     if (el.getAttribute('contenteditable') === 'true') return;
     if (ev.target === handle || ev.target === hE || ev.target === hW || ev.target === del) return;
-    ev.preventDefault(); ev.stopPropagation();
-    karteSelect(l); karteDrag(l, ev);
+    ev.stopPropagation();     // kein preventDefault → Doppelklick zum Bearbeiten bleibt möglich
+    karteSelect(l); kartePushUndo(); karteDrag(l, ev);
   });
   el.addEventListener('dblclick', function() {
     if (karteNav) return;
+    karteSelect(l);
     el.setAttribute('contenteditable', 'true'); el.focus();
     var range = document.createRange(); range.selectNodeContents(el);
     var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
   });
   el.addEventListener('blur', function() { el.setAttribute('contenteditable', 'false'); });
   el.addEventListener('keydown', function(ev) { if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); el.blur(); } });
-  handle.addEventListener('pointerdown', function(ev) { if (karteNav) return; ev.stopPropagation(); karteSelect(l); karteLabelScale(l, handle, ev); });
-  hE.addEventListener('pointerdown', function(ev) { if (karteNav) return; ev.stopPropagation(); karteSelect(l); karteLabelWidth(l, hE, 1, ev); });
-  hW.addEventListener('pointerdown', function(ev) { if (karteNav) return; ev.stopPropagation(); karteSelect(l); karteLabelWidth(l, hW, -1, ev); });
+  handle.addEventListener('pointerdown', function(ev) { if (karteNav) return; ev.stopPropagation(); karteSelect(l); kartePushUndo(); karteLabelScale(l, handle, ev); });
+  hE.addEventListener('pointerdown', function(ev) { if (karteNav) return; ev.stopPropagation(); karteSelect(l); kartePushUndo(); karteLabelWidth(l, hE, 1, ev); });
+  hW.addEventListener('pointerdown', function(ev) { if (karteNav) return; ev.stopPropagation(); karteSelect(l); kartePushUndo(); karteLabelWidth(l, hW, -1, ev); });
   del.addEventListener('pointerdown', function(ev) { ev.stopPropagation(); ev.preventDefault(); });
-  del.addEventListener('click', function(ev) {
-    ev.stopPropagation();
-    var i = karteLabels.indexOf(l); if (i >= 0) karteLabels.splice(i, 1);
-    if (karteSel === l) karteSel = null; el.remove();
-  });
+  del.addEventListener('click', function(ev) { ev.stopPropagation(); kartePushUndo(); karteRemove(l); });
 
   e.canvas.appendChild(el);
   karteLabels.push(l);
-  karteRelayout(); karteSelect(l);
-  el.setAttribute('contenteditable', 'true'); el.focus();
-  var range = document.createRange(); range.selectNodeContents(el);
+  karteRelayout();
+  return l;
+}
+function karteAddLabel(text) {
+  var v = karteView, c = karteVisibleCenter();
+  var wF = Math.max(0.04, (0.34 * c.fw / v.scale) / v.natW);   // ~34 % der Rahmenbreite
+  var fsF = Math.max(0.008, (16 / v.scale) / v.natH);          // ~16 px auf dem Bildschirm
+  kartePushUndo();
+  var l = karteBuildLabel({ text: text || 'Text', xF: c.fx - wF / 2, yF: c.fy - fsF, wF: wF, fsF: fsF });
+  karteSelect(l);
+  l.el.setAttribute('contenteditable', 'true'); l.el.focus();
+  var range = document.createRange(); range.selectNodeContents(l.el);
   var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
 }
 
@@ -7239,13 +7296,9 @@ function karteGelaendeDrag(g, startEvt) {
   g.el.addEventListener('pointermove', move);
   g.el.addEventListener('pointerup', up);
 }
-function karteAddGelaende() {
-  var e = karteEls(), v = karteView;
-  var c = karteVisibleCenter();
-  var screenDiam = 0.45 * Math.min(c.fw, c.fh);               // ~45 % der kleineren Rahmenseite
-  var dF = Math.max(0.05, (screenDiam / v.scale) / v.natW);
-  var halfXF = dF / 2, halfYF = (dF * v.natW / 2) / v.natH;   // el ist quadratisch (dF*natW px)
-  var g = { el: null, dial: null, nums: [], xF: c.fx - halfXF, yF: c.fy - halfYF, dF: dF, rot: 0, ringVisible: true };
+function karteBuildGelaende(data) {
+  var e = karteEls();
+  var g = { el: null, dial: null, nums: [], xF: data.xF, yF: data.yF, dF: data.dF, rot: data.rot || 0, ringVisible: data.ringVisible !== false };
   var el = document.createElement('div'); el.className = 'karte-gelaende';
   var dial = document.createElement('div'); dial.className = 'kg-ring';
   dial.style.borderColor = karteRingColor; el.appendChild(dial);
@@ -7262,14 +7315,16 @@ function karteAddGelaende() {
     e.frame.appendChild(n); g.nums.push(n);
   }
 
+  if (!g.ringVisible) { dial.style.display = 'none'; eye.classList.add('off'); }
+
   el.addEventListener('pointerdown', function(ev) {
     if (karteNav) return;
     if (ev.target === rot || ev.target === mv || ev.target === handle || ev.target === del || ev.target === eye) return;
-    ev.preventDefault(); ev.stopPropagation(); karteSelect(g); karteGelaendeDrag(g, ev);
+    ev.preventDefault(); ev.stopPropagation(); karteSelect(g); kartePushUndo(); karteGelaendeDrag(g, ev);
   });
-  rot.addEventListener('pointerdown', function(ev) { if (karteNav) return; ev.stopPropagation(); karteSelect(g); karteGelaendeRotate(g, rot, ev); });
-  mv.addEventListener('pointerdown', function(ev) { if (karteNav) return; ev.stopPropagation(); karteSelect(g); karteGelaendeDrag(g, ev); });
-  handle.addEventListener('pointerdown', function(ev) { if (karteNav) return; ev.stopPropagation(); karteSelect(g); karteGelaendeResize(g, handle, ev); });
+  rot.addEventListener('pointerdown', function(ev) { if (karteNav) return; ev.stopPropagation(); karteSelect(g); kartePushUndo(); karteGelaendeRotate(g, rot, ev); });
+  mv.addEventListener('pointerdown', function(ev) { if (karteNav) return; ev.stopPropagation(); karteSelect(g); kartePushUndo(); karteGelaendeDrag(g, ev); });
+  handle.addEventListener('pointerdown', function(ev) { if (karteNav) return; ev.stopPropagation(); karteSelect(g); kartePushUndo(); karteGelaendeResize(g, handle, ev); });
   eye.addEventListener('pointerdown', function(ev) { ev.stopPropagation(); ev.preventDefault(); });
   eye.addEventListener('click', function(ev) {
     ev.stopPropagation(); g.ringVisible = !g.ringVisible;
@@ -7277,16 +7332,21 @@ function karteAddGelaende() {
     eye.classList.toggle('off', !g.ringVisible);
   });
   del.addEventListener('pointerdown', function(ev) { ev.stopPropagation(); ev.preventDefault(); });
-  del.addEventListener('click', function(ev) {
-    ev.stopPropagation();
-    var i = karteGelaendes.indexOf(g); if (i >= 0) karteGelaendes.splice(i, 1);
-    if (karteSel === g) karteSel = null;
-    el.remove(); g.nums.forEach(function(n) { n.remove(); });
-  });
+  del.addEventListener('click', function(ev) { ev.stopPropagation(); kartePushUndo(); karteRemove(g); });
 
   e.canvas.appendChild(el);
   karteGelaendes.push(g);
-  karteGelaendeLayout(g); karteSelect(g);
+  karteGelaendeLayout(g);
+  return g;
+}
+function karteAddGelaende() {
+  var v = karteView, c = karteVisibleCenter();
+  var screenDiam = 0.45 * Math.min(c.fw, c.fh);               // ~45 % der kleineren Rahmenseite
+  var dF = Math.max(0.05, (screenDiam / v.scale) / v.natW);
+  var halfXF = dF / 2, halfYF = (dF * v.natW / 2) / v.natH;   // el ist quadratisch (dF*natW px)
+  kartePushUndo();
+  var g = karteBuildGelaende({ xF: c.fx - halfXF, yF: c.fy - halfYF, dF: dF, rot: 0, ringVisible: true });
+  karteSelect(g);
 }
 
 // ---- Bild laden ----
@@ -7303,6 +7363,9 @@ function karteSetImage(src) {
     if (e.bGelaende) e.bGelaende.disabled = false;
     if (e.bCrop) e.bCrop.disabled = false;
     if (e.navBtn) e.navBtn.disabled = false;
+    if (e.bDelete) e.bDelete.disabled = false;
+    if (e.bUndo) e.bUndo.disabled = true;
+    karteUndoStack = [];
     karteFrameFull(); karteFit(); karteRelayout();
   };
   e.img.src = src;
@@ -7325,6 +7388,9 @@ function karteClear() {
   if (e.bGelaende) e.bGelaende.disabled = true;
   if (e.bCrop) e.bCrop.disabled = true;
   if (e.navBtn) e.navBtn.disabled = true;
+  if (e.bDelete) e.bDelete.disabled = true;
+  if (e.bUndo) e.bUndo.disabled = true;
+  karteUndoStack = [];
   karteSetNav(false); karteExitDraw();
   karteView = { scale: 1, tx: 0, ty: 0, natW: 0, natH: 0 };
   if (e.file) e.file.value = '';
@@ -7350,6 +7416,7 @@ function karteExitDraw() {
 }
 function karteSetFrameFromDraw(rx, ry, rw, rh) {
   var e = karteEls(), v = karteView, B = 2, m = 14;
+  kartePushUndo();
   // 1) Ausgewählte Region in Bild-(Natur-)Koordinaten (relativ zur aktuellen Rahmen-Contentbox).
   var contentX = karteFrame.x + B, contentY = karteFrame.y + B;
   var nX = ((rx - contentX) - v.tx) / v.scale;
@@ -7419,18 +7486,20 @@ function karteCompose() {
   // Die Zahlen werden nach dem Zuschnitt in den Ausschnitt gezeichnet (bleiben im Rahmen).
   karteGelaendes.forEach(function(g) {
     if (!g.ringVisible) return;
-    var d = g.dF * W, cx = g.xF * W + d / 2, cy = g.yF * H + d / 2, rad = d / 2 * 0.98;
+    // Feste Strichstärke/Markergröße (wie in der Vorschau: 2.5 px bzw. ~13 px im Bild-Layer).
+    var d = g.dF * W, cx = g.xF * W + d / 2, cy = g.yF * H + d / 2, rad = d / 2 - 1.25;
     ctx.save();
-    ctx.lineWidth = Math.max(2, d * 0.012); ctx.strokeStyle = karteRingColor;
+    ctx.lineWidth = 2.5; ctx.strokeStyle = karteRingColor;
     ctx.beginPath(); ctx.arc(cx, cy, rad, 0, 2 * Math.PI); ctx.stroke();
-    var a = g.rot * Math.PI / 180, mb = d * 0.05;
-    var tipX = cx + Math.sin(a) * rad, tipY = cy - Math.cos(a) * rad;
-    var pX = cx + Math.sin(a) * (rad - mb * 1.6), pY = cy - Math.cos(a) * (rad - mb * 1.6);
-    var perpX = Math.cos(a), perpY = Math.sin(a);
+    var a = g.rot * Math.PI / 180;
+    var ux = Math.sin(a), uy = -Math.cos(a);    // Richtung nach außen (Norden)
+    var tx = Math.cos(a), ty = Math.sin(a);     // tangential
+    var bx = cx + ux * rad, by = cy + uy * rad; // Basis am Ring
+    var mh = 13, mw = 7;                         // Höhe/halbe Breite (Bild-px)
     ctx.fillStyle = '#dc2626'; ctx.beginPath();
-    ctx.moveTo(tipX, tipY);
-    ctx.lineTo(pX + perpX * mb, pY + perpY * mb);
-    ctx.lineTo(pX - perpX * mb, pY - perpY * mb);
+    ctx.moveTo(bx + ux * mh, by + uy * mh);     // Spitze außen
+    ctx.lineTo(bx + tx * mw, by + ty * mw);
+    ctx.lineTo(bx - tx * mw, by - ty * mw);
     ctx.closePath(); ctx.fill();
     ctx.restore();
   });
@@ -7507,6 +7576,15 @@ function karteExport() {
   e.bClear.addEventListener('click', karteClear);
   if (e.navBtn) e.navBtn.addEventListener('click', function() { karteSetNav(!karteNav); });
   if (e.bTools) e.bTools.addEventListener('click', function() { karteSetToolsVisible(!karteToolsVisible); });
+  if (e.bUndo) e.bUndo.addEventListener('click', karteUndo);
+  if (e.bDelete) e.bDelete.addEventListener('click', karteDeleteSelected);
+  // Tastatur: Entf/Backspace löscht Auswahl (nicht beim Textbearbeiten); Strg/Cmd+Z = zurück.
+  document.addEventListener('keydown', function(ev) {
+    if (!e.screen.classList.contains('open')) return;
+    var editing = document.activeElement && document.activeElement.getAttribute && document.activeElement.getAttribute('contenteditable') === 'true';
+    if ((ev.key === 'Delete' || ev.key === 'Backspace') && !editing && karteSel) { ev.preventDefault(); karteDeleteSelected(); }
+    else if ((ev.ctrlKey || ev.metaKey) && (ev.key === 'z' || ev.key === 'Z')) { ev.preventDefault(); karteUndo(); }
+  });
   var nm = document.getElementById('btnKarteNumMinus'), np = document.getElementById('btnKarteNumPlus');
   if (nm) nm.addEventListener('click', function() { karteChangeNumSize(-3); });
   if (np) np.addEventListener('click', function() { karteChangeNumSize(3); });
