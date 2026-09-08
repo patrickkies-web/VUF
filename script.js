@@ -7285,14 +7285,14 @@ function karteGelaendeRotate(g, knob, startEvt) {
 }
 function karteGelaendeDrag(g, startEvt) {
   var v = karteView, sx = startEvt.clientX, sy = startEvt.clientY, x0 = g.xF, y0 = g.yF;
-  g.el.setPointerCapture(startEvt.pointerId);
+  try { g.el.setPointerCapture(startEvt.pointerId); } catch (e) {}
   function move(ev) {
     g.xF = x0 + (ev.clientX - sx) / v.scale / v.natW;
     g.yF = y0 + (ev.clientY - sy) / v.scale / v.natH;
     g.el.style.left = (g.xF * 100) + '%'; g.el.style.top = (g.yF * 100) + '%';
     karteGelaendeNums(g);
   }
-  function up(ev) { g.el.releasePointerCapture(ev.pointerId); g.el.removeEventListener('pointermove', move); g.el.removeEventListener('pointerup', up); }
+  function up(ev) { try { g.el.releasePointerCapture(ev.pointerId); } catch (e) {} g.el.removeEventListener('pointermove', move); g.el.removeEventListener('pointerup', up); }
   g.el.addEventListener('pointermove', move);
   g.el.addEventListener('pointerup', up);
 }
@@ -7303,11 +7303,10 @@ function karteBuildGelaende(data) {
   var dial = document.createElement('div'); dial.className = 'kg-ring';
   dial.style.borderColor = karteRingColor; el.appendChild(dial);
   var rot = document.createElement('div'); rot.className = 'kc-rotate'; rot.title = 'Drehen'; rot.textContent = '↻';
-  var mv = document.createElement('div'); mv.className = 'kg-move'; mv.title = 'Verschieben'; mv.textContent = '🖐';
   var handle = document.createElement('div'); handle.className = 'karte-handle';
   var eye = document.createElement('div'); eye.className = 'kg-eye'; eye.title = 'Kreis ein-/ausblenden'; eye.textContent = '◎';
   var del = document.createElement('div'); del.className = 'karte-del'; del.textContent = '×';
-  el.appendChild(rot); el.appendChild(mv); el.appendChild(handle); el.appendChild(eye); el.appendChild(del);
+  el.appendChild(rot); el.appendChild(handle); el.appendChild(eye); el.appendChild(del);
   g.el = el; g.dial = dial;
   // Zahlen in der Rahmen-Ebene (bleiben im Rahmen).
   for (var i = 0; i < 4; i++) {
@@ -7317,13 +7316,17 @@ function karteBuildGelaende(data) {
 
   if (!g.ringVisible) { dial.style.display = 'none'; eye.classList.add('off'); }
 
+  // Nur die Ringlinie ist zum Verschieben greifbar (geringe Toleranz), nicht der Innenraum.
   el.addEventListener('pointerdown', function(ev) {
     if (karteNav) return;
-    if (ev.target === rot || ev.target === mv || ev.target === handle || ev.target === del || ev.target === eye) return;
+    if (ev.target === rot || ev.target === handle || ev.target === del || ev.target === eye) return;
+    var rect = el.getBoundingClientRect();
+    var cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2, r = rect.width / 2;
+    var dist = Math.hypot(ev.clientX - cx, ev.clientY - cy);
+    if (Math.abs(dist - r) > 12) return;    // nicht nah genug an der Ringlinie → kein Drag
     ev.preventDefault(); ev.stopPropagation(); karteSelect(g); kartePushUndo(); karteGelaendeDrag(g, ev);
   });
   rot.addEventListener('pointerdown', function(ev) { if (karteNav) return; ev.stopPropagation(); karteSelect(g); kartePushUndo(); karteGelaendeRotate(g, rot, ev); });
-  mv.addEventListener('pointerdown', function(ev) { if (karteNav) return; ev.stopPropagation(); karteSelect(g); kartePushUndo(); karteGelaendeDrag(g, ev); });
   handle.addEventListener('pointerdown', function(ev) { if (karteNav) return; ev.stopPropagation(); karteSelect(g); kartePushUndo(); karteGelaendeResize(g, handle, ev); });
   eye.addEventListener('pointerdown', function(ev) { ev.stopPropagation(); ev.preventDefault(); });
   eye.addEventListener('click', function(ev) {
