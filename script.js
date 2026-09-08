@@ -7057,7 +7057,7 @@ function karteRemove(x) {
   if (i >= 0) { karteLabels.splice(i, 1); x.el.remove(); }
   else {
     var j = karteGelaendes.indexOf(x);
-    if (j >= 0) { karteGelaendes.splice(j, 1); x.el.remove(); x.nums.forEach(function(n) { n.remove(); }); }
+    if (j >= 0) { karteGelaendes.splice(j, 1); x.el.remove(); x.nums.forEach(function(n) { n.remove(); }); if (x.northN) x.northN.remove(); }
   }
   if (karteSel === x) karteSel = null;
 }
@@ -7071,7 +7071,7 @@ var karteUndoStack = [];
 function karteSnapshot() {
   return {
     labels: karteLabels.map(function(l) { return { text: l.el.textContent, xF: l.xF, yF: l.yF, wF: l.wF, fsF: l.fsF }; }),
-    gelaendes: karteGelaendes.map(function(g) { return { xF: g.xF, yF: g.yF, dF: g.dF, rot: g.rot, ringVisible: g.ringVisible }; }),
+    gelaendes: karteGelaendes.map(function(g) { return { xF: g.xF, yF: g.yF, dF: g.dF, rot: g.rot, northRot: g.northRot, ringVisible: g.ringVisible }; }),
     frame: { x: karteFrame.x, y: karteFrame.y, w: karteFrame.w, h: karteFrame.h },
     view: { scale: karteView.scale, tx: karteView.tx, ty: karteView.ty, natW: karteView.natW, natH: karteView.natH },
     ringColor: karteRingColor, numSize: karteNumSize
@@ -7086,7 +7086,7 @@ function kartePushUndo() {
 function karteRestore(s) {
   var e = karteEls();
   karteLabels.forEach(function(l) { l.el.remove(); });
-  karteGelaendes.forEach(function(g) { g.el.remove(); g.nums.forEach(function(n) { n.remove(); }); });
+  karteGelaendes.forEach(function(g) { g.el.remove(); g.nums.forEach(function(n) { n.remove(); }); if (g.northN) g.northN.remove(); });
   karteLabels = []; karteGelaendes = []; karteSel = null;
   karteFrame = { x: s.frame.x, y: s.frame.y, w: s.frame.w, h: s.frame.h };
   karteView = { scale: s.view.scale, tx: s.view.tx, ty: s.view.ty, natW: s.view.natW, natH: s.view.natH };
@@ -7256,6 +7256,22 @@ function karteGelaendeNums(g) {
     y = Math.min(fh - pad, Math.max(pad, y));
     n.style.left = x + 'px'; n.style.top = y + 'px'; n.style.fontSize = fs + 'px';
   });
+  karteGelaendeNorth(g);
+}
+// Nordpfeil (Nadel im Bild-Layer, dreht mit rot+northRot; N-Label aufrecht im Rahmen).
+function karteGelaendeNorth(g) {
+  if (!g.needle) return;
+  var v = karteView, e = karteEls();
+  var d = g.dF * v.natW, ang = g.rot + g.northRot;
+  g.needle.style.transform = 'rotate(' + ang + 'deg)';
+  var fw = e.frame.clientWidth, fh = e.frame.clientHeight;
+  var cxImg = g.xF * v.natW + d / 2, cyImg = g.yF * v.natH + d / 2;
+  var scx = cxImg * v.scale + v.tx, scy = cyImg * v.scale + v.ty;
+  var radScreen = (d / 2) * 1.06 * v.scale;
+  var a = ang * Math.PI / 180, fs = karteNumSize, pad = fs + 6;
+  var x = scx + radScreen * Math.sin(a), y = scy - radScreen * Math.cos(a);
+  x = Math.min(fw - pad, Math.max(pad, x)); y = Math.min(fh - pad, Math.max(pad, y));
+  g.northN.style.left = x + 'px'; g.northN.style.top = y + 'px'; g.northN.style.fontSize = fs + 'px';
 }
 function karteGelaendeResize(g, handle, startEvt) {
   startEvt.stopPropagation();
@@ -7298,21 +7314,43 @@ function karteGelaendeDrag(g, startEvt) {
 }
 function karteBuildGelaende(data) {
   var e = karteEls();
-  var g = { el: null, dial: null, nums: [], xF: data.xF, yF: data.yF, dF: data.dF, rot: data.rot || 0, ringVisible: data.ringVisible !== false };
+  var g = { el: null, dial: null, needle: null, northN: null, nums: [], xF: data.xF, yF: data.yF, dF: data.dF, rot: data.rot || 0, northRot: data.northRot || 0, ringVisible: data.ringVisible !== false };
   var el = document.createElement('div'); el.className = 'karte-gelaende';
   var dial = document.createElement('div'); dial.className = 'kg-ring';
   dial.style.borderColor = karteRingColor; el.appendChild(dial);
+  // Nordpfeil (dreht mit; zusätzlich frei einstellbar über das N)
+  var needle = document.createElement('div'); needle.className = 'kg-north';
+  needle.innerHTML = '<div class="kg-north-line"></div><div class="kg-north-head"></div>';
+  el.appendChild(needle);
   var rot = document.createElement('div'); rot.className = 'kc-rotate'; rot.title = 'Drehen'; rot.textContent = '↻';
   var handle = document.createElement('div'); handle.className = 'karte-handle';
   var eye = document.createElement('div'); eye.className = 'kg-eye'; eye.title = 'Kreis ein-/ausblenden'; eye.textContent = '◎';
   var del = document.createElement('div'); del.className = 'karte-del'; del.textContent = '×';
   el.appendChild(rot); el.appendChild(handle); el.appendChild(eye); el.appendChild(del);
-  g.el = el; g.dial = dial;
+  g.el = el; g.dial = dial; g.needle = needle;
   // Zahlen in der Rahmen-Ebene (bleiben im Rahmen).
   for (var i = 0; i < 4; i++) {
     var n = document.createElement('div'); n.className = 'kg-num'; n.textContent = KC_LABELS[i];
     e.frame.appendChild(n); g.nums.push(n);
   }
+  // N-Label des Nordpfeils (Rahmen-Ebene, aufrecht, ziehbar zum Norden-Einstellen)
+  var northN = document.createElement('div'); northN.className = 'kg-num kg-north-n'; northN.textContent = 'N'; northN.title = 'Norden einstellen (ziehen)';
+  e.frame.appendChild(northN); g.northN = northN;
+  northN.addEventListener('pointerdown', function(ev) {
+    if (karteNav) return; ev.stopPropagation(); ev.preventDefault();
+    karteSelect(g); kartePushUndo();
+    try { northN.setPointerCapture(ev.pointerId); } catch (er) {}
+    function move(e2) {
+      var rect = g.el.getBoundingClientRect();
+      var cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+      var abs = Math.atan2(e2.clientX - cx, -(e2.clientY - cy)) * 180 / Math.PI;
+      g.northRot = abs - g.rot;
+      karteGelaendeNorth(g);
+    }
+    function up(e2) { try { northN.releasePointerCapture(e2.pointerId); } catch (er) {} northN.removeEventListener('pointermove', move); northN.removeEventListener('pointerup', up); }
+    northN.addEventListener('pointermove', move);
+    northN.addEventListener('pointerup', up);
+  });
 
   if (!g.ringVisible) { dial.style.display = 'none'; eye.classList.add('off'); }
 
@@ -7382,7 +7420,7 @@ function karteReadFile(file) {
 function karteClear() {
   var e = karteEls();
   karteLabels.forEach(function(l) { l.el.remove(); });
-  karteGelaendes.forEach(function(g) { g.el.remove(); g.nums.forEach(function(n) { n.remove(); }); });
+  karteGelaendes.forEach(function(g) { g.el.remove(); g.nums.forEach(function(n) { n.remove(); }); if (g.northN) g.northN.remove(); });
   karteLabels = []; karteGelaendes = []; karteSel = null; karteHasImg = false;
   e.img.removeAttribute('src');
   e.stage.classList.remove('has-img');
@@ -7488,17 +7526,20 @@ function karteCompose() {
   // Geländetaufe: nur der (transparente) Ring + Nord-Markierung im Bild-Layer.
   // Die Zahlen werden nach dem Zuschnitt in den Ausschnitt gezeichnet (bleiben im Rahmen).
   karteGelaendes.forEach(function(g) {
-    if (!g.ringVisible) return;
-    // Feste Strichstärke/Markergröße (wie in der Vorschau: 2.5 px bzw. ~13 px im Bild-Layer).
     var d = g.dF * W, cx = g.xF * W + d / 2, cy = g.yF * H + d / 2, rad = d / 2 - 1.25;
     ctx.save();
-    ctx.lineWidth = 2.5; ctx.strokeStyle = karteRingColor;
-    ctx.beginPath(); ctx.arc(cx, cy, rad, 0, 2 * Math.PI); ctx.stroke();
-    var a = g.rot * Math.PI / 180;
-    var ux = Math.sin(a), uy = -Math.cos(a);    // Richtung nach außen (Norden)
+    // Ring nur zeichnen, wenn eingeblendet.
+    if (g.ringVisible) {
+      ctx.lineWidth = 2.5; ctx.strokeStyle = karteRingColor;
+      ctx.beginPath(); ctx.arc(cx, cy, rad, 0, 2 * Math.PI); ctx.stroke();
+    }
+    // Nordpfeil (rot + northRot): Nadel von der Mitte zum Rand + Spitze.
+    var a = (g.rot + g.northRot) * Math.PI / 180;
+    var ux = Math.sin(a), uy = -Math.cos(a);    // Richtung Norden
     var tx = Math.cos(a), ty = Math.sin(a);     // tangential
-    var bx = cx + ux * rad, by = cy + uy * rad; // Basis am Ring
-    var mh = 13, mw = 7;                         // Höhe/halbe Breite (Bild-px)
+    ctx.strokeStyle = '#dc2626'; ctx.lineWidth = Math.max(2.5, rad * 0.05);
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + ux * rad, cy + uy * rad); ctx.stroke();
+    var bx = cx + ux * rad, by = cy + uy * rad, mh = 15, mw = 8;
     ctx.fillStyle = '#dc2626'; ctx.beginPath();
     ctx.moveTo(bx + ux * mh, by + uy * mh);     // Spitze außen
     ctx.lineTo(bx + tx * mw, by + ty * mw);
@@ -7533,6 +7574,17 @@ function karteDrawGelaendeNums(octx, outW, outH) {
       karteRoundRect(octx, ox - tw / 2 - fs * 0.32, oy - fs * 0.64, tw + fs * 0.64, fs * 1.28, fs * 0.32); octx.fill();
       octx.globalAlpha = 1; octx.fillStyle = '#0f2033'; octx.fillText(KC_LABELS[i], ox, oy);
     }
+    // "N" des Nordpfeils
+    var nang = (g.rot + g.northRot) * Math.PI / 180;
+    var nrad = (d / 2) * 1.06 * v.scale;
+    var nx = scx + nrad * Math.sin(nang), ny = scy - nrad * Math.cos(nang);
+    nx = Math.min(fw - pad, Math.max(pad, nx)); ny = Math.min(fh - pad, Math.max(pad, ny));
+    var nox = nx * kx, noy = ny * ky;
+    octx.font = '700 ' + fs + 'px system-ui, "Segoe UI", Arial, sans-serif';
+    var ntw = octx.measureText('N').width;
+    octx.globalAlpha = 0.9; octx.fillStyle = '#dc2626';
+    karteRoundRect(octx, nox - ntw / 2 - fs * 0.32, noy - fs * 0.64, ntw + fs * 0.64, fs * 1.28, fs * 0.32); octx.fill();
+    octx.globalAlpha = 1; octx.fillStyle = '#ffffff'; octx.fillText('N', nox, noy);
   });
   octx.textAlign = 'start';
 }
