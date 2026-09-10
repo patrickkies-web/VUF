@@ -637,6 +637,10 @@ document.getElementById('btnPresetParkplatz').onclick = function() {
   selectedSections = LEITFAEDEN.parkplatz.sections.slice();
   renderLibrary();
 };
+(function() {
+  var bv = document.getElementById('btnOpenVermisst');
+  if (bv) bv.onclick = function() { selectedSections = ['vermisst']; dismissStart(); };
+})();
 
 addStreifenwagen();
 renderLibrary();
@@ -7273,6 +7277,23 @@ function karteGelaendeNorth(g) {
   x = Math.min(fw - pad, Math.max(pad, x)); y = Math.min(fh - pad, Math.max(pad, y));
   g.northN.style.left = x + 'px'; g.northN.style.top = y + 'px'; g.northN.style.fontSize = fs + 'px';
 }
+// Norden einstellen: am roten Pfeil oder am "N" ziehen → northRot (relativ zur Ring-Drehung).
+function karteNorthDrag(g, target, startEvt) {
+  if (karteNav) return;
+  startEvt.stopPropagation(); startEvt.preventDefault();
+  karteSelect(g); kartePushUndo();
+  try { target.setPointerCapture(startEvt.pointerId); } catch (er) {}
+  function move(e2) {
+    var rect = g.el.getBoundingClientRect();
+    var cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+    var abs = Math.atan2(e2.clientX - cx, -(e2.clientY - cy)) * 180 / Math.PI;
+    g.northRot = abs - g.rot;
+    karteGelaendeNorth(g);
+  }
+  function up(e2) { try { target.releasePointerCapture(e2.pointerId); } catch (er) {} target.removeEventListener('pointermove', move); target.removeEventListener('pointerup', up); }
+  target.addEventListener('pointermove', move);
+  target.addEventListener('pointerup', up);
+}
 function karteGelaendeResize(g, handle, startEvt) {
   startEvt.stopPropagation();
   var v = karteView, sx = startEvt.clientX, d0 = g.dF;
@@ -7318,10 +7339,11 @@ function karteBuildGelaende(data) {
   var el = document.createElement('div'); el.className = 'karte-gelaende';
   var dial = document.createElement('div'); dial.className = 'kg-ring';
   dial.style.borderColor = karteRingColor; el.appendChild(dial);
-  // Nordpfeil (dreht mit; zusätzlich frei einstellbar über das N)
-  var needle = document.createElement('div'); needle.className = 'kg-north';
+  // Nordpfeil (dreht mit; zusätzlich frei einstellbar über den roten Pfeil oder das N)
+  var needle = document.createElement('div'); needle.className = 'kg-north'; needle.title = 'Norden einstellen (ziehen)';
   needle.innerHTML = '<div class="kg-north-line"></div><div class="kg-north-head"></div>';
   el.appendChild(needle);
+  needle.addEventListener('pointerdown', function(ev) { karteNorthDrag(g, needle, ev); });
   var rot = document.createElement('div'); rot.className = 'kc-rotate'; rot.title = 'Drehen'; rot.textContent = '↻';
   var handle = document.createElement('div'); handle.className = 'karte-handle';
   var eye = document.createElement('div'); eye.className = 'kg-eye'; eye.title = 'Kreis ein-/ausblenden'; eye.textContent = '◎';
@@ -7336,21 +7358,7 @@ function karteBuildGelaende(data) {
   // N-Label des Nordpfeils (Rahmen-Ebene, aufrecht, ziehbar zum Norden-Einstellen)
   var northN = document.createElement('div'); northN.className = 'kg-num kg-north-n'; northN.textContent = 'N'; northN.title = 'Norden einstellen (ziehen)';
   e.frame.appendChild(northN); g.northN = northN;
-  northN.addEventListener('pointerdown', function(ev) {
-    if (karteNav) return; ev.stopPropagation(); ev.preventDefault();
-    karteSelect(g); kartePushUndo();
-    try { northN.setPointerCapture(ev.pointerId); } catch (er) {}
-    function move(e2) {
-      var rect = g.el.getBoundingClientRect();
-      var cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
-      var abs = Math.atan2(e2.clientX - cx, -(e2.clientY - cy)) * 180 / Math.PI;
-      g.northRot = abs - g.rot;
-      karteGelaendeNorth(g);
-    }
-    function up(e2) { try { northN.releasePointerCapture(e2.pointerId); } catch (er) {} northN.removeEventListener('pointermove', move); northN.removeEventListener('pointerup', up); }
-    northN.addEventListener('pointermove', move);
-    northN.addEventListener('pointerup', up);
-  });
+  northN.addEventListener('pointerdown', function(ev) { karteNorthDrag(g, northN, ev); });
 
   if (!g.ringVisible) { dial.style.display = 'none'; eye.classList.add('off'); }
 
