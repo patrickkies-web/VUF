@@ -1,11 +1,12 @@
 // VUF Tools – Offline Service Worker
 // Precacht die App-Dateien und liefert sie offline aus (stale-while-revalidate).
-var CACHE = 'vuf-tools-v3.92';
+var CACHE = 'vuf-tools-v3.93';
 var CORE = [
   './',
   './index.html',
   './style.css',
   './script.js',
+  './menu.html',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',
